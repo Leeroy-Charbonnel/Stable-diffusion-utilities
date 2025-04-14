@@ -68,12 +68,24 @@ export function PromptsManager() {
     setPrompts(newPrompts);
   };
 
+  const handleDuplicatePrompt = (id: string) => {
+    const promptToDuplicate = prompts.find(p => p.id === id);
+    if (promptToDuplicate) {
+      const duplicatedPrompt: Prompt = {
+        ...promptToDuplicate,
+        id: crypto.randomUUID(),
+        text: `${promptToDuplicate.text} (copy)`,
+      };
+      setPrompts(prev => [...prev, duplicatedPrompt]);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Prompt List</h2>
-        <Button onClick={() => setIsAddingPrompt(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
+        <Button onClick={() => setIsAddingPrompt(true)} size="sm">
+          <PlusCircle className="mr-1.5 h-4 w-4" />
           Add Prompt
         </Button>
       </div>
@@ -98,11 +110,11 @@ export function PromptsManager() {
         </Card>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {prompts.map((prompt) => (
           <div key={prompt.id}>
             {editingPromptId === prompt.id ? (
-              <Card className="p-4">
+              <Card className="p-3">
                 <PromptForm
                   prompt={prompt}
                   onSubmit={handleEditPrompt}
@@ -116,6 +128,7 @@ export function PromptsManager() {
                 onEdit={() => setEditingPromptId(prompt.id)}
                 onDelete={() => handleDeletePrompt(prompt.id)}
                 onMove={handleMovePrompt}
+                onDuplicate={handleDuplicatePrompt}
               />
             )}
           </div>
