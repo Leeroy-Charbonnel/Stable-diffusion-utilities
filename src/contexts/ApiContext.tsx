@@ -9,12 +9,16 @@ interface ApiContextType {
   isLoading: boolean;
   error: string | null;
   availableSamplers: string[];
+  availableModels: string[];
+  currentModel: string;
+  availableLoras: any[];
   generatedImages: GeneratedImage[];
   checkConnection: () => Promise<boolean>;
   generateImage: (prompt: Prompt) => Promise<GeneratedImage | null>;
   refreshImages: () => void;
   deleteImage: (id: string) => Promise<boolean>;
   updateImageTags: (id: string, tags: string[]) => Promise<boolean>;
+  setModel: (modelName: string) => Promise<boolean>;
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
@@ -24,6 +28,9 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [availableSamplers, setAvailableSamplers] = useState<string[]>([]);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [currentModel, setCurrentModel] = useState<string>('');
+  const [availableLoras, setAvailableLoras] = useState<any[]>([]);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   
   const checkConnection = async (): Promise<boolean> => {
@@ -34,16 +41,25 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setIsConnected(connected);
       
       if (connected) {
-        //If connected, load samplers
-        const samplers = await apiService.getSamplers();
+        //If connected, load samplers, models, and loras
+        const [samplers, models, currentModelName, loras] = await Promise.all([
+          apiService.getSamplers(),
+          apiService.getModels(),
+          apiService.getCurrentModel(),
+          apiService.getLoras()
+        ]);
+        
         setAvailableSamplers(samplers);
+        setAvailableModels(models);
+        if (currentModelName) setCurrentModel(currentModelName);
+        setAvailableLoras(loras);
       } else {
-        setError("Unable to connect to Stable Diffusion API. Please check if the server is running.");
+        setError("Connection failed. Check if SD server is running.");
       }
       
       return connected;
     } catch (err) {
-      setError("Error connecting to API: " + (err instanceof Error ? err.message : String(err)));
+      setError("API error: " + (err instanceof Error ? err.message : String(err)));
       setIsConnected(false);
       return false;
     } finally {
@@ -62,7 +78,7 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     
     try {
       //Map our Prompt type to the API's Text2ImageRequest
-      const params = {
+      const params: any = {
         prompt: prompt.text,
         negative_prompt: prompt.negativePrompt,
         seed: prompt.seed === undefined ? -1 : prompt.seed, //Use -1 for random seed
@@ -74,6 +90,25 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         batch_size: 1,
         n_iter: 1, //Number of batches
       };
+      
+      // Add model override if specified and different from current
+      if (prompt.model && prompt.model !== currentModel) {
+        params.override_settings = {
+          sd_model_checkpoint: prompt.model
+        };
+      }
+      
+      // Add LoRAs if specified
+      if (prompt.loras && prompt.loras.length > 0) {
+        params.alwayson_scripts = {
+          lora: {
+            args: prompt.loras.map(lora => ({
+              model: lora.name,
+              weight: lora.weight
+            }))
+          }
+        };
+      }
       
       const result = await apiService.generateImage(params);
       
@@ -128,6 +163,23 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  // Function to set the current model
+  const setModel = async (modelName: string): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      const success = await apiService.setModel(modelName);
+      if (success) {
+        setCurrentModel(modelName);
+      }
+      return success;
+    } catch (err) {
+      setError("Failed to set model: " + (err instanceof Error ? err.message : String(err)));
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   //Load images on initial mount
   useEffect(() => {
     refreshImages();
@@ -141,12 +193,16 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isLoading,
     error,
     availableSamplers,
+    availableModels,
+    currentModel,
+    availableLoras,
     generatedImages,
     checkConnection,
     generateImage,
     refreshImages,
     deleteImage,
     updateImageTags,
+    setModel,
   };
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;

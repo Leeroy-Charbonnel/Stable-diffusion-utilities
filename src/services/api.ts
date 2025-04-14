@@ -22,6 +22,14 @@ export interface Text2ImageRequest {
   sampler_name?: string;
   enable_hr?: boolean;
   denoising_strength?: number;
+  override_settings?: {
+    sd_model_checkpoint?: string;
+  };
+  alwayson_scripts?: {
+    [key: string]: {
+      args: any[];
+    };
+  };
 }
 
 export interface Text2ImageResponse {
@@ -78,7 +86,7 @@ export class ApiService {
     try {
       const response = await fetch(`${this.apiUrl}/sdapi/v1/sd-models`);
       if (!response.ok) throw new Error('Failed to fetch models');
-      
+      console.log("response", response);
       const data = await response.json();
       return data.map((model: any) => model.title);
     } catch (error) {
@@ -124,6 +132,33 @@ export class ApiService {
     } catch (error) {
       console.error('Failed to set model:', error);
       return false;
+    }
+  }
+  
+  // Get the current SD model
+  async getCurrentModel(): Promise<string | null> {
+    try {
+      const response = await fetch(`${this.apiUrl}/sdapi/v1/options`);
+      if (!response.ok) throw new Error('Failed to fetch current model');
+      
+      const data = await response.json();
+      return data.sd_model_checkpoint || null;
+    } catch (error) {
+      console.error('Failed to get current model:', error);
+      return null;
+    }
+  }
+  
+  // Get available LoRAs
+  async getLoras(): Promise<any[]> {
+    try {
+      const response = await fetch(`${this.apiUrl}/sdapi/v1/loras`);
+      if (!response.ok) throw new Error('Failed to fetch LoRAs');
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch LoRAs:', error);
+      return [];
     }
   }
 

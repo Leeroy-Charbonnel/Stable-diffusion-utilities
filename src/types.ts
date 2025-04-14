@@ -1,3 +1,8 @@
+export interface LoraConfig {
+  name: string;
+  weight: number;
+}
+
 export interface Prompt {
   id: string;
   text: string;
@@ -5,10 +10,12 @@ export interface Prompt {
   seed?: number; 
   steps?: number;
   sampler?: string;
+  model?: string;
   width?: number;
   height?: number;
   runCount: number;
   tags?: string[];
+  loras?: LoraConfig[];
 }
 
 export interface GeneratedImage {

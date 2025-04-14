@@ -1,0 +1,5 @@
+Dropdown empty, console log seems to show that api is not called
+When adding lora dont have a add button,
+Test connection doesnt work
+
+Make the form a collapsible using shadcn

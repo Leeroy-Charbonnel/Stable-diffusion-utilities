@@ -4,55 +4,49 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { XIcon, Plus, Check, ChevronsUpDown, Copy, Trash2 } from 'lucide-react';
-import { Prompt } from '@/types';
-import { cn } from "@/lib/utils";
-import { usePromptContext } from '@/contexts/PromptContextProvider';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
+import { XIcon, Plus, Trash, Copy, Clipboard } from 'lucide-react';
+import { Prompt, LoraConfig } from '@/types';
+import { copyToAppClipboard, getFromAppClipboard, handleContextMenu } from '@/lib/clipboard';
 
 type PromptFormProps = {
   prompt?: Prompt;
   onSubmit: (prompt: Prompt) => void;
   onCancel: () => void;
   availableSamplers?: string[];
+  availableModels?: string[];
+  availableLoras?: any[];
+  currentModel?: string;
 };
 
-export function PromptForm({ prompt, onSubmit, onCancel, availableSamplers = [] }: PromptFormProps) {
-  const { copyPromptText, copyNegativePrompt, copyTags } = usePromptContext();
+export function PromptForm({ 
+  prompt, 
+  onSubmit, 
+  onCancel, 
+  availableSamplers = [],
+  availableModels = [],
+  availableLoras = [],
+  currentModel = ''
+}: PromptFormProps) {
   const [formData, setFormData] = useState<Omit<Prompt, 'id'>>({
     text: prompt?.text || '',
     negativePrompt: prompt?.negativePrompt || '',
     seed: prompt?.seed,
     steps: prompt?.steps || 20,
     sampler: prompt?.sampler || 'Euler a',
+    model: prompt?.model || currentModel,
     width: prompt?.width || 512,
     height: prompt?.height || 512,
     runCount: prompt?.runCount || 1,
     tags: prompt?.tags || [],
+    loras: prompt?.loras || [],
   });
   
   const [tagInput, setTagInput] = useState('');
-  const [samplerOpen, setSamplerOpen] = useState(false);
+  const [showLoraSelector, setShowLoraSelector] = useState(false);
+  const [selectedLora, setSelectedLora] = useState('');
+  const [loraWeight, setLoraWeight] = useState(1.0);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -68,50 +62,60 @@ export function PromptForm({ prompt, onSubmit, onCancel, availableSamplers = [] 
     }
   };
 
-  const handleSelectSampler = (value: string) => {
-    setFormData((prev) => ({ ...prev, sampler: value }));
-    setSamplerOpen(false);
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && tagInput.trim()) {
       e.preventDefault();
-      addTagsFromString(tagInput.trim());
+      addTag(tagInput.trim());
     }
   };
 
-  const addTagsFromString = (input: string) => {
-    // Split the input by spaces and process each word as a tag
-    const words = input.split(/\s+/).filter(word => word.trim() !== '');
-    
-    if (words.length > 0) {
-      const uniqueTags = words.filter(tag => !formData.tags.includes(tag));
-      
-      if (uniqueTags.length > 0) {
-        setFormData(prev => ({
-          ...prev,
-          tags: [...prev.tags, ...uniqueTags]
-        }));
-      }
+  const addTag = (tag: string) => {
+    if (tag && !formData.tags.includes(tag)) {
+      setFormData((prev) => ({
+        ...prev,
+        tags: [...prev.tags, tag],
+      }));
     }
-    
     setTagInput('');
   };
 
-  const handleRemoveTag = (tag: string, e: React.MouseEvent) => {
-    // Stop propagation to prevent other handlers from being triggered
-    e.stopPropagation();
-    
+  const removeTag = (tag: string) => {
     setFormData((prev) => ({
       ...prev,
       tags: prev.tags.filter((t) => t !== tag),
     }));
   };
 
-  const handleRemoveAllTags = () => {
-    setFormData((prev) => ({
+  // LoRA handling
+  const addLora = () => {
+    if (selectedLora && !formData.loras?.some(l => l.name === selectedLora)) {
+      setFormData(prev => ({
+        ...prev,
+        loras: [...(prev.loras || []), { name: selectedLora, weight: loraWeight }]
+      }));
+      setSelectedLora('');
+      setLoraWeight(1.0);
+      setShowLoraSelector(false);
+    }
+  };
+
+  const removeLora = (loraName: string) => {
+    setFormData(prev => ({
       ...prev,
-      tags: []
+      loras: prev.loras?.filter(l => l.name !== loraName) || []
+    }));
+  };
+
+  const updateLoraWeight = (loraName: string, weight: number) => {
+    setFormData(prev => ({
+      ...prev,
+      loras: prev.loras?.map(l => 
+        l.name === loraName ? { ...l, weight } : l
+      ) || []
     }));
   };
 
@@ -123,150 +127,65 @@ export function PromptForm({ prompt, onSubmit, onCancel, availableSamplers = [] 
     });
   };
 
-  // Ensure we have a formatted list of samplers for the combobox
-  const samplerOptions = availableSamplers.map(sampler => ({
-    value: sampler,
-    label: sampler
-  }));
-
-  // If no samplers are available, provide a default list
-  const defaultSamplers = [
-    { value: 'Euler a', label: 'Euler a' },
-    { value: 'Euler', label: 'Euler' },
-    { value: 'DPM++ 2M Karras', label: 'DPM++ 2M Karras' },
-    { value: 'DPM++ SDE Karras', label: 'DPM++ SDE Karras' },
-    { value: 'DPM++ 2M SDE Karras', label: 'DPM++ 2M SDE Karras' },
-    { value: 'DDIM', label: 'DDIM' },
-    { value: 'LMS', label: 'LMS' },
-  ];
-
-  const samplers = samplerOptions.length > 0 ? samplerOptions : defaultSamplers;
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <div className="grid grid-cols-1 gap-3">
-        <div>
-          <Label htmlFor="text" className="text-xs mb-1">Prompt</Label>
-          <ContextMenu>
-            <ContextMenuTrigger>
-              <Textarea
-                id="text"
-                name="text"
-                value={formData.text}
-                onChange={handleChange}
-                required
-                placeholder="Enter prompt text..."
-                className="min-h-20 text-sm cursor-context-menu"
-              />
-            </ContextMenuTrigger>
-            <ContextMenuContent>
-              <ContextMenuItem onClick={() => copyPromptText(formData.text)}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy Prompt Text
-              </ContextMenuItem>
-              <ContextMenuItem 
-                onClick={() => {
-                  navigator.clipboard.writeText(formData.text);
-                }}
-              >
-                <Copy className="mr-2 h-4 w-4" />
-                Copy to Clipboard
-              </ContextMenuItem>
-              <ContextMenuItem 
-                onClick={() => setFormData(prev => ({ ...prev, text: '' }))}
-                className="text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Clear Text
-              </ContextMenuItem>
-            </ContextMenuContent>
-          </ContextMenu>
-        </div>
-
-        <div>
-          <Label htmlFor="negativePrompt" className="text-xs mb-1">Negative Prompt</Label>
-          <ContextMenu>
-            <ContextMenuTrigger>
-              <Textarea
-                id="negativePrompt"
-                name="negativePrompt"
-                value={formData.negativePrompt}
-                onChange={handleChange}
-                placeholder="Enter negative prompt text... (optional)"
-                className="min-h-16 text-sm cursor-context-menu"
-              />
-            </ContextMenuTrigger>
-            <ContextMenuContent>
-              <ContextMenuItem onClick={() => copyNegativePrompt(formData.negativePrompt || '')}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy Negative Prompt
-              </ContextMenuItem>
-              <ContextMenuItem 
-                onClick={() => {
-                  navigator.clipboard.writeText(formData.negativePrompt || '');
-                }}
-              >
-                <Copy className="mr-2 h-4 w-4" />
-                Copy to Clipboard
-              </ContextMenuItem>
-              <ContextMenuItem 
-                onClick={() => setFormData(prev => ({ ...prev, negativePrompt: '' }))}
-                className="text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Clear Text
-              </ContextMenuItem>
-            </ContextMenuContent>
-          </ContextMenu>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="text">Prompt</Label>
+        <div 
+          onContextMenu={(e) => 
+            handleContextMenu(e, 'prompt', formData.text, {
+              copy: () => copyToAppClipboard('prompt', formData.text),
+              paste: () => {
+                const clipboard = getFromAppClipboard<string>('prompt');
+                if (clipboard) {
+                  setFormData(prev => ({...prev, text: clipboard}));
+                }
+              }
+            })
+          }
+          className="relative"
+        >
+          <Textarea
+            id="text"
+            name="text"
+            value={formData.text}
+            onChange={handleChange}
+            required
+            placeholder="Enter prompt text... (right-click to copy/paste)"
+            className="min-h-24"
+          />
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <Label htmlFor="sampler" className="text-xs mb-1">Sampler</Label>
-          <Popover open={samplerOpen} onOpenChange={setSamplerOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={samplerOpen}
-                className="w-full h-8 text-xs justify-between"
-              >
-                {formData.sampler
-                  ? samplers.find((s) => s.value === formData.sampler)?.label || formData.sampler
-                  : "Select sampler..."}
-                <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-full p-0">
-              <Command>
-                <CommandInput placeholder="Search sampler..." className="h-8" />
-                <CommandList>
-                  <CommandEmpty>No sampler found.</CommandEmpty>
-                  <CommandGroup>
-                    {samplers.map((sampler) => (
-                      <CommandItem
-                        key={sampler.value}
-                        value={sampler.value}
-                        onSelect={handleSelectSampler}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            formData.sampler === sampler.value ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {sampler.label}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+      <div>
+        <Label htmlFor="negativePrompt">Negative Prompt</Label>
+        <div
+          onContextMenu={(e) => 
+            handleContextMenu(e, 'negativePrompt', formData.negativePrompt, {
+              copy: () => copyToAppClipboard('negativePrompt', formData.negativePrompt),
+              paste: () => {
+                const clipboard = getFromAppClipboard<string>('negativePrompt');
+                if (clipboard) {
+                  setFormData(prev => ({...prev, negativePrompt: clipboard}));
+                }
+              }
+            })
+          }
+          className="relative"
+        >
+          <Textarea
+            id="negativePrompt"
+            name="negativePrompt"
+            value={formData.negativePrompt}
+            onChange={handleChange}
+            placeholder="Enter negative prompt text... (right-click to copy/paste)"
+          />
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="seed" className="text-xs mb-1">Seed</Label>
+          <Label htmlFor="seed">Seed</Label>
           <Input
             id="seed"
             name="seed"
@@ -274,11 +193,10 @@ export function PromptForm({ prompt, onSubmit, onCancel, availableSamplers = [] 
             value={formData.seed !== undefined ? formData.seed : ''}
             onChange={handleChange}
             placeholder="Random"
-            className="h-8 text-sm"
           />
         </div>
         <div>
-          <Label htmlFor="steps" className="text-xs mb-1">Steps</Label>
+          <Label htmlFor="steps">Steps</Label>
           <Input
             id="steps"
             name="steps"
@@ -288,14 +206,70 @@ export function PromptForm({ prompt, onSubmit, onCancel, availableSamplers = [] 
             required
             min={1}
             max={150}
-            className="h-8 text-sm"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div>
+        <Label htmlFor="model">Model</Label>
+        {availableModels.length > 0 ? (
+          <Select
+            value={formData.model || ''}
+            onValueChange={(value) => handleSelectChange('model', value)}
+          >
+            <SelectTrigger id="model">
+              <SelectValue placeholder="Select a model" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableModels.map((model) => (
+                <SelectItem key={model} value={model}>
+                  {model}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Input
+            id="model"
+            name="model"
+            value={formData.model || ''}
+            onChange={handleChange}
+            placeholder="No models available"
+          />
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
         <div>
-          <Label htmlFor="width" className="text-xs mb-1">Width</Label>
+          <Label htmlFor="sampler">Sampler</Label>
+          {availableSamplers.length > 0 ? (
+            <Select
+              value={formData.sampler}
+              onValueChange={(value) => handleSelectChange('sampler', value)}
+            >
+              <SelectTrigger id="sampler">
+                <SelectValue placeholder="Select a sampler" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableSamplers.map((sampler) => (
+                  <SelectItem key={sampler} value={sampler}>
+                    {sampler}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              id="sampler"
+              name="sampler"
+              value={formData.sampler}
+              onChange={handleChange}
+              required
+            />
+          )}
+        </div>
+        <div>
+          <Label htmlFor="width">Width</Label>
           <Input
             id="width"
             name="width"
@@ -306,11 +280,10 @@ export function PromptForm({ prompt, onSubmit, onCancel, availableSamplers = [] 
             step={8}
             min={64}
             max={2048}
-            className="h-8 text-sm"
           />
         </div>
         <div>
-          <Label htmlFor="height" className="text-xs mb-1">Height</Label>
+          <Label htmlFor="height">Height</Label>
           <Input
             id="height"
             name="height"
@@ -321,104 +294,176 @@ export function PromptForm({ prompt, onSubmit, onCancel, availableSamplers = [] 
             step={8}
             min={64}
             max={2048}
-            className="h-8 text-sm"
-          />
-        </div>
-        <div>
-          <Label htmlFor="runCount" className="text-xs mb-1">Run Count</Label>
-          <Input
-            id="runCount"
-            name="runCount"
-            type="number"
-            value={formData.runCount}
-            onChange={handleChange}
-            required
-            min={1}
-            max={100}
-            className="h-8 text-sm"
           />
         </div>
       </div>
 
+      {/* LoRA Section */}
       <div>
-        <div className="flex justify-between items-center">
-          <Label htmlFor="tags" className="text-xs">Tags (separate by space)</Label>
-          {formData.tags.length > 0 && (
+        <div className="flex items-center justify-between mb-2">
+          <Label>LoRAs</Label>
+          <Button 
+            type="button" 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowLoraSelector(!showLoraSelector)}
+            className="text-xs h-7 px-2"
+          >
+            <Plus className="h-3 w-3 mr-1" />
+            Add LoRA
+          </Button>
+        </div>
+        
+        {showLoraSelector && (
+          <div className="p-3 border rounded-md mb-2 space-y-2">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Label htmlFor="loraSelect" className="text-xs">LoRA Model</Label>
+                <Select
+                  value={selectedLora}
+                  onValueChange={setSelectedLora}
+                >
+                  <SelectTrigger id="loraSelect">
+                    <SelectValue placeholder="Select a LoRA" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableLoras.map((lora) => (
+                      <SelectItem key={lora.name} value={lora.name}>
+                        {lora.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-24">
+                <Label htmlFor="loraWeight" className="text-xs">Weight</Label>
+                <Input
+                  id="loraWeight"
+                  type="number"
+                  min={0}
+                  max={2}
+                  step={0.05}
+                  value={loraWeight}
+                  onChange={(e) => setLoraWeight(parseFloat(e.target.value))}
+                />
+              </div>
+            </div>
             <Button 
               type="button" 
-              size="sm" 
-              variant="ghost" 
-              className="h-6 text-xs px-2 text-muted-foreground"
-              onClick={handleRemoveAllTags}
+              onClick={addLora}
+              disabled={!selectedLora} 
+              size="sm"
+              className="w-full text-xs"
             >
-              Clear all
+              Add
             </Button>
-          )}
-        </div>
-        <div className="flex gap-2 mb-2 mt-1">
+          </div>
+        )}
+        
+        {formData.loras && formData.loras.length > 0 ? (
+          <div className="space-y-2">
+            {formData.loras.map((lora) => (
+              <div key={lora.name} className="flex items-center gap-2 p-2 border rounded-md">
+                <div className="flex-1 text-sm font-medium">{lora.name}</div>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">Weight: {lora.weight.toFixed(2)}</span>
+                  <Input
+                    type="range"
+                    min={0}
+                    max={2}
+                    step={0.05}
+                    value={lora.weight}
+                    onChange={(e) => updateLoraWeight(lora.name, parseFloat(e.target.value))}
+                    className="w-24 h-2"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeLora(lora.name)}
+                    className="h-6 w-6"
+                  >
+                    <Trash className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-xs text-muted-foreground">No LoRAs added</div>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="runCount">Run Count</Label>
+        <Input
+          id="runCount"
+          name="runCount"
+          type="number"
+          value={formData.runCount}
+          onChange={handleChange}
+          required
+          min={1}
+          max={100}
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="tags">Tags</Label>
+        <div className="flex gap-2 mb-2">
           <Input
             id="tags"
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={handleTagKeyDown}
-            placeholder="Type words to add as tags"
-            className="h-8 text-sm"
+            placeholder="Add tags (press Enter to add)"
           />
           <Button
             type="button"
-            onClick={() => addTagsFromString(tagInput.trim())}
+            onClick={() => addTag(tagInput.trim())}
             disabled={!tagInput.trim()}
-            size="sm"
-            className="h-8"
           >
-            <Plus className="h-4 w-4" />
+            Add
           </Button>
         </div>
-        <ContextMenu>
-          <ContextMenuTrigger>
-            <div className="flex flex-wrap gap-1 mt-1 min-h-8 cursor-context-menu">
-              {formData.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="flex items-center gap-1 text-xs py-0">
-                  {tag}
-                  <button 
-                    type="button" 
-                    className="ml-1 h-3 w-3 rounded-full inline-flex items-center justify-center"
-                    onClick={(e) => handleRemoveTag(tag, e)}
-                    aria-label={`Remove ${tag} tag`}
-                  >
-                    <XIcon className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-              {formData.tags.length === 0 && (
-                <div className="text-xs text-muted-foreground p-1">No tags added yet</div>
-              )}
-            </div>
-          </ContextMenuTrigger>
-          <ContextMenuContent>
-            <ContextMenuItem onClick={() => copyTags(formData.tags)}>
-              <Copy className="mr-2 h-4 w-4" />
-              Copy All Tags
-            </ContextMenuItem>
-            <ContextMenuSeparator />
-            <ContextMenuItem 
-              onClick={handleRemoveAllTags} 
-              className="text-destructive"
-              disabled={formData.tags.length === 0}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Remove All Tags
-            </ContextMenuItem>
-          </ContextMenuContent>
-        </ContextMenu>
+        <div 
+          className="flex flex-wrap gap-2 mt-2"
+          onContextMenu={(e) => 
+            handleContextMenu(e, 'tags', formData.tags, {
+              copy: () => copyToAppClipboard('tags', formData.tags),
+              paste: () => {
+                const clipboard = getFromAppClipboard<string[]>('tags');
+                if (clipboard) {
+                  // Merge tags without duplicates
+                  const mergedTags = [...new Set([...formData.tags, ...clipboard])];
+                  setFormData(prev => ({...prev, tags: mergedTags}));
+                }
+              }
+            })
+          }
+        >
+          {formData.tags.length > 0 ? (
+            formData.tags.map((tag) => (
+              <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                {tag}
+                <XIcon
+                  className="h-3 w-3 cursor-pointer"
+                  onClick={() => removeTag(tag)}
+                />
+              </Badge>
+            ))
+          ) : (
+            <div className="text-xs text-muted-foreground">(Right-click to copy/paste tags)</div>
+          )}
+        </div>
       </div>
 
-      <div className="flex justify-end space-x-2 pt-1">
-        <Button type="button" variant="outline" onClick={onCancel} size="sm">
+      <div className="flex justify-end space-x-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" size="sm">
-          {prompt ? 'Update' : 'Add'}
+        <Button type="submit">
+          {prompt ? 'Update Prompt' : 'Add Prompt'}
         </Button>
       </div>
     </form>
