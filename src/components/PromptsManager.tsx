@@ -1,15 +1,38 @@
-import React, { useState } from 'react';
+// src/components/PromptsManager.tsx
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { PlusCircle } from 'lucide-react';
-import { Prompt } from '../types';
+import { PlusCircle, InfoIcon } from 'lucide-react';
+import { Prompt } from '@/types';
 import { PromptForm } from './PromptForm';
 import { PromptCard } from './PromptCard';
+import { useApi } from '@/contexts/ApiContext';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+const STORAGE_KEY = 'sd-utilities-prompts';
 
 export function PromptsManager() {
+  const { isConnected, availableSamplers } = useApi();
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [isAddingPrompt, setIsAddingPrompt] = useState(false);
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
+
+  //Load prompts from local storage on initial render
+  useEffect(() => {
+    const savedPrompts = localStorage.getItem(STORAGE_KEY);
+    if (savedPrompts) {
+      try {
+        setPrompts(JSON.parse(savedPrompts));
+      } catch (error) {
+        console.error('Failed to parse saved prompts:', error);
+      }
+    }
+  }, []);
+
+  //Save prompts to local storage whenever they change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(prompts));
+  }, [prompts]);
 
   const handleAddPrompt = (prompt: Prompt) => {
     setPrompts((prevPrompts) => [...prevPrompts, prompt]);
@@ -55,9 +78,23 @@ export function PromptsManager() {
         </Button>
       </div>
 
+      {!isConnected && (
+        <Alert className="mb-4">
+          <InfoIcon className="h-4 w-4" />
+          <AlertTitle>Not Connected</AlertTitle>
+          <AlertDescription>
+            Not connected to the Stable Diffusion API. Go to the Execute tab to configure the connection.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {isAddingPrompt && (
         <Card className="mb-4 p-4">
-          <PromptForm onSubmit={handleAddPrompt} onCancel={() => setIsAddingPrompt(false)} />
+          <PromptForm 
+            onSubmit={handleAddPrompt} 
+            onCancel={() => setIsAddingPrompt(false)} 
+            availableSamplers={availableSamplers}
+          />
         </Card>
       )}
 
@@ -70,6 +107,7 @@ export function PromptsManager() {
                   prompt={prompt}
                   onSubmit={handleEditPrompt}
                   onCancel={() => setEditingPromptId(null)}
+                  availableSamplers={availableSamplers}
                 />
               </Card>
             ) : (

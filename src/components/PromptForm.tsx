@@ -1,17 +1,22 @@
+// src/components/PromptForm.tsx
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Prompt } from '../types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { XIcon } from 'lucide-react';
+import { Prompt } from '@/types';
 
 type PromptFormProps = {
   prompt?: Prompt;
   onSubmit: (prompt: Prompt) => void;
   onCancel: () => void;
+  availableSamplers?: string[];
 };
 
-export function PromptForm({ prompt, onSubmit, onCancel }: PromptFormProps) {
+export function PromptForm({ prompt, onSubmit, onCancel, availableSamplers = [] }: PromptFormProps) {
   const [formData, setFormData] = useState<Omit<Prompt, 'id'>>({
     text: prompt?.text || '',
     negativePrompt: prompt?.negativePrompt || '',
@@ -23,6 +28,8 @@ export function PromptForm({ prompt, onSubmit, onCancel }: PromptFormProps) {
     runCount: prompt?.runCount || 1,
     tags: prompt?.tags || [],
   });
+  
+  const [tagInput, setTagInput] = useState('');
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -36,6 +43,34 @@ export function PromptForm({ prompt, onSubmit, onCancel }: PromptFormProps) {
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && tagInput.trim()) {
+      e.preventDefault();
+      addTag(tagInput.trim());
+    }
+  };
+
+  const addTag = (tag: string) => {
+    if (tag && !formData.tags.includes(tag)) {
+      setFormData((prev) => ({
+        ...prev,
+        tags: [...prev.tags, tag],
+      }));
+    }
+    setTagInput('');
+  };
+
+  const removeTag = (tag: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      tags: prev.tags.filter((t) => t !== tag),
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -102,13 +137,31 @@ export function PromptForm({ prompt, onSubmit, onCancel }: PromptFormProps) {
       <div className="grid grid-cols-3 gap-4">
         <div>
           <Label htmlFor="sampler">Sampler</Label>
-          <Input
-            id="sampler"
-            name="sampler"
-            value={formData.sampler}
-            onChange={handleChange}
-            required
-          />
+          {availableSamplers.length > 0 ? (
+            <Select
+              value={formData.sampler}
+              onValueChange={(value) => handleSelectChange('sampler', value)}
+            >
+              <SelectTrigger id="sampler">
+                <SelectValue placeholder="Select a sampler" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableSamplers.map((sampler) => (
+                  <SelectItem key={sampler} value={sampler}>
+                    {sampler}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              id="sampler"
+              name="sampler"
+              value={formData.sampler}
+              onChange={handleChange}
+              required
+            />
+          )}
         </div>
         <div>
           <Label htmlFor="width">Width</Label>
@@ -152,6 +205,37 @@ export function PromptForm({ prompt, onSubmit, onCancel }: PromptFormProps) {
           min={1}
           max={100}
         />
+      </div>
+
+      <div>
+        <Label htmlFor="tags">Tags</Label>
+        <div className="flex gap-2 mb-2">
+          <Input
+            id="tags"
+            value={tagInput}
+            onChange={(e) => setTagInput(e.target.value)}
+            onKeyDown={handleTagKeyDown}
+            placeholder="Add tags (press Enter to add)"
+          />
+          <Button
+            type="button"
+            onClick={() => addTag(tagInput.trim())}
+            disabled={!tagInput.trim()}
+          >
+            Add
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {formData.tags.map((tag) => (
+            <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+              {tag}
+              <XIcon
+                className="h-3 w-3 cursor-pointer"
+                onClick={() => removeTag(tag)}
+              />
+            </Badge>
+          ))}
+        </div>
       </div>
 
       <div className="flex justify-end space-x-2">
