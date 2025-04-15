@@ -2,15 +2,12 @@ import { serve } from "bun";
 import { join, dirname } from "path";
 import { mkdir } from "node:fs/promises";
 import { exec } from "child_process";
-import { ImageMetadata, SaveImageRequest } from "./types";
-
-
-
+import { ImageMetadata, SaveImageRequest, Prompt } from "./types";
 
 //Output directory
 const OUTPUT_DIR = join(import.meta.dir, 'output');
 const METADATA_FILE = join(OUTPUT_DIR, 'metadata.json');
-
+const PROMPTS_FILE = join(OUTPUT_DIR, 'prompts.json');
 
 const readMetadata = async (): Promise<ImageMetadata[]> => {
   try {
@@ -32,6 +29,38 @@ const saveMetadata = async (metadata: ImageMetadata[]): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error('Error saving metadata:', error);
+    return false;
+  }
+};
+
+//Read prompts from file
+const readPrompts = async (): Promise<Prompt[]> => {
+  try {
+    const promptsFile = Bun.file(PROMPTS_FILE);
+    const exists = await promptsFile.exists();
+    if (!exists) { return []; }
+    const data = await promptsFile.text();
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading prompts:', error);
+    return [];
+  }
+};
+
+//Save prompts to file
+const savePrompts = async (prompts: Prompt[]): Promise<boolean> => {
+  try {
+    console.log("Saving prompts");
+    //Create output directory if it doesn't exist
+    try {
+      await mkdir(OUTPUT_DIR, { recursive: true });
+    } catch (err) {
+      //Ignore if directory already exists
+    }
+    await Bun.write(PROMPTS_FILE, JSON.stringify(prompts, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Error saving prompts:', error);
     return false;
   }
 };
@@ -59,10 +88,6 @@ const server = serve({
       const file = Bun.file(filePath);
       const exists = await file.exists();
 
-
-      console.log("test that never happens");
-
-
       if (!exists) {
         return new Response("File not found", { status: 404, headers });
       }
@@ -72,6 +97,34 @@ const server = serve({
 
     if (path.startsWith('/api/')) {
       const apiPath = path.substring(4);
+
+      //GET /api/prompts - Get all prompts
+      if (apiPath === '/prompts' && req.method === "GET") {
+        const prompts = await readPrompts();
+        return new Response(JSON.stringify({ success: true, data: prompts }), {
+          headers: { ...headers, "Content-Type": "application/json" }
+        });
+      }
+
+      //POST /api/prompts - Save all prompts
+      if (apiPath === '/prompts' && req.method === "POST") {
+        try {
+          const body = await req.json() as Prompt[];
+          await savePrompts(body);
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { ...headers, "Content-Type": "application/json" }
+          });
+        } catch (error) {
+          console.error('Error saving prompts:', error);
+          return new Response(JSON.stringify({
+            success: false,
+            error: String(error)
+          }), {
+            status: 500,
+            headers: { ...headers, "Content-Type": "application/json" }
+          });
+        }
+      }
 
       //GET /api/images - Get all images metadata
       if (apiPath === '/images' && req.method === "GET") {
@@ -128,59 +181,6 @@ const server = serve({
           });
         }
       }
-
-      // // GET /api/images/:id - Get image by ID
-      // if (apiPath.startsWith('/images/') && req.method === "GET") {
-      //   try {
-      //     const id = apiPath.split('/').pop();
-      //     const metadata = await readMetadata();
-      //     const image = metadata.find(img => img.id === id);
-
-      //     if (!image) {
-      //       return new Response(JSON.stringify({
-      //         success: false,
-      //         error: 'Image not found'
-      //       }), {
-      //         status: 404,
-      //         headers: { ...headers, "Content-Type": "application/json" }
-      //       });
-      //     }
-
-      //     const filePath = join(OUTPUT_DIR, image.path);
-      //     const file = Bun.file(filePath);
-      //     const exists = await file.exists();
-
-      //     if (!exists) {
-      //       return new Response(JSON.stringify({
-      //         success: false,
-      //         error: 'Image file not found'
-      //       }), {
-      //         status: 404,
-      //         headers: { ...headers, "Content-Type": "application/json" }
-      //       });
-      //     }
-
-      //     // Read the file and convert to base64
-      //     const bytes = await file.arrayBuffer();
-      //     const base64Data = `data:image/png;base64,${Buffer.from(bytes).toString('base64')}`;
-
-      //     return new Response(JSON.stringify({
-      //       success: true,
-      //       data: base64Data
-      //     }), {
-      //       headers: { ...headers, "Content-Type": "application/json" }
-      //     });
-      //   } catch (error) {
-      //     console.error('Error getting image:', error);
-      //     return new Response(JSON.stringify({
-      //       success: false,
-      //       error: String(error)
-      //     }), {
-      //       status: 500,
-      //       headers: { ...headers, "Content-Type": "application/json" }
-      //     });
-      //   }
-      // }
 
       //PUT /api/images/:id - Update image metadata
       if (apiPath.startsWith('/images/') && req.method === "PUT") {
@@ -395,3 +395,4 @@ const server = serve({
 console.log(`Server running on port ${server.port}`);
 console.log(`Images will be saved to: ${OUTPUT_DIR}`);
 console.log(`Metadata file: ${METADATA_FILE}`);
+console.log(`Prompts file: ${PROMPTS_FILE}`);

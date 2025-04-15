@@ -7,20 +7,16 @@ import { PromptCard } from './PromptCard';
 import { useApi } from '@/contexts/ApiContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { generateUUID } from '@/lib/utils';
-import { STORAGE_KEY } from '@/lib/constants';
-
+import { getAllPrompts, saveAllPrompts } from '@/lib/promptsApi';
 
 type ExecutionStatus = 'idle' | 'executing' | 'completed' | 'failed';
-
-//Helper function to save prompts to localStorage
-const savePromptsToStorage = (prompts: Prompt[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(prompts));
-};
 
 export function PromptsManager() {
   const api = useApi();
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
+  const [isLoadingPrompts, setIsLoadingPrompts] = useState(false);
+  const [savingPrompts, setSavingPrompts] = useState(false);
 
   // Execution state
   const [status, setStatus] = useState<ExecutionStatus>('idle');
@@ -38,6 +34,23 @@ export function PromptsManager() {
   const [loras, setLoras] = useState<any[]>([]);
   const [currentModel, setCurrentModel] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+
+  //Save prompts to the server
+  const savePromptsToServer = async (promptsToSave: Prompt[]) => {
+    try {
+      setSavingPrompts(true);
+      const success = await saveAllPrompts(promptsToSave);
+      if (!success) {
+        console.error('Failed to save prompts to server');
+        setError('Failed to save prompts to server');
+      }
+    } catch (error) {
+      console.error('Error saving prompts:', error);
+      setError(`Error saving prompts: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setSavingPrompts(false);
+    }
+  };
 
   // Fetch API data only once on component mount
   useEffect(() => {
@@ -72,19 +85,25 @@ export function PromptsManager() {
     fetchData();
   }, []); // Empty dependency array to prevent infinite loop
 
-  // Load prompts from local storage on initial render
+  // Load prompts from server on initial render
   useEffect(() => {
-    const savedPrompts = localStorage.getItem(STORAGE_KEY);
-    if (savedPrompts) {
+    const loadPromptsFromServer = async () => {
+      setIsLoadingPrompts(true);
       try {
-        setPrompts(JSON.parse(savedPrompts));
+        const loadedPrompts = await getAllPrompts();
+        setPrompts(loadedPrompts);
       } catch (error) {
-        console.error('Failed to parse saved prompts:', error);
+        console.error('Failed to load prompts from server:', error);
+        setError(`Failed to load prompts: ${error instanceof Error ? error.message : String(error)}`);
+      } finally {
+        setIsLoadingPrompts(false);
       }
-    }
+    };
+
+    loadPromptsFromServer();
   }, []);
 
-  const handleAddPrompt = () => {
+  const handleAddPrompt = async () => {
     // Create a new prompt with default values
     const newPrompt: Prompt = {
       id: generateUUID(),
@@ -106,30 +125,32 @@ export function PromptsManager() {
     const updatedPrompts = [...prompts, newPrompt];
     setPrompts(updatedPrompts);
 
-    // Immediately save to localStorage
-    savePromptsToStorage(updatedPrompts);
+    // Save to server
+    await savePromptsToServer(updatedPrompts);
 
     // Set it as the currently editing prompt
     setEditingPromptId(newPrompt.id);
   };
 
-  const handleUpdatePrompt = (updatedPrompt: Prompt) => {
+  const handleUpdatePrompt = async (updatedPrompt: Prompt) => {
     const updatedPrompts = prompts.map((p) =>
       (p.id === updatedPrompt.id ? updatedPrompt : p)
     );
     setPrompts(updatedPrompts);
-    // Immediately save to localStorage
-    savePromptsToStorage(updatedPrompts);
+    
+    // Save to server
+    await savePromptsToServer(updatedPrompts);
   };
 
-  const handleDeletePrompt = (id: string) => {
+  const handleDeletePrompt = async (id: string) => {
     const updatedPrompts = prompts.filter((p) => p.id !== id);
     setPrompts(updatedPrompts);
-    // Immediately save to localStorage
-    savePromptsToStorage(updatedPrompts);
+    
+    // Save to server
+    await savePromptsToServer(updatedPrompts);
   };
 
-  const handleMovePrompt = (id: string, direction: 'up' | 'down') => {
+  const handleMovePrompt = async (id: string, direction: 'up' | 'down') => {
     const promptIndex = prompts.findIndex((p) => p.id === id);
     if (
       (direction === 'up' && promptIndex === 0) ||
@@ -145,8 +166,9 @@ export function PromptsManager() {
     newPrompts.splice(newIndex, 0, promptToMove);
 
     setPrompts(newPrompts);
-    // Immediately save to localStorage
-    savePromptsToStorage(newPrompts);
+    
+    // Save to server
+    await savePromptsToServer(newPrompts);
   };
 
   const toggleEditPrompt = (id: string) => {
@@ -271,12 +293,12 @@ export function PromptsManager() {
         <div className="flex gap-2">
           <Button
             onClick={handleExecuteAll}
-            disabled={!api.isConnected || prompts.length === 0 || status === 'executing'}
+            disabled={!api.isConnected || prompts.length === 0 || status === 'executing' || isLoadingPrompts || savingPrompts}
           >
             <Play className="mr-2 h-4 w-4" />
             Start Execution
           </Button>
-          <Button onClick={handleAddPrompt}>
+          <Button onClick={handleAddPrompt} disabled={isLoadingPrompts || savingPrompts}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Prompt
           </Button>
@@ -302,9 +324,17 @@ export function PromptsManager() {
         </Alert>
       )}
 
-      {isLoading && (
+      {(isLoading || isLoadingPrompts) && (
         <Card className="p-4 mb-4">
-          <div className="text-center text-muted-foreground">Loading data from API...</div>
+          <div className="text-center text-muted-foreground">
+            {isLoading ? 'Loading data from API...' : 'Loading prompts...'}
+          </div>
+        </Card>
+      )}
+
+      {savingPrompts && (
+        <Card className="p-4 mb-4">
+          <div className="text-center text-muted-foreground">Saving prompts...</div>
         </Card>
       )}
 
@@ -322,6 +352,16 @@ export function PromptsManager() {
         <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Execution Failed</AlertTitle>
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {error && status !== 'failed' && (
+        <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
           <AlertDescription>
             {error}
           </AlertDescription>
@@ -353,7 +393,7 @@ export function PromptsManager() {
         ))}
       </div>
 
-      {prompts.length === 0 && !isLoading && (
+      {prompts.length === 0 && !isLoading && !isLoadingPrompts && (
         <Card className="p-6 text-center text-muted-foreground">
           <p>No prompts added yet. Click "Add Prompt" to get started.</p>
         </Card>

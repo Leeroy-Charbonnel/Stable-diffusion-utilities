@@ -1,0 +1,16 @@
+[
+  {
+    "id": "524c3b05-31c0-40eb-bb22-caaad40ccb66",
+    "name": "New Promptfefefefefefefefe",
+    "text": "fefefefeeeeeefefefefefefefefefefe",
+    "negativePrompt": "fefefefefaaaaaaaaaaaaaaaaaaaaaaaa",
+    "steps": 20,
+    "sampler": "Euler a",
+    "model": "v1-5-pruned-emaonly.ckpt [cc6cb27103]",
+    "width": 512,
+    "height": 512,
+    "runCount": 1,
+    "tags": [],
+    "loras": []
+  }
+]

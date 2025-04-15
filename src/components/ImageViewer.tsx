@@ -44,18 +44,19 @@ import { exportAllData } from '@/lib/fileSystemApi';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { STORAGE_KEY } from '@/lib/constants';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { getAllPrompts, saveAllPrompts } from '@/lib/promptsApi';
 
 export function ImageViewer() {
   const { generatedImages, getImageData, deleteImage, updateImageTags, refreshImages } = useApi();
@@ -155,7 +156,7 @@ export function ImageViewer() {
     try {
       // In a real app, you'd make a request to move the files
       // For now, we'll just update the metadata path
-      
+
       // Process each image
       for (const imageId of imageIds) {
         const image = generatedImages.find(img => img.id === imageId);
@@ -163,12 +164,12 @@ export function ImageViewer() {
           const currentPath = image.path;
           const filename = currentPath.includes('/') ? currentPath.split('/').pop()! : currentPath;
           const newPath = folder === 'default' ? filename : `${folder}/${filename}`;
-          
+
           // Update image metadata with new path
           await updateImageMetadata(imageId, { path: newPath });
         }
       }
-      
+
       // Refresh after moving
       await refreshImages();
       setSelectedImages([]);
@@ -191,11 +192,11 @@ export function ImageViewer() {
         },
         body: JSON.stringify(updates),
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to update image metadata: ${response.statusText}`);
       }
-      
+
       return true;
     } catch (error) {
       console.error('Error updating image metadata:', error);
@@ -206,14 +207,14 @@ export function ImageViewer() {
   // Handle bulk delete
   const handleBulkDelete = async () => {
     if (selectedImages.length === 0) return;
-    
+
     setIsLoading(true);
     try {
       // Delete each selected image
       for (const imageId of selectedImages) {
         await deleteImage(imageId);
       }
-      
+
       // Clear selection
       setSelectedImages([]);
     } catch (error) {
@@ -226,7 +227,7 @@ export function ImageViewer() {
 
   // Toggle image selection
   const toggleImageSelection = (imageId: string) => {
-    setSelectedImages(prev => 
+    setSelectedImages(prev =>
       prev.includes(imageId)
         ? prev.filter(id => id !== imageId)
         : [...prev, imageId]
@@ -254,8 +255,8 @@ export function ImageViewer() {
 
   // Get image folder
   const getImageFolder = (image: GeneratedImage) => {
-    return image.path.includes('/') 
-      ? image.path.split('/')[0] 
+    return image.path.includes('/')
+      ? image.path.split('/')[0]
       : 'default';
   };
 
@@ -266,7 +267,7 @@ export function ImageViewer() {
       img.tags?.forEach(tag => tags.add(tag));
     });
     setAvailableTags(Array.from(tags).sort());
-    
+
     // Also scan for folders
     scanForFolders();
   }, [generatedImages, scanForFolders]);
@@ -425,10 +426,15 @@ export function ImageViewer() {
     }
   };
 
-  const handleCreatePrompt = () => {
+  const handleCreatePrompt = async () => {
     if (!selectedImage || !newPromptName.trim()) return;
 
     try {
+      setIsLoading(true);
+
+      // Get existing prompts
+      const existingPrompts = await getAllPrompts();
+
       // Create a new prompt based on the selected image
       const newPrompt: Prompt = {
         id: crypto.randomUUID(),
@@ -444,17 +450,16 @@ export function ImageViewer() {
         tags: [...selectedImage.tags],
       };
 
-      // Get existing prompts
-      const existingPromptsStr = localStorage.getItem(STORAGE_KEY);
-      const existingPrompts: Prompt[] = existingPromptsStr
-        ? JSON.parse(existingPromptsStr)
-        : [];
-
       // Add new prompt
       existingPrompts.push(newPrompt);
 
-      // Save back to storage
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(existingPrompts));
+      // Save to server
+      const success = await saveAllPrompts(existingPrompts);
+
+      if (!success) {
+        console.error('Failed to save prompt');
+        return;
+      }
 
       // Close dialogs
       setCreatePromptDialogOpen(false);
@@ -463,11 +468,20 @@ export function ImageViewer() {
       setNewPromptName('');
     } catch (error) {
       console.error('Error creating prompt:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleReRunImage = (image: GeneratedImage) => {
+
+  // Updated handleReRunImage function to use the file-based API
+  const handleReRunImage = async (image: GeneratedImage) => {
     try {
+      setIsLoading(true);
+
+      // Get existing prompts
+      const existingPrompts = await getAllPrompts();
+
       // Create a new prompt based on the image
       const newPrompt: Prompt = {
         id: crypto.randomUUID(),
@@ -483,26 +497,26 @@ export function ImageViewer() {
         tags: [...image.tags],
       };
 
-      // Get existing prompts
-      const existingPromptsStr = localStorage.getItem(STORAGE_KEY);
-      const existingPrompts: Prompt[] = existingPromptsStr
-        ? JSON.parse(existingPromptsStr)
-        : [];
-
       // Add new prompt
       existingPrompts.push(newPrompt);
 
-      // Save back to storage
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(existingPrompts));
+      // Save to server
+      const success = await saveAllPrompts(existingPrompts);
 
-      // Navigate to prompts tab - would need to implement a proper navigation function
-      // This is a simple approach for now
+      if (!success) {
+        console.error('Failed to save prompt');
+        return;
+      }
+
+      // Navigate to prompts tab
       const promptsButton = document.querySelector('button[data-tab="prompts"]');
       if (promptsButton) {
         (promptsButton as HTMLButtonElement).click();
       }
     } catch (error) {
       console.error('Error re-running image:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -522,7 +536,7 @@ export function ImageViewer() {
     if (!selectedImages.includes(imageId)) {
       setSelectedImages(prev => [...prev, imageId]);
     }
-    
+
     // Set context menu position
     setContextMenuPosition({ x: e.clientX, y: e.clientY });
   };
@@ -626,26 +640,26 @@ export function ImageViewer() {
             </div>
           )}
         </div>
-        
+
         <div className="ml-4 flex items-center">
-          <Checkbox 
+          <Checkbox
             id="select-all"
             checked={selectedImages.length > 0 && selectedImages.length === filteredImages.length}
             className="mr-2"
             onClick={selectAllImages}
           />
           <label htmlFor="select-all" className="text-sm cursor-pointer">
-            {selectedImages.length === 0 
-              ? "Select All" 
-              : selectedImages.length === filteredImages.length 
-                ? "Deselect All" 
+            {selectedImages.length === 0
+              ? "Select All"
+              : selectedImages.length === filteredImages.length
+                ? "Deselect All"
                 : `Selected ${selectedImages.length}`}
           </label>
-          
+
           {selectedImages.length > 0 && (
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setFolderDialogOpen(true)}
               className="ml-2"
             >
@@ -653,11 +667,11 @@ export function ImageViewer() {
               Move to Folder
             </Button>
           )}
-          
+
           {selectedImages.length > 0 && (
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setDeleteDialogOpen(true)}
               className="ml-2 text-destructive"
             >
@@ -682,18 +696,17 @@ export function ImageViewer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredImages.map((image) => {
             const imageFolder = getImageFolder(image);
-            
+
             return (
-              <Card 
-                key={image.id} 
-                className={`overflow-hidden group relative ${
-                  selectedImages.includes(image.id) ? 'ring-2 ring-primary' : ''
-                }`}
+              <Card
+                key={image.id}
+                className={`overflow-hidden group relative ${selectedImages.includes(image.id) ? 'ring-2 ring-primary' : ''
+                  }`}
                 onContextMenu={(e) => handleContextMenu(e, image.id)}
               >
                 <div className="absolute top-2 left-2 z-10">
-                  <Checkbox 
-                    checked={selectedImages.includes(image.id)} 
+                  <Checkbox
+                    checked={selectedImages.includes(image.id)}
                     className="h-5 w-5 bg-background/80"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -701,7 +714,7 @@ export function ImageViewer() {
                     }}
                   />
                 </div>
-                
+
                 <div className="absolute top-2 right-2 z-10">
                   <Popover>
                     <PopoverTrigger asChild>
@@ -714,13 +727,12 @@ export function ImageViewer() {
                         <h4 className="font-medium text-sm">Move to folder</h4>
                         <div className="space-y-1">
                           {availableFolders.map(folder => (
-                            <div 
+                            <div
                               key={folder}
-                              className={`text-sm px-2 py-1.5 rounded cursor-pointer flex items-center ${
-                                imageFolder === folder 
-                                  ? 'bg-accent text-accent-foreground' 
+                              className={`text-sm px-2 py-1.5 rounded cursor-pointer flex items-center ${imageFolder === folder
+                                  ? 'bg-accent text-accent-foreground'
                                   : 'hover:bg-accent hover:text-accent-foreground'
-                              }`}
+                                }`}
                               onClick={() => {
                                 if (imageFolder !== folder) {
                                   moveImagesToFolder([image.id], folder);
@@ -736,7 +748,7 @@ export function ImageViewer() {
                     </PopoverContent>
                   </Popover>
                 </div>
-                
+
                 <div className="relative aspect-square">
                   {imageDataCache[image.id] ? (
                     <img
@@ -792,7 +804,7 @@ export function ImageViewer() {
                       {image.prompt.length > 100 ? "..." : ""}
                     </p>
                   </div>
-                  
+
                   <div className="flex justify-between w-full">
                     {imageFolder !== 'default' && (
                       <Badge variant="outline" className="mr-1">
@@ -800,9 +812,9 @@ export function ImageViewer() {
                         {imageFolder}
                       </Badge>
                     )}
-                    
+
                     <div className="flex-1" />
-                    
+
                     {image.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1 justify-end">
                         {image.tags.slice(0, 3).map((tag) => (
@@ -827,12 +839,12 @@ export function ImageViewer() {
 
       {/* Context Menu */}
       {contextMenuPosition && (
-        <div 
+        <div
           ref={contextMenuRef}
           className="fixed bg-background border rounded-md shadow-md py-1 z-50"
-          style={{ 
-            left: `${contextMenuPosition.x}px`, 
-            top: `${contextMenuPosition.y}px` 
+          style={{
+            left: `${contextMenuPosition.x}px`,
+            top: `${contextMenuPosition.y}px`
           }}
         >
           <div className="hover:bg-accent px-3 py-1.5 cursor-pointer" onClick={() => {
@@ -857,8 +869,8 @@ export function ImageViewer() {
             <DialogTitle>Confirm Deletion</DialogTitle>
           </DialogHeader>
           <p>
-            {selectedImages.length > 1 
-              ? `Are you sure you want to delete ${selectedImages.length} images?` 
+            {selectedImages.length > 1
+              ? `Are you sure you want to delete ${selectedImages.length} images?`
               : 'Are you sure you want to delete this image?'
             } This action cannot be undone.
           </p>
@@ -866,8 +878,8 @@ export function ImageViewer() {
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={selectedImages.length > 1 ? handleBulkDelete : handleDeleteImage}
               disabled={isLoading}
             >
@@ -902,7 +914,7 @@ export function ImageViewer() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="flex items-center">
               <Input
                 id="new-folder"
@@ -915,7 +927,7 @@ export function ImageViewer() {
                 }}
               />
             </div>
-            
+
             <p className="text-sm text-muted-foreground">
               Moving {selectedImages.length} {selectedImages.length === 1 ? 'image' : 'images'} to folder.
             </p>
@@ -924,7 +936,7 @@ export function ImageViewer() {
             <Button variant="outline" onClick={() => setFolderDialogOpen(false)}>
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={() => moveImagesToFolder(selectedImages, selectedFolder)}
               disabled={isLoading || !selectedFolder}
             >

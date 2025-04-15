@@ -21,13 +21,6 @@ function App() {
     localStorage.setItem('sd-utilities-activeTab', activeTab);
   }, [activeTab]);
 
-  // Initialize localStorage for prompts if it doesn't exist
-  useEffect(() => {
-    if (!localStorage.getItem('sd-utilities-prompts')) {
-      localStorage.setItem('sd-utilities-prompts', JSON.stringify([]));
-    }
-  }, []);
-
   // Map tabs to their content components
   const tabComponents = {
     prompts: <PromptsManager />,
