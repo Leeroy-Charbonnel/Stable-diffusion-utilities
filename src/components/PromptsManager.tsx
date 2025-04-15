@@ -158,7 +158,7 @@ export function PromptsManager() {
     setTotalRuns(prompt.runCount);
 
     for (let i = 0; i < prompt.runCount; i++) {
-      if (status !== 'executing') break; // Check if execution was cancelled
+      // Removed the cancellation check
 
       setCurrentRun(i + 1);
       setCurrentProgress(0);
@@ -218,8 +218,7 @@ export function PromptsManager() {
 
     try {
       for (const prompt of prompts) {
-        if (status !== 'executing') break; // Check if execution was cancelled
-
+        // Removed the cancellation check
         await executePrompt(prompt);
       }
 
@@ -260,10 +259,7 @@ export function PromptsManager() {
     }
   };
 
-  const handleCancelExecution = () => {
-    setStatus('idle');
-    setExecutingPromptId(null);
-  };
+  // Removed the handleCancelExecution function
 
   return (
     <div>
@@ -379,7 +375,7 @@ export function PromptsManager() {
               totalRuns: totalRuns,
               currentProgress: currentProgress
             }}
-            onCancelExecution={handleCancelExecution}
+            // Removed onCancelExecution prop
             availableSamplers={samplers}
             availableModels={models}
             availableLoras={loras}

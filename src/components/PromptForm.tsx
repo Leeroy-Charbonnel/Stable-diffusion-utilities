@@ -1,5 +1,4 @@
-// src/components/PromptForm.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { XIcon, Trash } from 'lucide-react';
-import { Prompt, LoraConfig } from '@/types';
+import { Prompt } from '@/types';
 import { copyToAppClipboard, getFromAppClipboard, handleContextMenu } from '@/lib/clipboard';
 
 type PromptFormProps = {
