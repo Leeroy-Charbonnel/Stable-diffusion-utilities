@@ -6,7 +6,6 @@ import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Play, XCircle, Settings, AlertCircle, CheckCircle } from 'lucide-react';
 import { useApi } from '@/contexts/ApiContext';
 import { Prompt } from '@/types';
@@ -20,9 +19,7 @@ export function BatchExecutor() {
     isLoading: apiLoading,
     error: apiError,
     generateImage,
-    availableModels,
-    currentModel,
-    setModel
+    availableModels
   } = useApi();
   
   const [apiUrl, setApiUrl] = useState<string>('http://localhost:7860');
@@ -171,37 +168,13 @@ export function BatchExecutor() {
             )}
             
             {isConnected && !apiError && (
-              <>
-                <Alert className="bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                  <CheckCircle className="h-4 w-4" />
-                  <AlertTitle>Connected</AlertTitle>
-                  <AlertDescription>
-                    Successfully connected to Stable Diffusion API.
-                  </AlertDescription>
-                </Alert>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="modelSelect">Active Model</Label>
-                  <div className="flex gap-2">
-                    <Select
-                      value={currentModel}
-                      onValueChange={(value) => setModel(value)}
-                      disabled={apiLoading}
-                    >
-                      <SelectTrigger id="modelSelect" className="flex-1">
-                        <SelectValue placeholder="Select model" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableModels.map((model) => (
-                          <SelectItem key={model} value={model}>
-                            {model}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </>
+              <Alert className="bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                <CheckCircle className="h-4 w-4" />
+                <AlertTitle>Connected</AlertTitle>
+                <AlertDescription>
+                  Successfully connected to Stable Diffusion API.
+                </AlertDescription>
+              </Alert>
             )}
             
             {apiError && (

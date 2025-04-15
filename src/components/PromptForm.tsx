@@ -45,7 +45,6 @@ export function PromptForm({
   });
   
   const [tagInput, setTagInput] = useState('');
-  const [loraWeight, setLoraWeight] = useState(1.0);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -94,10 +93,8 @@ export function PromptForm({
     if (loraName && !formData.loras?.some(l => l.name === loraName)) {
       setFormData(prev => ({
         ...prev,
-        loras: [...(prev.loras || []), { name: loraName, weight: loraWeight }]
+        loras: [...(prev.loras || []), { name: loraName, weight: 1.0 }]
       }));
-      // Reset weight to default after adding
-      setLoraWeight(1.0);
     }
   };
 
@@ -125,27 +122,11 @@ export function PromptForm({
     });
   };
 
-  // Log available LoRAs when component mounts or updates
-  React.useEffect(() => {
-    console.log("Available LoRAs in PromptForm:", availableLoras);
-  }, [availableLoras]);
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="name">Prompt Name</Label>
-        <Input
-          id="name"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          required
-          placeholder="Enter a name for this prompt"
-        />
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-3">
       
       <div>
-        <Label htmlFor="text">Prompt</Label>
+        <Label htmlFor="text" className="text-xs">Prompt</Label>
         <div 
           onContextMenu={(e) => 
             handleContextMenu(e, 'prompt', formData.text, {
@@ -166,14 +147,14 @@ export function PromptForm({
             value={formData.text}
             onChange={handleChange}
             required
-            placeholder="Enter prompt text... (right-click to copy/paste)"
-            className="min-h-24"
+            placeholder="Enter prompt text..."
+            className="min-h-20"
           />
         </div>
       </div>
 
       <div>
-        <Label htmlFor="negativePrompt">Negative Prompt</Label>
+        <Label htmlFor="negativePrompt" className="text-xs">Negative Prompt</Label>
         <div
           onContextMenu={(e) => 
             handleContextMenu(e, 'negativePrompt', formData.negativePrompt, {
@@ -193,14 +174,15 @@ export function PromptForm({
             name="negativePrompt"
             value={formData.negativePrompt}
             onChange={handleChange}
-            placeholder="Enter negative prompt text... (right-click to copy/paste)"
+            placeholder="Enter negative prompt text..."
+            className="min-h-16"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-4 gap-2">
         <div>
-          <Label htmlFor="seed">Seed</Label>
+          <Label htmlFor="seed" className="text-xs">Seed</Label>
           <Input
             id="seed"
             name="seed"
@@ -208,10 +190,11 @@ export function PromptForm({
             value={formData.seed !== undefined ? formData.seed : ''}
             onChange={handleChange}
             placeholder="Random"
+            className="h-8"
           />
         </div>
         <div>
-          <Label htmlFor="steps">Steps</Label>
+          <Label htmlFor="steps" className="text-xs">Steps</Label>
           <Input
             id="steps"
             name="steps"
@@ -221,48 +204,50 @@ export function PromptForm({
             required
             min={1}
             max={150}
+            className="h-8"
+          />
+        </div>
+        <div>
+          <Label htmlFor="width" className="text-xs">Width</Label>
+          <Input
+            id="width"
+            name="width"
+            type="number"
+            value={formData.width}
+            onChange={handleChange}
+            required
+            step={8}
+            min={64}
+            max={2048}
+            className="h-8"
+          />
+        </div>
+        <div>
+          <Label htmlFor="height" className="text-xs">Height</Label>
+          <Input
+            id="height"
+            name="height"
+            type="number"
+            value={formData.height}
+            onChange={handleChange}
+            required
+            step={8}
+            min={64}
+            max={2048}
+            className="h-8"
           />
         </div>
       </div>
 
-      <div>
-        <Label htmlFor="model">Model</Label>
-        {availableModels.length > 0 ? (
-          <Select
-            value={formData.model || ''}
-            onValueChange={(value) => handleSelectChange('model', value)}
-          >
-            <SelectTrigger id="model">
-              <SelectValue placeholder="Select a model" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableModels.map((model) => (
-                <SelectItem key={model} value={model}>
-                  {model}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <Input
-            id="model"
-            name="model"
-            value={formData.model || ''}
-            onChange={handleChange}
-            placeholder="No models available"
-          />
-        )}
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2">
         <div>
-          <Label htmlFor="sampler">Sampler</Label>
+          <Label htmlFor="sampler" className="text-xs">Sampler</Label>
           {availableSamplers.length > 0 ? (
             <Select
               value={formData.sampler}
               onValueChange={(value) => handleSelectChange('sampler', value)}
             >
-              <SelectTrigger id="sampler">
+              <SelectTrigger id="sampler" className="h-8">
                 <SelectValue placeholder="Select a sampler" />
               </SelectTrigger>
               <SelectContent>
@@ -280,82 +265,85 @@ export function PromptForm({
               value={formData.sampler}
               onChange={handleChange}
               required
+              className="h-8"
             />
           )}
         </div>
         <div>
-          <Label htmlFor="width">Width</Label>
-          <Input
-            id="width"
-            name="width"
-            type="number"
-            value={formData.width}
-            onChange={handleChange}
-            required
-            step={8}
-            min={64}
-            max={2048}
-          />
+          <Label htmlFor="model" className="text-xs">Model</Label>
+          {availableModels.length > 0 ? (
+            <Select
+              value={formData.model || ''}
+              onValueChange={(value) => handleSelectChange('model', value)}
+            >
+              <SelectTrigger id="model" className="h-8">
+                <SelectValue placeholder="Select a model" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableModels.map((model) => (
+                  <SelectItem key={model} value={model}>
+                    {model}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              id="model"
+              name="model"
+              value={formData.model || ''}
+              onChange={handleChange}
+              placeholder="No models available"
+              className="h-8"
+            />
+          )}
         </div>
         <div>
-          <Label htmlFor="height">Height</Label>
+          <Label htmlFor="runCount" className="text-xs">Run Count</Label>
           <Input
-            id="height"
-            name="height"
+            id="runCount"
+            name="runCount"
             type="number"
-            value={formData.height}
+            value={formData.runCount}
             onChange={handleChange}
             required
-            step={8}
-            min={64}
-            max={2048}
+            min={1}
+            max={100}
+            className="h-8"
           />
         </div>
       </div>
 
       {/* LoRA Section - Simplified */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <Label>LoRAs</Label>
+        <div className="flex items-center mb-1">
+          <Label className="text-xs">LoRAs</Label>
         </div>
         
-        <div className="flex gap-2 mb-2">
-          <div className="flex-1">
-            <Select
-              onValueChange={handleLoraSelect}
-              value="">
-              <SelectTrigger>
-                <SelectValue placeholder="Add a LoRA..." />
-              </SelectTrigger>
-              <SelectContent>
-                {availableLoras.map((lora) => (
-                  <SelectItem key={lora.name} value={lora.name}>
-                    {lora.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="w-24">
-            <Input
-              type="number"
-              min={0}
-              max={2}
-              step={0.05}
-              value={loraWeight}
-              onChange={(e) => setLoraWeight(parseFloat(e.target.value))}
-              title="Default weight for new LoRAs"
-            />
-          </div>
+        <div className="mb-2">
+          <Select
+            onValueChange={handleLoraSelect}
+            value="">
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="Add a LoRA..." />
+            </SelectTrigger>
+            <SelectContent>
+              {availableLoras.map((lora) => (
+                <SelectItem key={lora.name} value={lora.name}>
+                  {lora.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         
         {formData.loras && formData.loras.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-1">
             {formData.loras.map((lora) => (
-              <div key={lora.name} className="flex items-center gap-2 p-2 border rounded-md">
-                <div className="flex-1 text-sm font-medium">{lora.name}</div>
+              <div key={lora.name} className="flex items-center gap-2 p-1 border rounded-md">
+                <div className="flex-1 text-xs font-medium">{lora.name}</div>
                 <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground">Weight: {lora.weight.toFixed(2)}</span>
+                  <span className="text-xs text-muted-foreground w-10">{lora.weight.toFixed(2)}</span>
                   <Input
                     type="range"
                     min={0}
@@ -363,7 +351,7 @@ export function PromptForm({
                     step={0.05}
                     value={lora.weight}
                     onChange={(e) => updateLoraWeight(lora.name, parseFloat(e.target.value))}
-                    className="w-24 h-2"
+                    className="w-20 h-2"
                   />
                   <Button
                     type="button"
@@ -384,39 +372,27 @@ export function PromptForm({
       </div>
 
       <div>
-        <Label htmlFor="runCount">Run Count</Label>
-        <Input
-          id="runCount"
-          name="runCount"
-          type="number"
-          value={formData.runCount}
-          onChange={handleChange}
-          required
-          min={1}
-          max={100}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="tags">Tags</Label>
-        <div className="flex gap-2 mb-2">
+        <Label htmlFor="tags" className="text-xs">Tags</Label>
+        <div className="flex justify-between gap-2">
           <Input
             id="tags"
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={handleTagKeyDown}
             placeholder="Add tags (press Enter to add)"
+            className="h-8 flex-1"
           />
-          <Button
-            type="button"
-            onClick={() => addTag(tagInput.trim())}
-            disabled={!tagInput.trim()}
-          >
-            Add
-          </Button>
+          <div className="flex space-x-2">
+            <Button type="button" variant="outline" onClick={onCancel} size="sm" className="h-8">
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" className="h-8">
+              {prompt ? 'Update' : 'Add Prompt'}
+            </Button>
+          </div>
         </div>
         <div 
-          className="flex flex-wrap gap-2 mt-2"
+          className="flex flex-wrap gap-1 mt-1"
           onContextMenu={(e) => 
             handleContextMenu(e, 'tags', formData.tags, {
               copy: () => copyToAppClipboard('tags', formData.tags),
@@ -431,29 +407,16 @@ export function PromptForm({
             })
           }
         >
-          {formData.tags.length > 0 ? (
-            formData.tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                {tag}
-                <XIcon
-                  className="h-3 w-3 cursor-pointer"
-                  onClick={() => removeTag(tag)}
-                />
-              </Badge>
-            ))
-          ) : (
-            <div className="text-xs text-muted-foreground">(Right-click to copy/paste tags)</div>
-          )}
+          {formData.tags.map((tag) => (
+            <Badge key={tag} variant="secondary" className="flex items-center gap-1 text-xs py-1">
+              {tag}
+              <XIcon
+                className="h-3 w-3 cursor-pointer"
+                onClick={() => removeTag(tag)}
+              />
+            </Badge>
+          ))}
         </div>
-      </div>
-
-      <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit">
-          {prompt ? 'Update Prompt' : 'Add Prompt'}
-        </Button>
       </div>
     </form>
   );

@@ -17,6 +17,7 @@ export function PromptsManager() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [isAddingPrompt, setIsAddingPrompt] = useState(false);
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
+  const [newPromptName, setNewPromptName] = useState('New Prompt');
 
   // State for API data
   const [samplers, setSamplers] = useState<string[]>([]);
@@ -32,22 +33,15 @@ export function PromptsManager() {
       try {
         // Test API connection first
         const connected = await api.checkConnection();
-        console.log("API connection test result:", connected);
         
         if (connected) {
           // Fetch all required data in parallel
-          console.log("Fetching API data...");
           const [samplersData, modelsData, currentModelData, lorasData] = await Promise.all([
             api.api.getSamplers(),
             api.api.getModels(),
             api.api.getCurrentModel(),
             api.api.getLoras()
           ]);
-          
-          console.log("Fetched samplers:", samplersData);
-          console.log("Fetched models:", modelsData);
-          console.log("Fetched current model:", currentModelData);
-          console.log("Fetched LoRAs:", lorasData);
           
           setSamplers(samplersData);
           setModels(modelsData);
@@ -109,11 +103,13 @@ export function PromptsManager() {
   }, [prompts]);
 
   const handleAddPrompt = (prompt: Prompt) => {
-    setPrompts((prevPrompts) => [...prevPrompts, prompt]);
+    setPrompts((prevPrompts) => [...prevPrompts, {...prompt, name: newPromptName}]);
     setIsAddingPrompt(false);
+    // Reset the new prompt name for next time
+    setNewPromptName('New Prompt');
   };
 
-  const handleEditPrompt = (updatedPrompt: Prompt) => {
+  const handleUpdatePrompt = (updatedPrompt: Prompt) => {
     setPrompts((prevPrompts) =>
       prevPrompts.map((p) => (p.id === updatedPrompt.id ? updatedPrompt : p))
     );
@@ -145,7 +141,7 @@ export function PromptsManager() {
   const toggleEditPrompt = (id: string) => {
     setEditingPromptId(currentId => currentId === id ? null : id);
   };
-
+  
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -180,52 +176,50 @@ export function PromptsManager() {
       )}
 
       {isAddingPrompt && (
-        <Accordion type="single" collapsible className="mb-4" defaultValue="new-prompt">
-          <AccordionItem value="new-prompt" className="border rounded-md overflow-hidden">
-            <AccordionTrigger className="px-4 py-2">New Prompt</AccordionTrigger>
-            <AccordionContent className="px-4 pt-2 pb-4">
-              <PromptForm 
-                onSubmit={handleAddPrompt} 
-                onCancel={() => setIsAddingPrompt(false)} 
-                availableSamplers={samplers}
-                availableModels={models}
-                availableLoras={loras}
-                currentModel={currentModel}
-              />
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      )}
-
-      <div className="space-y-3">
-        {prompts.map((prompt) => (
-          <div key={prompt.id}>
-            {editingPromptId === prompt.id ? (
-              <Card className="overflow-hidden">
-                <div className="p-3 border-b font-medium">
-                  Edit Prompt: {prompt.name}
-                </div>
-                <CardContent className="p-4">
-                  <PromptForm
-                    prompt={prompt}
-                    onSubmit={handleEditPrompt}
-                    onCancel={() => setEditingPromptId(null)}
+        <Card className="mb-4 overflow-hidden">
+          <Accordion type="single" collapsible defaultValue="new-prompt">
+            <AccordionItem value="new-prompt" className="border-none">
+              <div className="px-3 py-2 flex items-center justify-between border-b">
+                <input
+                  type="text"
+                  value={newPromptName}
+                  onChange={(e) => setNewPromptName(e.target.value)}
+                  className="flex-1 text-sm font-medium bg-transparent border-none focus:outline-none"
+                  placeholder="Enter prompt name"
+                />
+              </div>
+              <AccordionContent>
+                <div className="p-4">
+                  <PromptForm 
+                    onSubmit={handleAddPrompt} 
+                    onCancel={() => setIsAddingPrompt(false)} 
                     availableSamplers={samplers}
                     availableModels={models}
                     availableLoras={loras}
                     currentModel={currentModel}
                   />
-                </CardContent>
-              </Card>
-            ) : (
-              <PromptCard
-                prompt={prompt}
-                onEditToggle={() => toggleEditPrompt(prompt.id)}
-                onDelete={() => handleDeletePrompt(prompt.id)}
-                onMove={handleMovePrompt}
-              />
-            )}
-          </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </Card>
+      )}
+
+      <div className="space-y-3">
+        {prompts.map((prompt) => (
+          <PromptCard
+            key={prompt.id}
+            prompt={prompt}
+            onEditToggle={() => toggleEditPrompt(prompt.id)}
+            onDelete={() => handleDeletePrompt(prompt.id)}
+            onMove={handleMovePrompt}
+            isEditing={editingPromptId === prompt.id}
+            onPromptUpdate={handleUpdatePrompt}
+            availableSamplers={samplers}
+            availableModels={models}
+            availableLoras={loras}
+            currentModel={currentModel}
+          />
         ))}
       </div>
 

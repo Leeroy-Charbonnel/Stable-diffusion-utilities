@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PromptsManager } from './components/PromptsManager';
 import { BatchExecutor } from './components/BatchExecutor';
 import { ImageViewer } from './components/ImageViewer';
@@ -9,7 +9,25 @@ import { Button } from '@/components/ui/button';
 import { Image, ListChecks, Play } from 'lucide-react';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'prompts' | 'execute' | 'images'>('prompts');
+  const [activeTab, setActiveTab] = useState<'prompts' | 'execute' | 'images'>(
+    // Try to restore the last active tab from localStorage, default to 'prompts'
+    () => {
+      const savedTab = localStorage.getItem('sd-utilities-activeTab');
+      return (savedTab as 'prompts' | 'execute' | 'images') || 'prompts';
+    }
+  );
+
+  // Save the active tab to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('sd-utilities-activeTab', activeTab);
+  }, [activeTab]);
+
+  // Initialize localStorage for prompts if it doesn't exist
+  useEffect(() => {
+    if (!localStorage.getItem('sd-utilities-prompts')) {
+      localStorage.setItem('sd-utilities-prompts', JSON.stringify([]));
+    }
+  }, []);
 
   // Map tabs to their content components
   const tabComponents = {
