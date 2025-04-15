@@ -1,9 +1,15 @@
 // src/services/api.ts
 import { Prompt, GeneratedImage } from '@/types';
+import { 
+  saveGeneratedImage,
+  getAllImageMetadata,
+  getImageData as getStoredImageData,
+  updateImageMetadata,
+  deleteImage as deleteStoredImage
+} from '@/lib/fileSystemApi';
 
 // Configure the base URL for the Stable Diffusion API
-const API_BASE_URL = 'http://localhost:7860'; //Default local address for AUTOMATIC1111
-const STORAGE_KEY = 'sd-utilities-data';
+const API_BASE_URL = 'http://localhost:7860'; // Default local address for AUTOMATIC1111
 
 // API request types based on AUTOMATIC1111 API schema
 export interface Text2ImageRequest {
@@ -41,10 +47,13 @@ export interface Text2ImageResponse {
 // API service class
 export class ApiService {
   private apiUrl: string;
+  private cachedImages: GeneratedImage[] = [];
+  private isLoadingImages: boolean = false;
 
   constructor(baseUrl = API_BASE_URL) {
     this.apiUrl = baseUrl;
     console.log(`ApiService initialized with base URL: ${baseUrl}`);
+    this.loadImages();
   }
 
   // Set the base URL for the API
@@ -180,122 +189,86 @@ export class ApiService {
     }
   }
 
-  // Save base64 image to file (this would be handled by the backend in a real app)
-  // For now we'll just simulate it by saving to local storage
+  // Save generated image with metadata
   async saveGeneratedImage(promptId: string, imageBase64: string, promptData: Prompt): Promise<GeneratedImage | null> {
     console.log(`Saving generated image for prompt ID: ${promptId}`);
     try {
       // Generate a unique ID for the image
       const imageId = crypto.randomUUID();
       
-      // In a real application, you would send this to your backend to save the image file
-      // Here we'll simulate it with local storage
-      const timestamp = new Date().toISOString();
-      const filename = `img_${timestamp.replace(/[:.]/g, '-')}_${imageId.slice(0, 8)}.png`;
+      // Save using file system API
+      const savedImage = await saveGeneratedImage(imageId, imageBase64, promptData);
       
-      const generatedImage: GeneratedImage = {
-        id: imageId,
-        promptId: promptId,
-        filename: filename,
-        path: `generated/${filename}`, // This would be a real path in a production app
-        prompt: promptData.text,
-        negativePrompt: promptData.negativePrompt,
-        seed: promptData.seed,
-        steps: promptData.steps,
-        sampler: promptData.sampler,
-        width: promptData.width,
-        height: promptData.height,
-        tags: promptData.tags || [],
-        createdAt: timestamp,
-      };
+      if (savedImage) {
+        // Update the cached images
+        this.cachedImages.push(savedImage);
+      }
       
-      // Save to local storage
-      const existingDataStr = localStorage.getItem(STORAGE_KEY);
-      const existingData = existingDataStr ? JSON.parse(existingDataStr) : { images: [] };
-      
-      // Store the base64 image data temporarily (in a production app, this would be a file path)
-      // Warning: This will quickly fill up local storage with large images
-      // Only for demonstration purposes
-      localStorage.setItem(`img_${imageId}`, imageBase64);
-      
-      existingData.images = [...existingData.images, generatedImage];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(existingData));
-      
-      console.log(`Image saved successfully with ID: ${imageId}`);
-      return generatedImage;
+      return savedImage;
     } catch (error) {
       console.error('Failed to save generated image:', error);
       return null;
     }
   }
 
+  // Load images from the file system API
+  private async loadImages() {
+    if (this.isLoadingImages) return;
+    
+    this.isLoadingImages = true;
+    try {
+      this.cachedImages = await getAllImageMetadata();
+      console.log(`Loaded ${this.cachedImages.length} images from storage`);
+    } catch (error) {
+      console.error('Failed to load images:', error);
+    } finally {
+      this.isLoadingImages = false;
+    }
+  }
+
+  // Refresh images from storage
+  async refreshImages() {
+    await this.loadImages();
+    return this.cachedImages;
+  }
+
   // Get all saved images
   getStoredImages(): GeneratedImage[] {
-    console.log(`Retrieving stored images from localStorage`);
-    const dataStr = localStorage.getItem(STORAGE_KEY);
-    if (!dataStr) {
-      console.log('No stored images found');
-      return [];
-    }
-    
-    const data = JSON.parse(dataStr);
-    console.log(`Retrieved ${data.images?.length || 0} stored images`);
-    return data.images || [];
+    return this.cachedImages;
   }
 
   // Get image data by ID
-  getImageData(imageId: string): string | null {
-    const imageData = localStorage.getItem(`img_${imageId}`);
-    console.log(`Retrieved image data for ID ${imageId}: ${imageData ? 'SUCCESS' : 'NOT FOUND'}`);
+  async getImageData(imageId: string): Promise<string | null> {
+    const imageData = await getStoredImageData(imageId);
     return imageData;
   }
 
   // Delete an image
-  deleteImage(imageId: string): boolean {
+  async deleteImage(imageId: string): Promise<boolean> {
     console.log(`Deleting image with ID: ${imageId}`);
-    try {
-      // Remove the image data
-      localStorage.removeItem(`img_${imageId}`);
-      
-      // Remove from the image list
-      const dataStr = localStorage.getItem(STORAGE_KEY);
-      if (!dataStr) return false;
-      
-      const data = JSON.parse(dataStr);
-      const initialCount = data.images.length;
-      data.images = data.images.filter((img: GeneratedImage) => img.id !== imageId);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      
-      console.log(`Image deleted successfully. Images before: ${initialCount}, after: ${data.images.length}`);
-      return true;
-    } catch (error) {
-      console.error('Failed to delete image:', error);
-      return false;
+    const success = await deleteStoredImage(imageId);
+    
+    if (success) {
+      // Update cache
+      this.cachedImages = this.cachedImages.filter(img => img.id !== imageId);
     }
+    
+    return success;
   }
 
   // Update image metadata
-  updateImageMetadata(imageId: string, updates: Partial<GeneratedImage>): boolean {
+  async updateImageMetadata(imageId: string, updates: Partial<GeneratedImage>): Promise<boolean> {
     console.log(`Updating metadata for image ID: ${imageId}`, updates);
-    try {
-      const dataStr = localStorage.getItem(STORAGE_KEY);
-      if (!dataStr) return false;
-      
-      const data = JSON.parse(dataStr);
-      data.images = data.images.map((img: GeneratedImage) => {
-        if (img.id === imageId) {
-          return { ...img, ...updates };
-        }
-        return img;
-      });
-      
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      console.log(`Image metadata updated successfully`);
-      return true;
-    } catch (error) {
-      console.error('Failed to update image metadata:', error);
-      return false;
+    const success = await updateImageMetadata(imageId, updates);
+    
+    if (success) {
+      // Update cache
+      this.cachedImages = this.cachedImages.map(img => 
+        img.id === imageId ? { ...img, ...updates } : img
+      );
     }
+    
+    return success;
   }
 }
 

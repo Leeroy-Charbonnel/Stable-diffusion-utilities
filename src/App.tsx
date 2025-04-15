@@ -1,20 +1,19 @@
 // src/App.tsx
 import React, { useState, useEffect } from 'react';
 import { PromptsManager } from './components/PromptsManager';
-import { BatchExecutor } from './components/BatchExecutor';
 import { ImageViewer } from './components/ImageViewer';
 import { ApiProvider } from './contexts/ApiContext';
 import { PromptContextProvider } from './contexts/PromptContextProvider';
 import { Button } from '@/components/ui/button';
-import { Image, ListChecks, Play } from 'lucide-react';
+import { Image, ListChecks } from 'lucide-react';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'prompts' | 'execute' | 'images'>(
+  const [activeTab, setActiveTab] = useState<'prompts' | 'images'>(
     // Try to restore the last active tab from localStorage, default to 'prompts'
-    () => {
-      const savedTab = localStorage.getItem('sd-utilities-activeTab');
-      return (savedTab as 'prompts' | 'execute' | 'images') || 'prompts';
-    }
+    // () => {
+    //   const savedTab = localStorage.getItem('sd-utilities-activeTab');
+    //   return (savedTab === 'images' ? 'images' : 'prompts');
+    // }
   );
 
   // Save the active tab to localStorage whenever it changes
@@ -32,7 +31,6 @@ function App() {
   // Map tabs to their content components
   const tabComponents = {
     prompts: <PromptsManager />,
-    execute: <BatchExecutor />,
     images: <ImageViewer />
   };
 
@@ -48,7 +46,7 @@ function App() {
                 Stable Diffusion Tools
               </p>
             </div>
-            
+
             <nav className="flex flex-col p-2 gap-1">
               <Button
                 variant={activeTab === 'prompts' ? 'default' : 'ghost'}
@@ -58,16 +56,7 @@ function App() {
                 <ListChecks className="mr-2 h-4 w-4" />
                 Prompts
               </Button>
-              
-              <Button
-                variant={activeTab === 'execute' ? 'default' : 'ghost'} 
-                className="justify-start"
-                onClick={() => setActiveTab('execute')}
-              >
-                <Play className="mr-2 h-4 w-4" />
-                Execute
-              </Button>
-              
+
               <Button
                 variant={activeTab === 'images' ? 'default' : 'ghost'}
                 className="justify-start"
@@ -78,7 +67,7 @@ function App() {
               </Button>
             </nav>
           </div>
-          
+
           {/* Main content */}
           <div className="flex-1 overflow-auto">
             <div className="max-w-4xl mx-auto p-6">

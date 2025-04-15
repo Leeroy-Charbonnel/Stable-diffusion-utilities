@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, Check, X } from 'lucide-react';
+import { Trash2, Check, X, Play } from 'lucide-react';
 import { Prompt } from '../types';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -16,23 +16,25 @@ type PromptCardProps = {
   onMove: (id: string, direction: 'up' | 'down') => void;
   isEditing: boolean;
   onPromptUpdate: (updatedPrompt: Prompt) => void;
+  onRunPrompt: (prompt: Prompt) => void;
   availableSamplers?: string[];
   availableModels?: string[];
   availableLoras?: any[];
   currentModel?: string;
 };
 
-export function PromptCard({ 
-  prompt, 
-  onEditToggle, 
-  onDelete, 
-  onMove, 
-  isEditing, 
+export function PromptCard({
+  prompt,
+  onEditToggle,
+  onDelete,
+  onMove,
+  isEditing,
   onPromptUpdate,
+  onRunPrompt,
   availableSamplers = [],
   availableModels = [],
   availableLoras = [],
-  currentModel = '' 
+  currentModel = ''
 }: PromptCardProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(prompt.name);
@@ -66,9 +68,9 @@ export function PromptCard({
 
   return (
     <Card className="overflow-hidden">
-      <Accordion 
-        type="single" 
-        collapsible 
+      <Accordion
+        type="single"
+        collapsible
         className="w-full"
         value={isEditing ? prompt.id : undefined}
       >
@@ -84,17 +86,17 @@ export function PromptCard({
                     autoFocus
                     className="h-7 text-sm py-0"
                   />
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
+                  <Button
+                    size="icon"
+                    variant="ghost"
                     onClick={saveNameChange}
                     className="h-6 w-6 ml-1"
                   >
                     <Check className="h-3.5 w-3.5" />
                   </Button>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
+                  <Button
+                    size="icon"
+                    variant="ghost"
                     onClick={cancelNameEdit}
                     className="h-6 w-6"
                   >
@@ -103,7 +105,7 @@ export function PromptCard({
                 </div>
               ) : (
                 <AccordionTrigger className="hover:no-underline py-0 flex">
-                  <h3 
+                  <h3
                     className="text-sm font-medium truncate hover:underline cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -116,6 +118,18 @@ export function PromptCard({
               )}
             </div>
             <div className="flex items-center space-x-1 ml-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRunPrompt(prompt);
+                }}
+                className="h-7 text-xs"
+              >
+                <Play className="mr-1 h-3 w-3" />
+                Run
+              </Button>
               <div className="text-xs bg-secondary text-secondary-foreground rounded px-1.5 py-0.5">
                 {prompt.runCount}×
               </div>
@@ -129,7 +143,7 @@ export function PromptCard({
                 className="h-6 w-6 text-muted-foreground hover:text-foreground"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m18 15-6-6-6 6"/>
+                  <path d="m18 15-6-6-6 6" />
                 </svg>
               </Button>
               <Button
@@ -142,7 +156,7 @@ export function PromptCard({
                 className="h-6 w-6 text-muted-foreground hover:text-foreground"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m6 9 6 6 6-6"/>
+                  <path d="m6 9 6 6 6-6" />
                 </svg>
               </Button>
               <Button

@@ -1,38 +1,46 @@
 // src/components/ImageViewer.tsx
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
+import {
+  Card,
+  CardContent,
+  CardHeader,
   CardTitle,
   CardFooter
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogFooter
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  Search, 
-  Tag, 
-  Trash2, 
-  Image as ImageIcon, 
-  XIcon, 
+import {
+  Search,
+  Tag,
+  Trash2,
+  Image as ImageIcon,
+  XIcon,
   InfoIcon,
   Download,
-  Plus
+  Plus,
+  Copy,
+  TerminalSquare,
+  FileDown,
+  RefreshCw
 } from 'lucide-react';
 import { useApi } from '@/contexts/ApiContext';
 import { GeneratedImage } from '@/types';
+import { exportAllData } from '@/lib/fileSystemApi';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { STORAGE_KEY } from '@/lib/constants';
+import { Prompt } from '@/types';
 
 export function ImageViewer() {
-  const { generatedImages, getImageData, deleteImage, updateImageTags } = useApi();
+  const { generatedImages, getImageData, deleteImage, updateImageTags, refreshImages } = useApi();
   const [filteredImages, setFilteredImages] = useState<GeneratedImage[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -41,6 +49,43 @@ export function ImageViewer() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [promptCopied, setPromptCopied] = useState(false);
+  const [showExportSuccess, setShowExportSuccess] = useState(false);
+  const [createPromptDialogOpen, setCreatePromptDialogOpen] = useState(false);
+  const [newPromptName, setNewPromptName] = useState('');
+  const [imageDataCache, setImageDataCache] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Load image data for a specific image
+  const loadImageData = async (imageId: string) => {
+    if (imageDataCache[imageId]) {
+      return imageDataCache[imageId];
+    }
+
+    try {
+      const data = await getImageData(imageId);
+      if (data) {
+        setImageDataCache(prev => ({ ...prev, [imageId]: data }));
+        return data;
+      }
+    } catch (error) {
+      console.error(`Error loading image ${imageId}:`, error);
+    }
+
+    return null;
+  };
+
+  // Refresh images
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    try {
+      await refreshImages();
+      // Clear image data cache
+      setImageDataCache({});
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   //Extract all unique tags from images
   useEffect(() => {
@@ -54,7 +99,7 @@ export function ImageViewer() {
   //Filter images based on search query and selected tags
   useEffect(() => {
     let filtered = [...generatedImages];
-    
+
     //Search by prompt or tags
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -64,19 +109,28 @@ export function ImageViewer() {
           img.tags.some((tag) => tag.toLowerCase().includes(query))
       );
     }
-    
+
     //Filter by selected tags (all selected tags must be present)
     if (selectedTags.length > 0) {
       filtered = filtered.filter((img) =>
         selectedTags.every((tag) => img.tags.includes(tag))
       );
     }
-    
+
     //Sort by creation date, newest first
     filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    
+
     setFilteredImages(filtered);
   }, [generatedImages, searchQuery, selectedTags]);
+
+  // Preload images when filtered images change
+  useEffect(() => {
+    // Preload the first few images
+    const preloadCount = Math.min(9, filteredImages.length);
+    for (let i = 0; i < preloadCount; i++) {
+      loadImageData(filteredImages[i].id);
+    }
+  }, [filteredImages]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -93,6 +147,12 @@ export function ImageViewer() {
   const handleDeleteImage = async () => {
     if (selectedImage) {
       await deleteImage(selectedImage.id);
+
+      // Remove from cache
+      const newCache = { ...imageDataCache };
+      delete newCache[selectedImage.id];
+      setImageDataCache(newCache);
+
       setDeleteDialogOpen(false);
       setSelectedImage(null);
     }
@@ -118,7 +178,7 @@ export function ImageViewer() {
 
   const handleDownload = () => {
     if (selectedImage) {
-      const imageData = getImageData(selectedImage.id);
+      const imageData = imageDataCache[selectedImage.id];
       if (imageData) {
         //Create a temporary link and trigger download
         const link = document.createElement('a');
@@ -129,12 +189,84 @@ export function ImageViewer() {
     }
   };
 
+  const handleCopyPrompt = () => {
+    if (selectedImage) {
+      navigator.clipboard.writeText(selectedImage.prompt);
+      setPromptCopied(true);
+      setTimeout(() => setPromptCopied(false), 2000);
+    }
+  };
+
+  const handleExportData = async () => {
+    if (await exportAllData()) {
+      setShowExportSuccess(true);
+      setTimeout(() => setShowExportSuccess(false), 3000);
+    }
+  };
+
+  const handleCreatePrompt = () => {
+    if (selectedImage && newPromptName.trim()) {
+      // Create a new prompt based on the selected image
+      const newPrompt: Prompt = {
+        id: crypto.randomUUID(),
+        name: newPromptName.trim(),
+        text: selectedImage.prompt,
+        negativePrompt: selectedImage.negativePrompt,
+        seed: selectedImage.seed,
+        steps: selectedImage.steps,
+        sampler: selectedImage.sampler,
+        width: selectedImage.width,
+        height: selectedImage.height,
+        runCount: 1,
+        tags: [...selectedImage.tags],
+      };
+
+      // Get existing prompts
+      const existingPromptsStr = localStorage.getItem(STORAGE_KEY);
+      const existingPrompts: Prompt[] = existingPromptsStr
+        ? JSON.parse(existingPromptsStr)
+        : [];
+
+      // Add new prompt
+      existingPrompts.push(newPrompt);
+
+      // Save back to storage
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(existingPrompts));
+
+      // Close dialogs
+      setCreatePromptDialogOpen(false);
+      setDetailDialogOpen(false);
+      setSelectedImage(null);
+      setNewPromptName('');
+    }
+  };
+
+  const handleImageClick = async (image: GeneratedImage) => {
+    // Load image data if not already loaded
+    if (!imageDataCache[image.id]) {
+      await loadImageData(image.id);
+    }
+
+    setSelectedImage(image);
+    setDetailDialogOpen(true);
+  };
+
   //If there are no images
   if (generatedImages.length === 0) {
     return (
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Image Gallery</h2>
+          <div className="flex gap-2">
+            <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              {isLoading ? 'Refreshing...' : 'Refresh'}
+            </Button>
+            <Button onClick={handleExportData} variant="outline">
+              <FileDown className="mr-2 h-4 w-4" />
+              Export Data
+            </Button>
+          </div>
         </div>
 
         <Card>
@@ -142,7 +274,7 @@ export function ImageViewer() {
             <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-4" />
             <h3 className="text-lg font-medium mb-2">No Images Found</h3>
             <p className="text-muted-foreground">
-              Generate some images using the Execute tab to see them here.
+              Generate some images using the Prompts tab to see them here.
             </p>
           </CardContent>
         </Card>
@@ -154,8 +286,16 @@ export function ImageViewer() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Image Gallery</h2>
-        
+
         <div className="flex gap-2">
+          <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading ? 'Refreshing...' : 'Refresh'}
+          </Button>
+          <Button onClick={handleExportData} variant="outline">
+            <FileDown className="mr-2 h-4 w-4" />
+            Export Data
+          </Button>
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -168,6 +308,16 @@ export function ImageViewer() {
           </div>
         </div>
       </div>
+
+      {showExportSuccess && (
+        <Alert className="mb-4 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+          <InfoIcon className="h-4 w-4" />
+          <AlertTitle>Export Successful</AlertTitle>
+          <AlertDescription>
+            All image data has been exported successfully.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {availableTags.length > 0 && (
         <div className="mb-4">
@@ -203,35 +353,30 @@ export function ImageViewer() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredImages.map((image) => {
-            const imageData = getImageData(image.id);
-            
             return (
               <Card key={image.id} className="overflow-hidden group">
                 <div className="relative aspect-square">
-                  {imageData ? (
+                  {imageDataCache[image.id] ? (
                     <img
-                      src={imageData}
+                      src={imageDataCache[image.id]}
                       alt={image.prompt}
                       className="object-cover w-full h-full cursor-pointer"
-                      onClick={() => {
-                        setSelectedImage(image);
-                        setDetailDialogOpen(true);
-                      }}
+                      onClick={() => handleImageClick(image)}
                     />
                   ) : (
-                    <div className="flex items-center justify-center w-full h-full bg-muted">
+                    <div
+                      className="flex items-center justify-center w-full h-full bg-muted cursor-pointer"
+                      onClick={() => handleImageClick(image)}
+                    >
                       <ImageIcon className="h-10 w-10 text-muted-foreground" />
                     </div>
                   )}
-                  
+
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => {
-                        setSelectedImage(image);
-                        setDetailDialogOpen(true);
-                      }}
+                      onClick={() => handleImageClick(image)}
                     >
                       Details
                     </Button>
@@ -247,13 +392,13 @@ export function ImageViewer() {
                     </Button>
                   </div>
                 </div>
-                
+
                 <CardFooter className="flex flex-col items-start pt-4">
                   <p className="text-sm line-clamp-2 font-medium mb-2">
                     {image.prompt.substring(0, 100)}
                     {image.prompt.length > 100 ? "..." : ""}
                   </p>
-                  
+
                   {image.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {image.tags.slice(0, 3).map((tag) => (
@@ -299,13 +444,13 @@ export function ImageViewer() {
           <DialogHeader>
             <DialogTitle>Image Details</DialogTitle>
           </DialogHeader>
-          
+
           {selectedImage && (
             <div className="grid md:grid-cols-2 gap-4 flex-1 overflow-hidden">
               <div className="relative aspect-square mx-auto max-h-[50vh] overflow-hidden">
-                {getImageData(selectedImage.id) ? (
+                {imageDataCache[selectedImage.id] ? (
                   <img
-                    src={getImageData(selectedImage.id)!}
+                    src={imageDataCache[selectedImage.id]}
                     alt={selectedImage.prompt}
                     className="object-contain w-full h-full"
                   />
@@ -315,21 +460,30 @@ export function ImageViewer() {
                   </div>
                 )}
               </div>
-              
+
               <ScrollArea className="h-[50vh]">
                 <div className="space-y-4 p-1">
-                  <div>
+                  <div className="flex justify-between">
                     <h3 className="text-sm font-medium mb-1">Prompt</h3>
-                    <p className="text-sm">{selectedImage.prompt}</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCopyPrompt}
+                      className="h-6 px-2"
+                    >
+                      <Copy className="h-3.5 w-3.5 mr-1" />
+                      {promptCopied ? "Copied!" : "Copy"}
+                    </Button>
                   </div>
-                  
+                  <p className="text-sm">{selectedImage.prompt}</p>
+
                   {selectedImage.negativePrompt && (
                     <div>
                       <h3 className="text-sm font-medium mb-1">Negative Prompt</h3>
                       <p className="text-sm">{selectedImage.negativePrompt}</p>
                     </div>
                   )}
-                  
+
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                     <div>
                       <h3 className="text-xs font-medium">Seed</h3>
@@ -354,7 +508,7 @@ export function ImageViewer() {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div>
                     <h3 className="text-sm font-medium mb-2">Tags</h3>
                     <div className="flex flex-wrap gap-2 mb-2">
@@ -371,7 +525,7 @@ export function ImageViewer() {
                         <p className="text-sm text-muted-foreground">No tags</p>
                       )}
                     </div>
-                    
+
                     <div className="flex items-center gap-2 mt-2">
                       <Input
                         value={tagInput}
@@ -398,14 +552,57 @@ export function ImageViewer() {
               </ScrollArea>
             </div>
           )}
-          
+
           <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setNewPromptName(selectedImage?.prompt.substring(0, 30) + '...' || 'New Prompt');
+                setCreatePromptDialogOpen(true);
+              }}
+            >
+              <TerminalSquare className="h-4 w-4 mr-2" />
+              Create Prompt
+            </Button>
             <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
               Close
             </Button>
             <Button onClick={handleDownload}>
               <Download className="h-4 w-4 mr-2" />
               Download
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Prompt Dialog */}
+      <Dialog open={createPromptDialogOpen} onOpenChange={setCreatePromptDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Prompt</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="prompt-name" className="text-sm font-medium">
+                Prompt Name
+              </label>
+              <Input
+                id="prompt-name"
+                value={newPromptName}
+                onChange={(e) => setNewPromptName(e.target.value)}
+                placeholder="Enter prompt name"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              This will create a new prompt using the settings from this image.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreatePromptDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreatePrompt} disabled={!newPromptName.trim()}>
+              Create Prompt
             </Button>
           </DialogFooter>
         </DialogContent>
