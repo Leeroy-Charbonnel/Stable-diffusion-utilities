@@ -5,6 +5,7 @@ export interface LoraConfig {
 
 export interface Prompt {
   id: string;
+  name: string;
   text: string;
   negativePrompt?: string;
   seed?: number; 

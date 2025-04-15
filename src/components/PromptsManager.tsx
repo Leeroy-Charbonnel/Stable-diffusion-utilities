@@ -1,23 +1,97 @@
 // src/components/PromptsManager.tsx
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { PlusCircle, InfoIcon } from 'lucide-react';
 import { Prompt } from '@/types';
 import { PromptForm } from './PromptForm';
 import { PromptCard } from './PromptCard';
 import { useApi } from '@/contexts/ApiContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const STORAGE_KEY = 'sd-utilities-prompts';
 
 export function PromptsManager() {
-  const { isConnected, availableSamplers, availableModels, availableLoras, currentModel } = useApi();
+  const api = useApi();
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [isAddingPrompt, setIsAddingPrompt] = useState(false);
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
 
-  //Load prompts from local storage on initial render
+  // State for API data
+  const [samplers, setSamplers] = useState<string[]>([]);
+  const [models, setModels] = useState<string[]>([]);
+  const [loras, setLoras] = useState<any[]>([]);
+  const [currentModel, setCurrentModel] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Fetch API data only once on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Test API connection first
+        const connected = await api.checkConnection();
+        console.log("API connection test result:", connected);
+        
+        if (connected) {
+          // Fetch all required data in parallel
+          console.log("Fetching API data...");
+          const [samplersData, modelsData, currentModelData, lorasData] = await Promise.all([
+            api.api.getSamplers(),
+            api.api.getModels(),
+            api.api.getCurrentModel(),
+            api.api.getLoras()
+          ]);
+          
+          console.log("Fetched samplers:", samplersData);
+          console.log("Fetched models:", modelsData);
+          console.log("Fetched current model:", currentModelData);
+          console.log("Fetched LoRAs:", lorasData);
+          
+          setSamplers(samplersData);
+          setModels(modelsData);
+          if (currentModelData) setCurrentModel(currentModelData);
+          setLoras(lorasData);
+        }
+      } catch (error) {
+        console.error("Error fetching API data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    // Only fetch once when component mounts
+    fetchData();
+  }, []); // Empty dependency array to prevent infinite loop
+
+  // Add a manual refresh function in case you need to refresh the data
+  const refreshApiData = async () => {
+    setIsLoading(true);
+    try {
+      const connected = await api.checkConnection();
+      
+      if (connected) {
+        const [samplersData, modelsData, currentModelData, lorasData] = await Promise.all([
+          api.api.getSamplers(),
+          api.api.getModels(),
+          api.api.getCurrentModel(),
+          api.api.getLoras()
+        ]);
+        
+        setSamplers(samplersData);
+        setModels(modelsData);
+        if (currentModelData) setCurrentModel(currentModelData);
+        setLoras(lorasData);
+      }
+    } catch (error) {
+      console.error("Error refreshing API data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load prompts from local storage on initial render
   useEffect(() => {
     const savedPrompts = localStorage.getItem(STORAGE_KEY);
     if (savedPrompts) {
@@ -29,7 +103,7 @@ export function PromptsManager() {
     }
   }, []);
 
-  //Save prompts to local storage whenever they change
+  // Save prompts to local storage whenever they change
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(prompts));
   }, [prompts]);
@@ -68,17 +142,28 @@ export function PromptsManager() {
     setPrompts(newPrompts);
   };
 
+  const toggleEditPrompt = (id: string) => {
+    setEditingPromptId(currentId => currentId === id ? null : id);
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Prompt List</h2>
-        <Button onClick={() => setIsAddingPrompt(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Prompt
-        </Button>
+        <div className="flex gap-2">
+          {api.isConnected && (
+            <Button variant="outline" onClick={refreshApiData} disabled={isLoading}>
+              Refresh Models & LoRAs
+            </Button>
+          )}
+          <Button onClick={() => setIsAddingPrompt(!isAddingPrompt)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            {isAddingPrompt ? 'Cancel' : 'Add Prompt'}
+          </Button>
+        </div>
       </div>
 
-      {!isConnected && (
+      {!api.isConnected && (
         <Alert className="mb-4">
           <InfoIcon className="h-4 w-4" />
           <AlertTitle>Not Connected</AlertTitle>
@@ -88,38 +173,54 @@ export function PromptsManager() {
         </Alert>
       )}
 
-      {isAddingPrompt && (
-        <Card className="mb-4 p-4">
-          <PromptForm 
-            onSubmit={handleAddPrompt} 
-            onCancel={() => setIsAddingPrompt(false)} 
-            availableSamplers={availableSamplers}
-            availableModels={availableModels}
-            availableLoras={availableLoras}
-            currentModel={currentModel}
-          />
+      {isLoading && (
+        <Card className="p-4 mb-4">
+          <div className="text-center text-muted-foreground">Loading data from API...</div>
         </Card>
       )}
 
-      <div className="space-y-4">
+      {isAddingPrompt && (
+        <Accordion type="single" collapsible className="mb-4" defaultValue="new-prompt">
+          <AccordionItem value="new-prompt" className="border rounded-md overflow-hidden">
+            <AccordionTrigger className="px-4 py-2">New Prompt</AccordionTrigger>
+            <AccordionContent className="px-4 pt-2 pb-4">
+              <PromptForm 
+                onSubmit={handleAddPrompt} 
+                onCancel={() => setIsAddingPrompt(false)} 
+                availableSamplers={samplers}
+                availableModels={models}
+                availableLoras={loras}
+                currentModel={currentModel}
+              />
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      )}
+
+      <div className="space-y-3">
         {prompts.map((prompt) => (
           <div key={prompt.id}>
             {editingPromptId === prompt.id ? (
-              <Card className="p-4">
-                <PromptForm
-                  prompt={prompt}
-                  onSubmit={handleEditPrompt}
-                  onCancel={() => setEditingPromptId(null)}
-                  availableSamplers={availableSamplers}
-                  availableModels={availableModels}
-                  availableLoras={availableLoras}
-                  currentModel={currentModel}
-                />
+              <Card className="overflow-hidden">
+                <div className="p-3 border-b font-medium">
+                  Edit Prompt: {prompt.name}
+                </div>
+                <CardContent className="p-4">
+                  <PromptForm
+                    prompt={prompt}
+                    onSubmit={handleEditPrompt}
+                    onCancel={() => setEditingPromptId(null)}
+                    availableSamplers={samplers}
+                    availableModels={models}
+                    availableLoras={loras}
+                    currentModel={currentModel}
+                  />
+                </CardContent>
               </Card>
             ) : (
               <PromptCard
                 prompt={prompt}
-                onEdit={() => setEditingPromptId(prompt.id)}
+                onEditToggle={() => toggleEditPrompt(prompt.id)}
                 onDelete={() => handleDeletePrompt(prompt.id)}
                 onMove={handleMovePrompt}
               />
@@ -128,7 +229,7 @@ export function PromptsManager() {
         ))}
       </div>
 
-      {prompts.length === 0 && !isAddingPrompt && (
+      {prompts.length === 0 && !isAddingPrompt && !isLoading && (
         <Card className="p-6 text-center text-muted-foreground">
           <p>No prompts added yet. Click "Add Prompt" to get started.</p>
         </Card>

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { XIcon, Plus, Trash, Copy, Clipboard } from 'lucide-react';
+import { XIcon, Trash } from 'lucide-react';
 import { Prompt, LoraConfig } from '@/types';
 import { copyToAppClipboard, getFromAppClipboard, handleContextMenu } from '@/lib/clipboard';
 
@@ -30,6 +30,7 @@ export function PromptForm({
   currentModel = ''
 }: PromptFormProps) {
   const [formData, setFormData] = useState<Omit<Prompt, 'id'>>({
+    name: prompt?.name || 'New Prompt',
     text: prompt?.text || '',
     negativePrompt: prompt?.negativePrompt || '',
     seed: prompt?.seed,
@@ -44,8 +45,6 @@ export function PromptForm({
   });
   
   const [tagInput, setTagInput] = useState('');
-  const [showLoraSelector, setShowLoraSelector] = useState(false);
-  const [selectedLora, setSelectedLora] = useState('');
   const [loraWeight, setLoraWeight] = useState(1.0);
 
   const handleChange = (
@@ -90,16 +89,15 @@ export function PromptForm({
     }));
   };
 
-  // LoRA handling
-  const addLora = () => {
-    if (selectedLora && !formData.loras?.some(l => l.name === selectedLora)) {
+  // LoRA handling - automatically add on selection
+  const handleLoraSelect = (loraName: string) => {
+    if (loraName && !formData.loras?.some(l => l.name === loraName)) {
       setFormData(prev => ({
         ...prev,
-        loras: [...(prev.loras || []), { name: selectedLora, weight: loraWeight }]
+        loras: [...(prev.loras || []), { name: loraName, weight: loraWeight }]
       }));
-      setSelectedLora('');
+      // Reset weight to default after adding
       setLoraWeight(1.0);
-      setShowLoraSelector(false);
     }
   };
 
@@ -127,8 +125,25 @@ export function PromptForm({
     });
   };
 
+  // Log available LoRAs when component mounts or updates
+  React.useEffect(() => {
+    console.log("Available LoRAs in PromptForm:", availableLoras);
+  }, [availableLoras]);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="name">Prompt Name</Label>
+        <Input
+          id="name"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          required
+          placeholder="Enter a name for this prompt"
+        />
+      </div>
+      
       <div>
         <Label htmlFor="text">Prompt</Label>
         <div 
@@ -298,67 +313,41 @@ export function PromptForm({
         </div>
       </div>
 
-      {/* LoRA Section */}
+      {/* LoRA Section - Simplified */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <Label>LoRAs</Label>
-          <Button 
-            type="button" 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setShowLoraSelector(!showLoraSelector)}
-            className="text-xs h-7 px-2"
-          >
-            <Plus className="h-3 w-3 mr-1" />
-            Add LoRA
-          </Button>
         </div>
         
-        {showLoraSelector && (
-          <div className="p-3 border rounded-md mb-2 space-y-2">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Label htmlFor="loraSelect" className="text-xs">LoRA Model</Label>
-                <Select
-                  value={selectedLora}
-                  onValueChange={setSelectedLora}
-                >
-                  <SelectTrigger id="loraSelect">
-                    <SelectValue placeholder="Select a LoRA" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableLoras.map((lora) => (
-                      <SelectItem key={lora.name} value={lora.name}>
-                        {lora.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-24">
-                <Label htmlFor="loraWeight" className="text-xs">Weight</Label>
-                <Input
-                  id="loraWeight"
-                  type="number"
-                  min={0}
-                  max={2}
-                  step={0.05}
-                  value={loraWeight}
-                  onChange={(e) => setLoraWeight(parseFloat(e.target.value))}
-                />
-              </div>
-            </div>
-            <Button 
-              type="button" 
-              onClick={addLora}
-              disabled={!selectedLora} 
-              size="sm"
-              className="w-full text-xs"
-            >
-              Add
-            </Button>
+        <div className="flex gap-2 mb-2">
+          <div className="flex-1">
+            <Select
+              onValueChange={handleLoraSelect}
+              value="">
+              <SelectTrigger>
+                <SelectValue placeholder="Add a LoRA..." />
+              </SelectTrigger>
+              <SelectContent>
+                {availableLoras.map((lora) => (
+                  <SelectItem key={lora.name} value={lora.name}>
+                    {lora.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        )}
+          <div className="w-24">
+            <Input
+              type="number"
+              min={0}
+              max={2}
+              step={0.05}
+              value={loraWeight}
+              onChange={(e) => setLoraWeight(parseFloat(e.target.value))}
+              title="Default weight for new LoRAs"
+            />
+          </div>
+        </div>
         
         {formData.loras && formData.loras.length > 0 ? (
           <div className="space-y-2">

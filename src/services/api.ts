@@ -44,10 +44,12 @@ export class ApiService {
 
   constructor(baseUrl = API_BASE_URL) {
     this.apiUrl = baseUrl;
+    console.log(`ApiService initialized with base URL: ${baseUrl}`);
   }
 
   // Set the base URL for the API
   setBaseUrl(url: string) {
+    console.log(`API base URL changed from ${this.apiUrl} to ${url}`);
     this.apiUrl = url;
   }
 
@@ -58,8 +60,10 @@ export class ApiService {
 
   // Test the API connection
   async testConnection(): Promise<boolean> {
+    console.log(`Testing API connection to ${this.apiUrl}`);
     try {
-      const response = await fetch(`${this.apiUrl}/sdapi/v1/samplers`);
+      const response = await fetch(`${this.apiUrl}/app_id`);
+      console.log(`API connection test result: ${response.ok ? 'SUCCESS' : 'FAILED'}, status: ${response.status}`);
       return response.ok;
     } catch (error) {
       console.error('API connection test failed:', error);
@@ -69,11 +73,13 @@ export class ApiService {
 
   // Get available samplers
   async getSamplers(): Promise<string[]> {
+    console.log(`Fetching samplers from ${this.apiUrl}/sdapi/v1/samplers`);
     try {
       const response = await fetch(`${this.apiUrl}/sdapi/v1/samplers`);
-      if (!response.ok) throw new Error('Failed to fetch samplers');
+      if (!response.ok) throw new Error(`Failed to fetch samplers, status: ${response.status}`);
       
       const data = await response.json();
+      console.log(`Samplers fetched successfully:`, data);
       return data.map((sampler: any) => sampler.name);
     } catch (error) {
       console.error('Failed to fetch samplers:', error);
@@ -83,11 +89,13 @@ export class ApiService {
 
   // Get available SD models
   async getModels(): Promise<string[]> {
+    console.log(`Fetching models from ${this.apiUrl}/sdapi/v1/sd-models`);
     try {
       const response = await fetch(`${this.apiUrl}/sdapi/v1/sd-models`);
-      if (!response.ok) throw new Error('Failed to fetch models');
-      console.log("response", response);
+      if (!response.ok) throw new Error(`Failed to fetch models, status: ${response.status}`);
+      
       const data = await response.json();
+      console.log(`Models fetched successfully:`, data);
       return data.map((model: any) => model.title);
     } catch (error) {
       console.error('Failed to fetch models:', error);
@@ -97,6 +105,7 @@ export class ApiService {
 
   // Generate an image using text-to-image
   async generateImage(params: Text2ImageRequest): Promise<Text2ImageResponse | null> {
+    console.log(`Generating image with params:`, params);
     try {
       const response = await fetch(`${this.apiUrl}/sdapi/v1/txt2img`, {
         method: 'POST',
@@ -106,9 +115,11 @@ export class ApiService {
         body: JSON.stringify(params),
       });
 
-      if (!response.ok) throw new Error('Failed to generate image');
+      if (!response.ok) throw new Error(`Failed to generate image, status: ${response.status}`);
       
-      return await response.json();
+      const result = await response.json();
+      console.log(`Image generation successful, received ${result.images?.length} images`);
+      return result;
     } catch (error) {
       console.error('Failed to generate image:', error);
       return null;
@@ -117,6 +128,7 @@ export class ApiService {
 
   // Set the current SD model
   async setModel(modelTitle: string): Promise<boolean> {
+    console.log(`Setting model to: ${modelTitle}`);
     try {
       const response = await fetch(`${this.apiUrl}/sdapi/v1/options`, {
         method: 'POST',
@@ -128,6 +140,7 @@ export class ApiService {
         }),
       });
 
+      console.log(`Set model response: ${response.ok ? 'SUCCESS' : 'FAILED'}, status: ${response.status}`);
       return response.ok;
     } catch (error) {
       console.error('Failed to set model:', error);
@@ -137,11 +150,13 @@ export class ApiService {
   
   // Get the current SD model
   async getCurrentModel(): Promise<string | null> {
+    console.log(`Fetching current model from ${this.apiUrl}/sdapi/v1/options`);
     try {
       const response = await fetch(`${this.apiUrl}/sdapi/v1/options`);
-      if (!response.ok) throw new Error('Failed to fetch current model');
+      if (!response.ok) throw new Error(`Failed to fetch current model, status: ${response.status}`);
       
       const data = await response.json();
+      console.log(`Current model fetched:`, data.sd_model_checkpoint);
       return data.sd_model_checkpoint || null;
     } catch (error) {
       console.error('Failed to get current model:', error);
@@ -151,11 +166,14 @@ export class ApiService {
   
   // Get available LoRAs
   async getLoras(): Promise<any[]> {
+    console.log(`Fetching LoRAs from ${this.apiUrl}/sdapi/v1/loras`);
     try {
       const response = await fetch(`${this.apiUrl}/sdapi/v1/loras`);
-      if (!response.ok) throw new Error('Failed to fetch LoRAs');
+      if (!response.ok) throw new Error(`Failed to fetch LoRAs, status: ${response.status}`);
       
-      return await response.json();
+      const data = await response.json();
+      console.log(`LoRAs fetched successfully:`, data);
+      return data;
     } catch (error) {
       console.error('Failed to fetch LoRAs:', error);
       return [];
@@ -165,6 +183,7 @@ export class ApiService {
   // Save base64 image to file (this would be handled by the backend in a real app)
   // For now we'll just simulate it by saving to local storage
   async saveGeneratedImage(promptId: string, imageBase64: string, promptData: Prompt): Promise<GeneratedImage | null> {
+    console.log(`Saving generated image for prompt ID: ${promptId}`);
     try {
       // Generate a unique ID for the image
       const imageId = crypto.randomUUID();
@@ -202,6 +221,7 @@ export class ApiService {
       existingData.images = [...existingData.images, generatedImage];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(existingData));
       
+      console.log(`Image saved successfully with ID: ${imageId}`);
       return generatedImage;
     } catch (error) {
       console.error('Failed to save generated image:', error);
@@ -211,20 +231,28 @@ export class ApiService {
 
   // Get all saved images
   getStoredImages(): GeneratedImage[] {
+    console.log(`Retrieving stored images from localStorage`);
     const dataStr = localStorage.getItem(STORAGE_KEY);
-    if (!dataStr) return [];
+    if (!dataStr) {
+      console.log('No stored images found');
+      return [];
+    }
     
     const data = JSON.parse(dataStr);
+    console.log(`Retrieved ${data.images?.length || 0} stored images`);
     return data.images || [];
   }
 
   // Get image data by ID
   getImageData(imageId: string): string | null {
-    return localStorage.getItem(`img_${imageId}`);
+    const imageData = localStorage.getItem(`img_${imageId}`);
+    console.log(`Retrieved image data for ID ${imageId}: ${imageData ? 'SUCCESS' : 'NOT FOUND'}`);
+    return imageData;
   }
 
   // Delete an image
   deleteImage(imageId: string): boolean {
+    console.log(`Deleting image with ID: ${imageId}`);
     try {
       // Remove the image data
       localStorage.removeItem(`img_${imageId}`);
@@ -234,9 +262,11 @@ export class ApiService {
       if (!dataStr) return false;
       
       const data = JSON.parse(dataStr);
+      const initialCount = data.images.length;
       data.images = data.images.filter((img: GeneratedImage) => img.id !== imageId);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       
+      console.log(`Image deleted successfully. Images before: ${initialCount}, after: ${data.images.length}`);
       return true;
     } catch (error) {
       console.error('Failed to delete image:', error);
@@ -246,6 +276,7 @@ export class ApiService {
 
   // Update image metadata
   updateImageMetadata(imageId: string, updates: Partial<GeneratedImage>): boolean {
+    console.log(`Updating metadata for image ID: ${imageId}`, updates);
     try {
       const dataStr = localStorage.getItem(STORAGE_KEY);
       if (!dataStr) return false;
@@ -259,6 +290,7 @@ export class ApiService {
       });
       
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      console.log(`Image metadata updated successfully`);
       return true;
     } catch (error) {
       console.error('Failed to update image metadata:', error);
