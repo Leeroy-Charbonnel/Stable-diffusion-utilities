@@ -28,9 +28,6 @@ export function PromptForm({
   availableLoras = [],
   currentModel = ''
 }: PromptFormProps) {
-  // Track if this is an edit (not a new prompt)
-  const isEdit = !!prompt?.id;
-
   // Ref to track changes to prevent infinite loops
   const isUpdating = useRef(false);
 
@@ -56,8 +53,8 @@ export function PromptForm({
     const newFormData = { ...formData, ...updatedData };
     setFormData(newFormData);
 
-    // Only submit changes for existing prompts, not for new ones
-    if (isEdit && !isUpdating.current) {
+    // Only submit changes if we're not currently updating
+    if (!isUpdating.current && prompt?.id) {
       isUpdating.current = true;
 
       // Use setTimeout to avoid state update during render
@@ -134,17 +131,8 @@ export function PromptForm({
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit({
-      id: prompt?.id || crypto.randomUUID(),
-      ...formData,
-    });
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-
+    <form className="space-y-3">
       <div>
         <Label htmlFor="text" className="text-xs">Prompt</Label>
         <div
@@ -166,7 +154,6 @@ export function PromptForm({
             name="text"
             value={formData.text}
             onChange={handleChange}
-            required
             placeholder="Enter prompt text..."
             className="min-h-20"
           />
@@ -402,17 +389,9 @@ export function PromptForm({
             placeholder="Add tags (press Enter to add)"
             className="h-8 flex-1"
           />
-          <div className="flex space-x-2">
-            <Button type="button" variant="outline" onClick={onCancel} size="sm" className="h-8">
-              Cancel
-            </Button>
-            {/* Only show the Add Prompt button for new prompts, not for edits */}
-            {!isEdit && (
-              <Button type="submit" size="sm" className="h-8">
-                Add Prompt
-              </Button>
-            )}
-          </div>
+          <Button type="button" variant="outline" onClick={onCancel} size="sm" className="h-8">
+            Cancel
+          </Button>
         </div>
         <div
           className="flex flex-wrap gap-1 mt-1"

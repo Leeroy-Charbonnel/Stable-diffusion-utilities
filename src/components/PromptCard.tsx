@@ -14,16 +14,17 @@ type PromptCardProps = {
   onEditToggle: () => void;
   onDelete: () => void;
   onMove: (id: string, direction: 'up' | 'down') => void;
-  isEditing: boolean;
   onPromptUpdate: (updatedPrompt: Prompt) => void;
   onRunPrompt: (prompt: Prompt) => void;
+
+  isOpen: boolean;
   isExecuting?: boolean;
   executionProgress?: {
     currentRun: number;
     totalRuns: number;
     currentProgress: number;
   };
-  onCancelExecution?: () => void;
+
   availableSamplers?: string[];
   availableModels?: string[];
   availableLoras?: any[];
@@ -37,6 +38,7 @@ export function PromptCard({
   onMove,
   onPromptUpdate,
   onRunPrompt,
+  isOpen = false,
   isExecuting = false,
   executionProgress = { currentRun: 0, totalRuns: 0, currentProgress: 0 },
   availableSamplers = [],
@@ -46,7 +48,7 @@ export function PromptCard({
 }: PromptCardProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(prompt.name);
-  const [isAccordionOpen, setIsAccordionOpen] = useState(false);
+  const [isAccordionOpen, setIsAccordionOpen] = useState(isOpen);
 
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {

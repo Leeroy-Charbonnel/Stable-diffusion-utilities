@@ -1,16 +1,14 @@
-// src/components/PromptsManager.tsx
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PlusCircle, Play, CheckCircle, AlertCircle } from 'lucide-react';
 import { Prompt } from '@/types';
-import { PromptForm } from './PromptForm';
 import { PromptCard } from './PromptCard';
 import { useApi } from '@/contexts/ApiContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Accordion, AccordionContent, AccordionItem } from '@/components/ui/accordion';
+import { generateUUID } from '@/lib/utils';
+import { STORAGE_KEY } from '@/lib/constants';
 
-const STORAGE_KEY = 'sd-utilities-prompts';
 
 type ExecutionStatus = 'idle' | 'executing' | 'completed' | 'failed';
 
@@ -22,14 +20,7 @@ const savePromptsToStorage = (prompts: Prompt[]) => {
 export function PromptsManager() {
   const api = useApi();
   const [prompts, setPrompts] = useState<Prompt[]>([]);
-  const [isAddingPrompt, setIsAddingPrompt] = useState(false);
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
-  const [newPromptName, setNewPromptName] = useState('New Prompt');
-  const [newPromptData, setNewPromptData] = useState<Partial<Prompt>>({
-    name: 'New Prompt',
-    text: '',
-    runCount: 1
-  });
 
   // Execution state
   const [status, setStatus] = useState<ExecutionStatus>('idle');
@@ -93,19 +84,33 @@ export function PromptsManager() {
     }
   }, []);
 
-  const handleAddPrompt = (prompt: Prompt) => {
-    const updatedPrompts = [...prompts, prompt];
-    setPrompts(updatedPrompts);
-    // Immediately save to localStorage
-    savePromptsToStorage(updatedPrompts);
-    setIsAddingPrompt(false);
-    // Reset the new prompt name for next time
-    setNewPromptName('New Prompt');
-    setNewPromptData({
+  const handleAddPrompt = () => {
+    // Create a new prompt with default values
+    const newPrompt: Prompt = {
+      id: generateUUID(),
       name: 'New Prompt',
       text: '',
-      runCount: 1
-    });
+      negativePrompt: '',
+      seed: undefined,
+      steps: 20,
+      sampler: 'Euler a',
+      model: currentModel,
+      width: 512,
+      height: 512,
+      runCount: 1,
+      tags: [],
+      loras: []
+    };
+
+    // Add it to the prompts array
+    const updatedPrompts = [...prompts, newPrompt];
+    setPrompts(updatedPrompts);
+
+    // Immediately save to localStorage
+    savePromptsToStorage(updatedPrompts);
+
+    // Set it as the currently editing prompt
+    setEditingPromptId(newPrompt.id);
   };
 
   const handleUpdatePrompt = (updatedPrompt: Prompt) => {
@@ -259,8 +264,6 @@ export function PromptsManager() {
     }
   };
 
-  // Removed the handleCancelExecution function
-
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -273,9 +276,9 @@ export function PromptsManager() {
             <Play className="mr-2 h-4 w-4" />
             Start Execution
           </Button>
-          <Button onClick={() => setIsAddingPrompt(!isAddingPrompt)}>
+          <Button onClick={handleAddPrompt}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            {isAddingPrompt ? 'Cancel' : 'Add Prompt'}
+            Add Prompt
           </Button>
         </div>
       </div>
@@ -325,39 +328,6 @@ export function PromptsManager() {
         </Alert>
       )}
 
-      {isAddingPrompt && (
-        <Card className="mb-4 overflow-hidden">
-          <Accordion type="single" collapsible defaultValue="new-prompt">
-            <AccordionItem value="new-prompt" className="border-none">
-              <div className="px-3 py-2 flex items-center justify-between border-b">
-                <input
-                  type="text"
-                  value={newPromptName}
-                  onChange={(e) => {
-                    setNewPromptName(e.target.value);
-                    setNewPromptData(prev => ({ ...prev, name: e.target.value }));
-                  }}
-                  className="flex-1 text-sm font-medium bg-transparent border-none focus:outline-none"
-                  placeholder="Enter prompt name"
-                />
-              </div>
-              <AccordionContent>
-                <div className="p-4">
-                  <PromptForm
-                    onSubmit={handleAddPrompt}
-                    onCancel={() => setIsAddingPrompt(false)}
-                    availableSamplers={samplers}
-                    availableModels={models}
-                    availableLoras={loras}
-                    currentModel={currentModel}
-                  />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </Card>
-      )}
-
       <div className="space-y-3">
         {prompts.map((prompt) => (
           <PromptCard
@@ -367,7 +337,7 @@ export function PromptsManager() {
             onDelete={() => handleDeletePrompt(prompt.id)}
             onMove={handleMovePrompt}
             onRunPrompt={handleExecutePrompt}
-            isEditing={editingPromptId === prompt.id}
+            isOpen={editingPromptId === prompt.id}
             onPromptUpdate={handleUpdatePrompt}
             isExecuting={status === 'executing' && executingPromptId === prompt.id}
             executionProgress={{
@@ -375,7 +345,6 @@ export function PromptsManager() {
               totalRuns: totalRuns,
               currentProgress: currentProgress
             }}
-            // Removed onCancelExecution prop
             availableSamplers={samplers}
             availableModels={models}
             availableLoras={loras}
@@ -384,7 +353,7 @@ export function PromptsManager() {
         ))}
       </div>
 
-      {prompts.length === 0 && !isAddingPrompt && !isLoading && (
+      {prompts.length === 0 && !isLoading && (
         <Card className="p-6 text-center text-muted-foreground">
           <p>No prompts added yet. Click "Add Prompt" to get started.</p>
         </Card>
