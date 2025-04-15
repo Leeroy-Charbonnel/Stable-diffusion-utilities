@@ -34,3 +34,28 @@ export interface GeneratedImage {
   tags: string[];
   createdAt: string;
 }
+
+
+
+export interface ImageMetadata {
+  id: string;
+  path: string;
+  filename: string;
+  prompt: string;
+  negativePrompt?: string;
+  seed: number;
+  steps: number;
+  width: number;
+  height: number;
+  sampler: string;
+  model: string;
+  tags: string[];
+  createdAt: string;
+}
+
+
+export interface SaveImageRequest {
+  id: string;
+  imageBase64: string;
+  metadata: ImageMetadata;
+}

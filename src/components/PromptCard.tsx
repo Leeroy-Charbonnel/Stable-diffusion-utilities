@@ -1,12 +1,12 @@
-// src/components/PromptCard.tsx
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, Check, X, Play } from 'lucide-react';
+import { Trash2, Check, X, Play, Pause } from 'lucide-react';
 import { Prompt } from '../types';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Progress } from '@/components/ui/progress';
 import { PromptForm } from './PromptForm';
 
 type PromptCardProps = {
@@ -17,6 +17,13 @@ type PromptCardProps = {
   isEditing: boolean;
   onPromptUpdate: (updatedPrompt: Prompt) => void;
   onRunPrompt: (prompt: Prompt) => void;
+  isExecuting?: boolean;
+  executionProgress?: {
+    currentRun: number;
+    totalRuns: number;
+    currentProgress: number;
+  };
+  onCancelExecution?: () => void;
   availableSamplers?: string[];
   availableModels?: string[];
   availableLoras?: any[];
@@ -31,6 +38,9 @@ export function PromptCard({
   isEditing,
   onPromptUpdate,
   onRunPrompt,
+  isExecuting = false,
+  executionProgress = { currentRun: 0, totalRuns: 0, currentProgress: 0 },
+  onCancelExecution,
   availableSamplers = [],
   availableModels = [],
   availableLoras = [],
@@ -65,6 +75,12 @@ export function PromptCard({
       cancelNameEdit();
     }
   };
+
+  const totalProgress = prompt.runCount > 1
+    ? (executionProgress.currentRun / prompt.runCount) * 100
+    : executionProgress.currentProgress;
+
+  const shouldShowProgress = isExecuting && executionProgress.totalRuns > 0;
 
   return (
     <Card className="overflow-hidden">
@@ -118,18 +134,34 @@ export function PromptCard({
               )}
             </div>
             <div className="flex items-center space-x-1 ml-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRunPrompt(prompt);
-                }}
-                className="h-7 text-xs"
-              >
-                <Play className="mr-1 h-3 w-3" />
-                Run
-              </Button>
+              {!shouldShowProgress ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRunPrompt(prompt);
+                  }}
+                  className="h-7 text-xs"
+                  disabled={isExecuting}
+                >
+                  <Play className="mr-1 h-3 w-3" />
+                  Run
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCancelExecution?.();
+                  }}
+                  className="h-7 text-xs text-destructive"
+                >
+                  <Pause className="mr-1 h-3 w-3" />
+                  Cancel
+                </Button>
+              )}
               <div className="text-xs bg-secondary text-secondary-foreground rounded px-1.5 py-0.5">
                 {prompt.runCount}×
               </div>
@@ -141,6 +173,7 @@ export function PromptCard({
                   onMove(prompt.id, 'up');
                 }}
                 className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                disabled={isExecuting}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="m18 15-6-6-6 6" />
@@ -154,6 +187,7 @@ export function PromptCard({
                   onMove(prompt.id, 'down');
                 }}
                 className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                disabled={isExecuting}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="m6 9 6 6 6-6" />
@@ -167,11 +201,34 @@ export function PromptCard({
                   onDelete();
                 }}
                 className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                disabled={isExecuting}
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
+
+          {shouldShowProgress && (
+            <div className="px-3 py-2 border-b space-y-2">
+              {prompt.runCount > 1 && (
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span>Total progress: {executionProgress.currentRun}/{prompt.runCount}</span>
+                    <span>{Math.round(totalProgress)}%</span>
+                  </div>
+                  <Progress value={totalProgress} className="h-2" />
+                </div>
+              )}
+
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span>Current image:</span>
+                  <span>{Math.round(executionProgress.currentProgress)}%</span>
+                </div>
+                <Progress value={executionProgress.currentProgress} className="h-2" />
+              </div>
+            </div>
+          )}
 
           <div className="px-3 py-2 border-b">
             {prompt.tags && prompt.tags.length > 0 ? (

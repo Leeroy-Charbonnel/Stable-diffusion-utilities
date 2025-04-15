@@ -10,10 +10,10 @@ import { Image, ListChecks } from 'lucide-react';
 function App() {
   const [activeTab, setActiveTab] = useState<'prompts' | 'images'>(
     // Try to restore the last active tab from localStorage, default to 'prompts'
-    // () => {
-    //   const savedTab = localStorage.getItem('sd-utilities-activeTab');
-    //   return (savedTab === 'images' ? 'images' : 'prompts');
-    // }
+    () => {
+      const savedTab = localStorage.getItem('sd-utilities-activeTab');
+      return (savedTab === 'images' ? 'images' : 'prompts');
+    }
   );
 
   // Save the active tab to localStorage whenever it changes
@@ -52,6 +52,7 @@ function App() {
                 variant={activeTab === 'prompts' ? 'default' : 'ghost'}
                 className="justify-start"
                 onClick={() => setActiveTab('prompts')}
+                data-tab="prompts"
               >
                 <ListChecks className="mr-2 h-4 w-4" />
                 Prompts
@@ -61,6 +62,7 @@ function App() {
                 variant={activeTab === 'images' ? 'default' : 'ghost'}
                 className="justify-start"
                 onClick={() => setActiveTab('images')}
+                data-tab="images"
               >
                 <Image className="mr-2 h-4 w-4" />
                 Images

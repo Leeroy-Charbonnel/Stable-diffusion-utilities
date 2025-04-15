@@ -1,4 +1,3 @@
-// src/contexts/ApiContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiService, ApiService } from '@/services/api';
 import { Prompt, GeneratedImage } from '@/types';

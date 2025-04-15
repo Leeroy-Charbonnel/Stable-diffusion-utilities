@@ -9,8 +9,6 @@ import { PromptCard } from './PromptCard';
 import { useApi } from '@/contexts/ApiContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const STORAGE_KEY = 'sd-utilities-prompts';
 
@@ -27,17 +25,16 @@ export function PromptsManager() {
   const [isAddingPrompt, setIsAddingPrompt] = useState(false);
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
   const [newPromptName, setNewPromptName] = useState('New Prompt');
-  
+
   // Execution state
   const [status, setStatus] = useState<ExecutionStatus>('idle');
-  const [progress, setProgress] = useState(0);
-  const [totalSteps, setTotalSteps] = useState(0);
-  const [currentStep, setCurrentStep] = useState(0);
+  const [executingPromptId, setExecutingPromptId] = useState<string | null>(null);
+  const [currentProgress, setCurrentProgress] = useState(0);
+  const [currentRun, setCurrentRun] = useState(0);
+  const [totalRuns, setTotalRuns] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [successCount, setSuccessCount] = useState(0);
   const [failureCount, setFailureCount] = useState(0);
-  const [executingPrompts, setExecutingPrompts] = useState<Prompt[]>([]);
-  const [executionDialogOpen, setExecutionDialogOpen] = useState(false);
 
   // State for API data
   const [samplers, setSamplers] = useState<string[]>([]);
@@ -45,7 +42,7 @@ export function PromptsManager() {
   const [loras, setLoras] = useState<any[]>([]);
   const [currentModel, setCurrentModel] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Fetch API data only once on component mount
   useEffect(() => {
     const fetchData = async () => {
@@ -53,7 +50,7 @@ export function PromptsManager() {
       try {
         // Test API connection first
         const connected = await api.checkConnection();
-        
+
         if (connected) {
           // Fetch all required data in parallel
           const [samplersData, modelsData, currentModelData, lorasData] = await Promise.all([
@@ -62,7 +59,7 @@ export function PromptsManager() {
             api.api.getCurrentModel(),
             api.api.getLoras()
           ]);
-          
+
           setSamplers(samplersData);
           setModels(modelsData);
           if (currentModelData) setCurrentModel(currentModelData);
@@ -74,7 +71,7 @@ export function PromptsManager() {
         setIsLoading(false);
       }
     };
-    
+
     // Only fetch once when component mounts
     fetchData();
   }, []); // Empty dependency array to prevent infinite loop
@@ -92,7 +89,7 @@ export function PromptsManager() {
   }, []);
 
   const handleAddPrompt = (prompt: Prompt) => {
-    const updatedPrompts = [...prompts, {...prompt, name: newPromptName}];
+    const updatedPrompts = [...prompts, { ...prompt, name: newPromptName }];
     setPrompts(updatedPrompts);
     // Immediately save to localStorage
     savePromptsToStorage(updatedPrompts);
@@ -102,7 +99,7 @@ export function PromptsManager() {
   };
 
   const handleUpdatePrompt = (updatedPrompt: Prompt) => {
-    const updatedPrompts = prompts.map((p) => 
+    const updatedPrompts = prompts.map((p) =>
       (p.id === updatedPrompt.id ? updatedPrompt : p)
     );
     setPrompts(updatedPrompts);
@@ -132,7 +129,7 @@ export function PromptsManager() {
     const promptToMove = newPrompts[promptIndex];
     newPrompts.splice(promptIndex, 1);
     newPrompts.splice(newIndex, 0, promptToMove);
-    
+
     setPrompts(newPrompts);
     // Immediately save to localStorage
     savePromptsToStorage(newPrompts);
@@ -141,73 +138,89 @@ export function PromptsManager() {
   const toggleEditPrompt = (id: string) => {
     setEditingPromptId(currentId => currentId === id ? null : id);
   };
-  
+
   // Execution related functions
   //Execute a single prompt with the specified count
   const executePrompt = async (prompt: Prompt): Promise<number> => {
     let successfulRuns = 0;
-    
+
+    setExecutingPromptId(prompt.id);
+    setCurrentRun(0);
+    setTotalRuns(prompt.runCount);
+
     for (let i = 0; i < prompt.runCount; i++) {
+      if (status !== 'executing') break; // Check if execution was cancelled
+
+      setCurrentRun(i + 1);
+      setCurrentProgress(0);
+
       try {
+        // Simulate progress updates during generation
+        const progressUpdateInterval = setInterval(() => {
+          setCurrentProgress(prev => {
+            const newProgress = prev + 5; // Increment by 5%
+            return newProgress >= 95 ? 95 : newProgress; // Cap at 95% until completion
+          });
+        }, 500);
+
         const result = await api.generateImage(prompt);
+
+        clearInterval(progressUpdateInterval);
+        setCurrentProgress(100);
+
         if (result) {
           successfulRuns++;
           setSuccessCount(prev => prev + 1);
         } else {
           setFailureCount(prev => prev + 1);
         }
+
+        // Short delay to show 100% before moving to next image
+        await new Promise(resolve => setTimeout(resolve, 500));
       } catch (err) {
         console.error(`Error running prompt ${prompt.id} (${i + 1}/${prompt.runCount}):`, err);
         setFailureCount(prev => prev + 1);
+        setCurrentProgress(0);
       }
-      
-      //Update progress
-      setCurrentStep(prev => prev + 1);
-      const newProgress = ((currentStep + 1) / totalSteps) * 100;
-      setProgress(newProgress);
     }
-    
+
     return successfulRuns;
   };
-  
+
   //Handle execution of all prompts
   const handleExecuteAll = async () => {
     if (!api.isConnected) {
       setError("Not connected to API. Please check connection.");
       return;
     }
-    
+
     if (prompts.length === 0) {
       setError("No prompts to execute. Please add prompts first.");
       return;
     }
-    
-    // Calculate total steps
-    const total = prompts.reduce((acc, prompt) => acc + prompt.runCount, 0);
-    setTotalSteps(total);
-    
+
     // Start execution
     setStatus('executing');
-    setProgress(0);
-    setCurrentStep(0);
+    setCurrentProgress(0);
+    setCurrentRun(0);
     setSuccessCount(0);
     setFailureCount(0);
     setError(null);
-    setExecutingPrompts([...prompts]);
-    setExecutionDialogOpen(true);
-    
+
     try {
       for (const prompt of prompts) {
         if (status !== 'executing') break; // Check if execution was cancelled
-        
+
         await executePrompt(prompt);
       }
-      
+
       setStatus('completed');
+      setExecutingPromptId(null);
     } catch (err) {
       console.error('Error during batch execution:', err);
       setError(`Error during execution: ${err instanceof Error ? err.message : String(err)}`);
       setStatus('failed');
+      setExecutingPromptId(null);
     }
   };
 
@@ -217,47 +230,40 @@ export function PromptsManager() {
       setError("Not connected to API. Please check connection.");
       return;
     }
-    
+
     // Set up execution for just this prompt
-    setTotalSteps(promptToExecute.runCount);
     setStatus('executing');
-    setProgress(0);
-    setCurrentStep(0);
+    setCurrentProgress(0);
+    setCurrentRun(0);
     setSuccessCount(0);
     setFailureCount(0);
     setError(null);
-    setExecutingPrompts([promptToExecute]);
-    setExecutionDialogOpen(true);
-    
+
     try {
       await executePrompt(promptToExecute);
       setStatus('completed');
+      setExecutingPromptId(null);
     } catch (err) {
       console.error('Error during prompt execution:', err);
       setError(`Error during execution: ${err instanceof Error ? err.message : String(err)}`);
       setStatus('failed');
+      setExecutingPromptId(null);
     }
   };
 
   const handleCancelExecution = () => {
     setStatus('idle');
+    setExecutingPromptId(null);
   };
 
-  const closeExecutionDialog = () => {
-    if (status !== 'executing') {
-      setExecutionDialogOpen(false);
-      setStatus('idle');
-    }
-  };
-  
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Prompt List</h2>
         <div className="flex gap-2">
-          <Button 
-            onClick={handleExecuteAll} 
-            disabled={!api.isConnected || prompts.length === 0}
+          <Button
+            onClick={handleExecuteAll}
+            disabled={!api.isConnected || prompts.length === 0 || status === 'executing'}
           >
             <Play className="mr-2 h-4 w-4" />
             Start Execution
@@ -294,6 +300,26 @@ export function PromptsManager() {
         </Card>
       )}
 
+      {status === 'completed' && (
+        <Alert className="mb-4 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+          <CheckCircle className="h-4 w-4" />
+          <AlertTitle>Execution Completed</AlertTitle>
+          <AlertDescription>
+            Generated {successCount} images successfully. {failureCount} failed.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {status === 'failed' && error && (
+        <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Execution Failed</AlertTitle>
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {isAddingPrompt && (
         <Card className="mb-4 overflow-hidden">
           <Accordion type="single" collapsible defaultValue="new-prompt">
@@ -309,9 +335,9 @@ export function PromptsManager() {
               </div>
               <AccordionContent>
                 <div className="p-4">
-                  <PromptForm 
-                    onSubmit={handleAddPrompt} 
-                    onCancel={() => setIsAddingPrompt(false)} 
+                  <PromptForm
+                    onSubmit={handleAddPrompt}
+                    onCancel={() => setIsAddingPrompt(false)}
                     availableSamplers={samplers}
                     availableModels={models}
                     availableLoras={loras}
@@ -335,6 +361,13 @@ export function PromptsManager() {
             onRunPrompt={handleExecutePrompt}
             isEditing={editingPromptId === prompt.id}
             onPromptUpdate={handleUpdatePrompt}
+            isExecuting={status === 'executing' && executingPromptId === prompt.id}
+            executionProgress={{
+              currentRun: currentRun,
+              totalRuns: totalRuns,
+              currentProgress: currentProgress
+            }}
+            onCancelExecution={handleCancelExecution}
             availableSamplers={samplers}
             availableModels={models}
             availableLoras={loras}
@@ -348,75 +381,6 @@ export function PromptsManager() {
           <p>No prompts added yet. Click "Add Prompt" to get started.</p>
         </Card>
       )}
-
-      {/* Execution Dialog */}
-      <Dialog open={executionDialogOpen} onOpenChange={closeExecutionDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {status === 'executing' 
-                ? 'Executing Prompts...' 
-                : status === 'completed' 
-                  ? 'Execution Complete' 
-                  : status === 'failed' 
-                    ? 'Execution Failed' 
-                    : 'Prompt Execution'}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            {status === 'executing' ? (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Progress: {currentStep} of {totalSteps} images</span>
-                    <span>{Math.round(progress)}%</span>
-                  </div>
-                  <Progress value={progress} />
-                </div>
-                
-                <div className="flex gap-4 text-sm">
-                  <div>Success: {successCount}</div>
-                  <div>Failed: {failureCount}</div>
-                </div>
-                
-                <div className="text-sm text-muted-foreground">
-                  {executingPrompts.length === 1 
-                    ? `Executing prompt "${executingPrompts[0].name}"` 
-                    : `Executing ${executingPrompts.length} prompts`}
-                </div>
-              </div>
-            ) : status === 'completed' ? (
-              <Alert className="bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-900/30">
-                <CheckCircle className="h-4 w-4" />
-                <AlertTitle>Execution Completed</AlertTitle>
-                <AlertDescription className="mt-1">
-                  Generated {successCount} images successfully. {failureCount} failed.
-                </AlertDescription>
-              </Alert>
-            ) : status === 'failed' ? (
-              <Alert variant="destructive" className="bg-destructive/10 text-destructive dark:bg-destructive/20">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription className="mt-1 text-sm">{error}</AlertDescription>
-              </Alert>
-            ) : null}
-          </div>
-          
-          <DialogFooter>
-            {status === 'executing' ? (
-              <Button variant="destructive" onClick={handleCancelExecution}>
-                <XCircle className="mr-2 h-4 w-4" />
-                Cancel Execution
-              </Button>
-            ) : (
-              <Button onClick={closeExecutionDialog}>
-                Close
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
