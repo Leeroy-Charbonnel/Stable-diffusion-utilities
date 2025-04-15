@@ -1,14 +1,14 @@
 // src/components/PromptsManager.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { PlusCircle, InfoIcon, Play, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { PlusCircle, Play, CheckCircle, AlertCircle } from 'lucide-react';
 import { Prompt } from '@/types';
 import { PromptForm } from './PromptForm';
 import { PromptCard } from './PromptCard';
 import { useApi } from '@/contexts/ApiContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Accordion, AccordionContent, AccordionItem } from '@/components/ui/accordion';
 
 const STORAGE_KEY = 'sd-utilities-prompts';
 
@@ -25,6 +25,11 @@ export function PromptsManager() {
   const [isAddingPrompt, setIsAddingPrompt] = useState(false);
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
   const [newPromptName, setNewPromptName] = useState('New Prompt');
+  const [newPromptData, setNewPromptData] = useState<Partial<Prompt>>({
+    name: 'New Prompt',
+    text: '',
+    runCount: 1
+  });
 
   // Execution state
   const [status, setStatus] = useState<ExecutionStatus>('idle');
@@ -89,13 +94,18 @@ export function PromptsManager() {
   }, []);
 
   const handleAddPrompt = (prompt: Prompt) => {
-    const updatedPrompts = [...prompts, { ...prompt, name: newPromptName }];
+    const updatedPrompts = [...prompts, prompt];
     setPrompts(updatedPrompts);
     // Immediately save to localStorage
     savePromptsToStorage(updatedPrompts);
     setIsAddingPrompt(false);
     // Reset the new prompt name for next time
     setNewPromptName('New Prompt');
+    setNewPromptData({
+      name: 'New Prompt',
+      text: '',
+      runCount: 1
+    });
   };
 
   const handleUpdatePrompt = (updatedPrompt: Prompt) => {
@@ -105,7 +115,6 @@ export function PromptsManager() {
     setPrompts(updatedPrompts);
     // Immediately save to localStorage
     savePromptsToStorage(updatedPrompts);
-    setEditingPromptId(null);
   };
 
   const handleDeletePrompt = (id: string) => {
@@ -328,7 +337,10 @@ export function PromptsManager() {
                 <input
                   type="text"
                   value={newPromptName}
-                  onChange={(e) => setNewPromptName(e.target.value)}
+                  onChange={(e) => {
+                    setNewPromptName(e.target.value);
+                    setNewPromptData(prev => ({ ...prev, name: e.target.value }));
+                  }}
                   className="flex-1 text-sm font-medium bg-transparent border-none focus:outline-none"
                   placeholder="Enter prompt name"
                 />

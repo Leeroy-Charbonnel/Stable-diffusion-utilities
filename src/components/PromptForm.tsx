@@ -1,5 +1,5 @@
 // src/components/PromptForm.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,15 +20,21 @@ type PromptFormProps = {
   currentModel?: string;
 };
 
-export function PromptForm({ 
-  prompt, 
-  onSubmit, 
-  onCancel, 
+export function PromptForm({
+  prompt,
+  onSubmit,
+  onCancel,
   availableSamplers = [],
   availableModels = [],
   availableLoras = [],
   currentModel = ''
 }: PromptFormProps) {
+  // Track if this is an edit (not a new prompt)
+  const isEdit = !!prompt?.id;
+
+  // Ref to track changes to prevent infinite loops
+  const isUpdating = useRef(false);
+
   const [formData, setFormData] = useState<Omit<Prompt, 'id'>>({
     name: prompt?.name || 'New Prompt',
     text: prompt?.text || '',
@@ -43,25 +49,45 @@ export function PromptForm({
     tags: prompt?.tags || [],
     loras: prompt?.loras || [],
   });
-  
+
   const [tagInput, setTagInput] = useState('');
+
+  // This function will be called when a form field changes
+  const handleFormChange = (updatedData: Partial<Omit<Prompt, 'id'>>) => {
+    const newFormData = { ...formData, ...updatedData };
+    setFormData(newFormData);
+
+    // Only submit changes for existing prompts, not for new ones
+    if (isEdit && !isUpdating.current) {
+      isUpdating.current = true;
+
+      // Use setTimeout to avoid state update during render
+      setTimeout(() => {
+        onSubmit({
+          id: prompt.id,
+          ...newFormData,
+        });
+        isUpdating.current = false;
+      }, 0);
+    }
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    
+
     //Convert numeric fields
     if (['seed', 'steps', 'width', 'height', 'runCount'].includes(name)) {
       const numValue = value === '' ? undefined : parseInt(value, 10);
-      setFormData((prev) => ({ ...prev, [name]: numValue }));
+      handleFormChange({ [name]: numValue });
     } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      handleFormChange({ [name]: value });
     }
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    handleFormChange({ [name]: value });
   };
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -73,45 +99,40 @@ export function PromptForm({
 
   const addTag = (tag: string) => {
     if (tag && !formData.tags.includes(tag)) {
-      setFormData((prev) => ({
-        ...prev,
-        tags: [...prev.tags, tag],
-      }));
+      handleFormChange({
+        tags: [...formData.tags, tag],
+      });
     }
     setTagInput('');
   };
 
   const removeTag = (tag: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      tags: prev.tags.filter((t) => t !== tag),
-    }));
+    handleFormChange({
+      tags: formData.tags.filter((t) => t !== tag),
+    });
   };
 
   // LoRA handling - automatically add on selection
   const handleLoraSelect = (loraName: string) => {
     if (loraName && !formData.loras?.some(l => l.name === loraName)) {
-      setFormData(prev => ({
-        ...prev,
-        loras: [...(prev.loras || []), { name: loraName, weight: 1.0 }]
-      }));
+      handleFormChange({
+        loras: [...(formData.loras || []), { name: loraName, weight: 1.0 }]
+      });
     }
   };
 
   const removeLora = (loraName: string) => {
-    setFormData(prev => ({
-      ...prev,
-      loras: prev.loras?.filter(l => l.name !== loraName) || []
-    }));
+    handleFormChange({
+      loras: formData.loras?.filter(l => l.name !== loraName) || []
+    });
   };
 
   const updateLoraWeight = (loraName: string, weight: number) => {
-    setFormData(prev => ({
-      ...prev,
-      loras: prev.loras?.map(l => 
+    handleFormChange({
+      loras: formData.loras?.map(l =>
         l.name === loraName ? { ...l, weight } : l
       ) || []
-    }));
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -124,17 +145,17 @@ export function PromptForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      
+
       <div>
         <Label htmlFor="text" className="text-xs">Prompt</Label>
-        <div 
-          onContextMenu={(e) => 
+        <div
+          onContextMenu={(e) =>
             handleContextMenu(e, 'prompt', formData.text, {
               copy: () => copyToAppClipboard('prompt', formData.text),
               paste: () => {
                 const clipboard = getFromAppClipboard<string>('prompt');
                 if (clipboard) {
-                  setFormData(prev => ({...prev, text: clipboard}));
+                  handleFormChange({ text: clipboard });
                 }
               }
             })
@@ -156,13 +177,13 @@ export function PromptForm({
       <div>
         <Label htmlFor="negativePrompt" className="text-xs">Negative Prompt</Label>
         <div
-          onContextMenu={(e) => 
+          onContextMenu={(e) =>
             handleContextMenu(e, 'negativePrompt', formData.negativePrompt, {
               copy: () => copyToAppClipboard('negativePrompt', formData.negativePrompt),
               paste: () => {
                 const clipboard = getFromAppClipboard<string>('negativePrompt');
                 if (clipboard) {
-                  setFormData(prev => ({...prev, negativePrompt: clipboard}));
+                  handleFormChange({ negativePrompt: clipboard });
                 }
               }
             })
@@ -319,7 +340,7 @@ export function PromptForm({
         <div className="flex items-center mb-1">
           <Label className="text-xs">LoRAs</Label>
         </div>
-        
+
         <div className="mb-2">
           <Select
             onValueChange={handleLoraSelect}
@@ -336,7 +357,7 @@ export function PromptForm({
             </SelectContent>
           </Select>
         </div>
-        
+
         {formData.loras && formData.loras.length > 0 ? (
           <div className="space-y-1">
             {formData.loras.map((lora) => (
@@ -386,14 +407,17 @@ export function PromptForm({
             <Button type="button" variant="outline" onClick={onCancel} size="sm" className="h-8">
               Cancel
             </Button>
-            <Button type="submit" size="sm" className="h-8">
-              {prompt ? 'Update' : 'Add Prompt'}
-            </Button>
+            {/* Only show the Add Prompt button for new prompts, not for edits */}
+            {!isEdit && (
+              <Button type="submit" size="sm" className="h-8">
+                Add Prompt
+              </Button>
+            )}
           </div>
         </div>
-        <div 
+        <div
           className="flex flex-wrap gap-1 mt-1"
-          onContextMenu={(e) => 
+          onContextMenu={(e) =>
             handleContextMenu(e, 'tags', formData.tags, {
               copy: () => copyToAppClipboard('tags', formData.tags),
               paste: () => {
@@ -401,7 +425,7 @@ export function PromptForm({
                 if (clipboard) {
                   // Merge tags without duplicates
                   const mergedTags = [...new Set([...formData.tags, ...clipboard])];
-                  setFormData(prev => ({...prev, tags: mergedTags}));
+                  handleFormChange({ tags: mergedTags });
                 }
               }
             })

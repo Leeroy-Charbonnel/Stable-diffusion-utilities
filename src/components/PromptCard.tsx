@@ -1,3 +1,4 @@
+// src/components/PromptCard.tsx
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -80,7 +81,8 @@ export function PromptCard({
     ? (executionProgress.currentRun / prompt.runCount) * 100
     : executionProgress.currentProgress;
 
-  const shouldShowProgress = isExecuting && executionProgress.totalRuns > 0;
+  // const shouldShowProgress = isExecuting && executionProgress.totalRuns > 0;
+  const shouldShowProgress = true;
 
   return (
     <Card className="overflow-hidden">
@@ -93,44 +95,23 @@ export function PromptCard({
         <AccordionItem value={prompt.id} className="border-none">
           <div className="px-3 py-2 flex items-center justify-between border-b">
             <div className="flex-1 truncate flex items-center">
+
+              <AccordionTrigger className="hover:no-underline py-0 mr-2 flex"></AccordionTrigger>
+
               {isEditingName ? (
                 <div className="flex items-center flex-1">
-                  <Input
-                    value={nameValue}
-                    onChange={handleNameChange}
-                    onKeyDown={handleKeyDown}
-                    autoFocus
-                    className="h-7 text-sm py-0"
-                  />
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={saveNameChange}
-                    className="h-6 w-6 ml-1"
-                  >
+                  <Input value={nameValue} onChange={handleNameChange} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm py-0" />
+                  <Button size="icon" variant="ghost" onClick={saveNameChange} className="h-6 w-6 ml-1">
                     <Check className="h-3.5 w-3.5" />
                   </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={cancelNameEdit}
-                    className="h-6 w-6"
-                  >
+                  <Button size="icon" variant="ghost" onClick={cancelNameEdit} className="h-6 w-6"                  >
                     <X className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               ) : (
-                <AccordionTrigger className="hover:no-underline py-0 flex">
-                  <h3
-                    className="text-sm font-medium truncate hover:underline cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsEditingName(true);
-                    }}
-                  >
-                    {prompt.name}
-                  </h3>
-                </AccordionTrigger>
+                <h3 className="text-sm font-medium truncate hover:underline cursor-pointer" onClick={() => { setIsEditingName(true); }}                >
+                  {prompt.name}
+                </h3>
               )}
             </div>
             <div className="flex items-center space-x-1 ml-2">
