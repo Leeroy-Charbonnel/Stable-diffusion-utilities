@@ -1,6 +1,6 @@
 // src/services/api.ts
 import { Prompt, GeneratedImage } from '@/types';
-import { 
+import {
   saveGeneratedImage,
   getAllImageMetadata,
   getImageData as getStoredImageData,
@@ -71,7 +71,14 @@ export class ApiService {
   async testConnection(): Promise<boolean> {
     console.log(`Testing API connection to ${this.apiUrl}`);
     try {
-      const response = await fetch(`${this.apiUrl}/app_id`);
+      const response = await fetch(`${this.apiUrl}/app_id`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        // Add a timeout to prevent hanging on connection issues
+        signal: AbortSignal.timeout(5000)
+      });
       console.log(`API connection test result: ${response.ok ? 'SUCCESS' : 'FAILED'}, status: ${response.status}`);
       return response.ok;
     } catch (error) {
@@ -86,7 +93,7 @@ export class ApiService {
     try {
       const response = await fetch(`${this.apiUrl}/sdapi/v1/samplers`);
       if (!response.ok) throw new Error(`Failed to fetch samplers, status: ${response.status}`);
-      
+
       const data = await response.json();
       console.log(`Samplers fetched successfully:`, data);
       return data.map((sampler: any) => sampler.name);
@@ -102,7 +109,7 @@ export class ApiService {
     try {
       const response = await fetch(`${this.apiUrl}/sdapi/v1/sd-models`);
       if (!response.ok) throw new Error(`Failed to fetch models, status: ${response.status}`);
-      
+
       const data = await response.json();
       console.log(`Models fetched successfully:`, data);
       return data.map((model: any) => model.title);
@@ -124,8 +131,11 @@ export class ApiService {
         body: JSON.stringify(params),
       });
 
-      if (!response.ok) throw new Error(`Failed to generate image, status: ${response.status}`);
-      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to generate image, status: ${response.status}, message: ${errorText}`);
+      }
+
       const result = await response.json();
       console.log(`Image generation successful, received ${result.images?.length} images`);
       return result;
@@ -156,14 +166,14 @@ export class ApiService {
       return false;
     }
   }
-  
+
   // Get the current SD model
   async getCurrentModel(): Promise<string | null> {
     console.log(`Fetching current model from ${this.apiUrl}/sdapi/v1/options`);
     try {
       const response = await fetch(`${this.apiUrl}/sdapi/v1/options`);
       if (!response.ok) throw new Error(`Failed to fetch current model, status: ${response.status}`);
-      
+
       const data = await response.json();
       console.log(`Current model fetched:`, data.sd_model_checkpoint);
       return data.sd_model_checkpoint || null;
@@ -172,14 +182,14 @@ export class ApiService {
       return null;
     }
   }
-  
+
   // Get available LoRAs
   async getLoras(): Promise<any[]> {
     console.log(`Fetching LoRAs from ${this.apiUrl}/sdapi/v1/loras`);
     try {
       const response = await fetch(`${this.apiUrl}/sdapi/v1/loras`);
       if (!response.ok) throw new Error(`Failed to fetch LoRAs, status: ${response.status}`);
-      
+
       const data = await response.json();
       console.log(`LoRAs fetched successfully:`, data);
       return data;
@@ -195,15 +205,18 @@ export class ApiService {
     try {
       // Generate a unique ID for the image
       const imageId = crypto.randomUUID();
-      
+
       // Save using file system API
       const savedImage = await saveGeneratedImage(imageId, imageBase64, promptData);
-      
+
       if (savedImage) {
         // Update the cached images
         this.cachedImages.push(savedImage);
+        console.log(`Image saved successfully with ID: ${imageId}`);
+      } else {
+        console.error('Failed to save image: No response from file system API');
       }
-      
+
       return savedImage;
     } catch (error) {
       console.error('Failed to save generated image:', error);
@@ -214,8 +227,9 @@ export class ApiService {
   // Load images from the file system API
   private async loadImages() {
     if (this.isLoadingImages) return;
-    
+
     this.isLoadingImages = true;
+    console.log('Loading images from storage...');
     try {
       this.cachedImages = await getAllImageMetadata();
       console.log(`Loaded ${this.cachedImages.length} images from storage`);
@@ -228,6 +242,7 @@ export class ApiService {
 
   // Refresh images from storage
   async refreshImages() {
+    console.log('Refreshing images from storage...');
     await this.loadImages();
     return this.cachedImages;
   }
@@ -239,20 +254,28 @@ export class ApiService {
 
   // Get image data by ID
   async getImageData(imageId: string): Promise<string | null> {
-    const imageData = await getStoredImageData(imageId);
-    return imageData;
+    try {
+      const imageData = await getStoredImageData(imageId);
+      return imageData;
+    } catch (error) {
+      console.error(`Error getting image data for ID ${imageId}:`, error);
+      return null;
+    }
   }
 
   // Delete an image
   async deleteImage(imageId: string): Promise<boolean> {
     console.log(`Deleting image with ID: ${imageId}`);
     const success = await deleteStoredImage(imageId);
-    
+
     if (success) {
       // Update cache
       this.cachedImages = this.cachedImages.filter(img => img.id !== imageId);
+      console.log(`Image with ID ${imageId} deleted successfully`);
+    } else {
+      console.error(`Failed to delete image with ID ${imageId}`);
     }
-    
+
     return success;
   }
 
@@ -260,14 +283,17 @@ export class ApiService {
   async updateImageMetadata(imageId: string, updates: Partial<GeneratedImage>): Promise<boolean> {
     console.log(`Updating metadata for image ID: ${imageId}`, updates);
     const success = await updateImageMetadata(imageId, updates);
-    
+
     if (success) {
       // Update cache
-      this.cachedImages = this.cachedImages.map(img => 
+      this.cachedImages = this.cachedImages.map(img =>
         img.id === imageId ? { ...img, ...updates } : img
       );
+      console.log(`Metadata updated successfully for image ID: ${imageId}`);
+    } else {
+      console.error(`Failed to update metadata for image ID: ${imageId}`);
     }
-    
+
     return success;
   }
 }

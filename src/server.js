@@ -1,41 +1,31 @@
 // server.js
-const express = require('express');
-const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
-const bodyParser = require('body-parser');
-const multer = require('multer');
+import express from 'express';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import bodyParser from 'body-parser';
+
+//Get current directory in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Configure CORS to allow requests from your frontend
-app.use(cors());
+//Configure CORS to allow requests from your frontend
 app.use(bodyParser.json({limit: '50mb'}));
 
-// Configure output directory
+//Configure output directory
 const OUTPUT_DIR = path.join(__dirname, 'output');
 const METADATA_FILE = path.join(OUTPUT_DIR, 'metadata.json');
 
-// Ensure output directory exists
+//Ensure output directory exists
 if (!fs.existsSync(OUTPUT_DIR)) {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   console.log(`Created output directory: ${OUTPUT_DIR}`);
 }
 
-// Configure storage for uploaded files
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, OUTPUT_DIR);
-  },
-  filename: (req, file, cb) => {
-    cb(null, file.originalname);
-  }
-});
-
-const upload = multer({ storage });
-
-// Helper function to read metadata
+//Helper function to read metadata
 const readMetadata = () => {
   try {
     if (!fs.existsSync(METADATA_FILE)) {
@@ -49,7 +39,7 @@ const readMetadata = () => {
   }
 };
 
-// Helper function to save metadata
+//Helper function to save metadata
 const saveMetadata = (metadata) => {
   try {
     fs.writeFileSync(METADATA_FILE, JSON.stringify(metadata, null, 2));
@@ -60,38 +50,53 @@ const saveMetadata = (metadata) => {
   }
 };
 
-// API Endpoints
+//Serve static files from the output directory
+app.use('/images', express.static(OUTPUT_DIR));
 
-// Get all images metadata
+//API Endpoints
+
+//Get all images metadata
 app.get('/api/images', (req, res) => {
   const metadata = readMetadata();
   res.json({ success: true, data: metadata });
 });
 
-// Save an image
+//Save an image
 app.post('/api/images', (req, res) => {
   try {
     const { id, imageBase64, metadata } = req.body;
     
-    // Create filename
-    const filename = metadata.filename;
+    if (!id || !imageBase64 || !metadata) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing required parameters: id, imageBase64, or metadata' 
+      });
+    }
+    
+    //Create filename with timestamp to ensure uniqueness
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `img_${timestamp}_${id.slice(0, 8)}.png`;
     const filePath = path.join(OUTPUT_DIR, filename);
     
-    // Write image file (remove data URL prefix)
+    //Write image file (remove data URL prefix if present)
     const base64Data = imageBase64.replace(/^data:image\/png;base64,/, '');
     fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
     
-    // Update metadata
+    //Update metadata
     const allMetadata = readMetadata();
-    allMetadata.push({
+    const newImageMetadata = {
       ...metadata,
-      path: filename // Save relative path
-    });
+      id,
+      path: filename,
+      createdAt: new Date().toISOString()
+    };
+    
+    allMetadata.push(newImageMetadata);
     saveMetadata(allMetadata);
     
     res.json({ 
       success: true, 
-      data: { ...metadata, path: filename }
+      data: newImageMetadata
     });
   } catch (error) {
     console.error('Error saving image:', error);
@@ -99,7 +104,7 @@ app.post('/api/images', (req, res) => {
   }
 });
 
-// Get image by ID
+//Get image by ID
 app.get('/api/images/:id', (req, res) => {
   try {
     const id = req.params.id;
@@ -126,13 +131,23 @@ app.get('/api/images/:id', (req, res) => {
   }
 });
 
-// Update image metadata
+//Update image metadata
 app.put('/api/images/:id', (req, res) => {
   try {
     const id = req.params.id;
     const updates = req.body;
     
+    if (!id) {
+      return res.status(400).json({ success: false, error: 'Missing image ID' });
+    }
+    
     const metadata = readMetadata();
+    const imageIndex = metadata.findIndex(item => item.id === id);
+    
+    if (imageIndex === -1) {
+      return res.status(404).json({ success: false, error: 'Image not found' });
+    }
+    
     const updatedMetadata = metadata.map(item => {
       if (item.id === id) {
         return { ...item, ...updates };
@@ -142,14 +157,14 @@ app.put('/api/images/:id', (req, res) => {
     
     saveMetadata(updatedMetadata);
     
-    res.json({ success: true });
+    res.json({ success: true, data: updatedMetadata[imageIndex] });
   } catch (error) {
     console.error('Error updating metadata:', error);
     res.status(500).json({ success: false, error: String(error) });
   }
 });
 
-// Delete image
+//Delete image
 app.delete('/api/images/:id', (req, res) => {
   try {
     const id = req.params.id;
@@ -162,12 +177,12 @@ app.delete('/api/images/:id', (req, res) => {
     
     const filePath = path.join(OUTPUT_DIR, image.path);
     
-    // Delete file if it exists
+    //Delete file if it exists
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
     
-    // Update metadata
+    //Update metadata
     const updatedMetadata = metadata.filter(item => item.id !== id);
     saveMetadata(updatedMetadata);
     
@@ -178,7 +193,7 @@ app.delete('/api/images/:id', (req, res) => {
   }
 });
 
-// Export all data
+//Export all data
 app.get('/api/export', (req, res) => {
   try {
     const metadata = readMetadata();
@@ -189,7 +204,9 @@ app.get('/api/export', (req, res) => {
   }
 });
 
-// Start the server
+//Start the server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Images will be saved to: ${OUTPUT_DIR}`);
+  console.log(`Metadata file: ${METADATA_FILE}`);
 });

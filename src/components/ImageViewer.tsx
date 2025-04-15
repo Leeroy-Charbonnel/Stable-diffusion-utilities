@@ -1,5 +1,5 @@
 // src/components/ImageViewer.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -57,7 +57,7 @@ export function ImageViewer() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Load image data for a specific image
-  const loadImageData = async (imageId: string) => {
+  const loadImageData = useCallback(async (imageId: string) => {
     if (imageDataCache[imageId]) {
       return imageDataCache[imageId];
     }
@@ -73,7 +73,7 @@ export function ImageViewer() {
     }
 
     return null;
-  };
+  }, [imageDataCache, getImageData]);
 
   // Refresh images
   const handleRefresh = async () => {
@@ -82,6 +82,8 @@ export function ImageViewer() {
       await refreshImages();
       // Clear image data cache
       setImageDataCache({});
+    } catch (error) {
+      console.error('Error refreshing images:', error);
     } finally {
       setIsLoading(false);
     }
@@ -127,10 +129,14 @@ export function ImageViewer() {
   useEffect(() => {
     // Preload the first few images
     const preloadCount = Math.min(9, filteredImages.length);
-    for (let i = 0; i < preloadCount; i++) {
-      loadImageData(filteredImages[i].id);
-    }
-  }, [filteredImages]);
+    const preloadImages = async () => {
+      for (let i = 0; i < preloadCount; i++) {
+        await loadImageData(filteredImages[i].id);
+      }
+    };
+
+    preloadImages();
+  }, [filteredImages, loadImageData]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -145,67 +151,97 @@ export function ImageViewer() {
   };
 
   const handleDeleteImage = async () => {
-    if (selectedImage) {
-      await deleteImage(selectedImage.id);
+    if (!selectedImage) return;
 
-      // Remove from cache
-      const newCache = { ...imageDataCache };
-      delete newCache[selectedImage.id];
-      setImageDataCache(newCache);
+    try {
+      setIsLoading(true);
+      const success = await deleteImage(selectedImage.id);
 
+      if (success) {
+        // Remove from cache
+        const newCache = { ...imageDataCache };
+        delete newCache[selectedImage.id];
+        setImageDataCache(newCache);
+      } else {
+        console.error(`Failed to delete image ${selectedImage.id}`);
+      }
+    } catch (error) {
+      console.error('Error deleting image:', error);
+    } finally {
       setDeleteDialogOpen(false);
       setSelectedImage(null);
+      setIsLoading(false);
     }
   };
 
-  const handleAddTag = () => {
-    if (tagInput.trim() && selectedImage) {
+  const handleAddTag = async () => {
+    if (!tagInput.trim() || !selectedImage) return;
+
+    try {
       const newTags = [...selectedImage.tags];
       if (!newTags.includes(tagInput.trim())) {
         newTags.push(tagInput.trim());
-        updateImageTags(selectedImage.id, newTags);
-        setTagInput('');
+        const success = await updateImageTags(selectedImage.id, newTags);
+
+        if (success) {
+          setTagInput('');
+        }
       }
+    } catch (error) {
+      console.error('Error adding tag:', error);
     }
   };
 
-  const handleRemoveTag = (tag: string) => {
-    if (selectedImage) {
+  const handleRemoveTag = async (tag: string) => {
+    if (!selectedImage) return;
+
+    try {
       const newTags = selectedImage.tags.filter(t => t !== tag);
-      updateImageTags(selectedImage.id, newTags);
+      await updateImageTags(selectedImage.id, newTags);
+    } catch (error) {
+      console.error('Error removing tag:', error);
     }
   };
 
   const handleDownload = () => {
-    if (selectedImage) {
-      const imageData = imageDataCache[selectedImage.id];
-      if (imageData) {
-        //Create a temporary link and trigger download
-        const link = document.createElement('a');
-        link.href = imageData;
-        link.download = selectedImage.filename;
-        link.click();
-      }
+    if (!selectedImage) return;
+
+    const imageData = imageDataCache[selectedImage.id];
+    if (imageData) {
+      //Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = imageData;
+      link.download = selectedImage.filename;
+      link.click();
     }
   };
 
   const handleCopyPrompt = () => {
-    if (selectedImage) {
-      navigator.clipboard.writeText(selectedImage.prompt);
-      setPromptCopied(true);
-      setTimeout(() => setPromptCopied(false), 2000);
-    }
+    if (!selectedImage) return;
+
+    navigator.clipboard.writeText(selectedImage.prompt);
+    setPromptCopied(true);
+    setTimeout(() => setPromptCopied(false), 2000);
   };
 
   const handleExportData = async () => {
-    if (await exportAllData()) {
-      setShowExportSuccess(true);
-      setTimeout(() => setShowExportSuccess(false), 3000);
+    setIsLoading(true);
+    try {
+      if (await exportAllData()) {
+        setShowExportSuccess(true);
+        setTimeout(() => setShowExportSuccess(false), 3000);
+      }
+    } catch (error) {
+      console.error('Error exporting data:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleCreatePrompt = () => {
-    if (selectedImage && newPromptName.trim()) {
+    if (!selectedImage || !newPromptName.trim()) return;
+
+    try {
       // Create a new prompt based on the selected image
       const newPrompt: Prompt = {
         id: crypto.randomUUID(),
@@ -238,6 +274,8 @@ export function ImageViewer() {
       setDetailDialogOpen(false);
       setSelectedImage(null);
       setNewPromptName('');
+    } catch (error) {
+      console.error('Error creating prompt:', error);
     }
   };
 
@@ -262,7 +300,7 @@ export function ImageViewer() {
               <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               {isLoading ? 'Refreshing...' : 'Refresh'}
             </Button>
-            <Button onClick={handleExportData} variant="outline">
+            <Button onClick={handleExportData} variant="outline" disabled={isLoading}>
               <FileDown className="mr-2 h-4 w-4" />
               Export Data
             </Button>
@@ -292,7 +330,7 @@ export function ImageViewer() {
             <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             {isLoading ? 'Refreshing...' : 'Refresh'}
           </Button>
-          <Button onClick={handleExportData} variant="outline">
+          <Button onClick={handleExportData} variant="outline" disabled={isLoading}>
             <FileDown className="mr-2 h-4 w-4" />
             Export Data
           </Button>
@@ -362,6 +400,7 @@ export function ImageViewer() {
                       alt={image.prompt}
                       className="object-cover w-full h-full cursor-pointer"
                       onClick={() => handleImageClick(image)}
+                      loading="lazy"
                     />
                   ) : (
                     <div
@@ -431,8 +470,8 @@ export function ImageViewer() {
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteImage}>
-              Delete
+            <Button variant="destructive" onClick={handleDeleteImage} disabled={isLoading}>
+              {isLoading ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>

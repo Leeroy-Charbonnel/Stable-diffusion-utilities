@@ -13,7 +13,7 @@ export const saveGeneratedImage = async (
   promptData: Prompt
 ): Promise<GeneratedImage | null> => {
   try {
-    // Create timestamp and filename
+    // Format the timestamp in a way that's safe for filenames
     const timestamp = new Date().toISOString();
     const filename = `img_${timestamp.replace(/[:.]/g, '-')}_${imageId.slice(0, 8)}.png`;
     
@@ -47,7 +47,8 @@ export const saveGeneratedImage = async (
     });
     
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(`API error: ${response.status} - ${errorData.error || 'Unknown error'}`);
     }
     
     const result = await response.json();
@@ -132,7 +133,8 @@ export const updateImageMetadata = async (
     });
     
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(`API error: ${response.status} - ${errorData.error || 'Unknown error'}`);
     }
     
     const result = await response.json();
@@ -154,7 +156,8 @@ export const deleteImage = async (id: string): Promise<boolean> => {
     });
     
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(`API error: ${response.status} - ${errorData.error || 'Unknown error'}`);
     }
     
     const result = await response.json();
