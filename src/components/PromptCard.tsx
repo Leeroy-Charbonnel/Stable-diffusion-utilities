@@ -36,7 +36,6 @@ export function PromptCard({
   onRunPrompt,
   isExecuting = false,
   isApiConnected = false,
-  executionProgress = { currentRun: 0, totalRuns: 0, currentProgress: 0 },
   availableSamplers = [],
   availableModels = [],
   availableLoras = []
@@ -73,14 +72,7 @@ export function PromptCard({
     }
   };
 
-
-
-  isExecuting = prompt.name == "1" || prompt.name == "2"
-  // const totalProgress = prompt.runCount > 1
-  //   ? (executionProgress.currentRun / prompt.runCount) * 100
-  //   : executionProgress.currentProgress;
-
-  const totalProgress = 50
+  const currentProgress = (prompt.currentRun / prompt.runCount) * 100
 
   return (
     <Card className="overflow-hidden p-0">
@@ -148,12 +140,12 @@ export function PromptCard({
             <div className="px-3 py-2 space-y-2">
               <div className="w-full">
                 <div className="flex items-center gap-2">
-                  <Progress value={totalProgress} className="h-1 flex-1" />
+                  <Progress value={currentProgress} className="h-1 flex-1" />
                   {
                     prompt.runCount > 1 ?
-                      <span className="text-xs">{executionProgress.currentRun}/{prompt.runCount}</span>
+                      <span className="text-xs">{prompt.currentRun}/{prompt.runCount}</span>
                       :
-                      <span className="text-xs">{Math.round(executionProgress.currentProgress)}%</span>
+                      <span className="text-xs">{Math.round(currentProgress)}%</span>
                   }
 
                 </div>

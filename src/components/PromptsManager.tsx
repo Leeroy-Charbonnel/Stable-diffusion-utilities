@@ -18,14 +18,17 @@ export function PromptsManager() {
 
   //Execution state
   const [status, setStatus] = useState<ExecutionStatus>('idle');
+
+
   const [executingPromptId, setExecutingPromptId] = useState<string | null>(null);
-  const [currentProgress, setCurrentProgress] = useState(0);
-  const [currentRun, setCurrentRun] = useState(0);
-  const [totalRuns, setTotalRuns] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [executionError, setExecutionError] = useState<string | null>(null);
+
   const [successCount, setSuccessCount] = useState(0);
   const [failureCount, setFailureCount] = useState(0);
+  const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
+  const [promptsToRunCount, setPromptsToRunCount] = useState(0);
 
+  //Stable diffusion api data
   const [samplers, setSamplers] = useState<string[]>([]);
   const [models, setModels] = useState<string[]>([]);
   const [loras, setLoras] = useState<any[]>([]);
@@ -37,16 +40,17 @@ export function PromptsManager() {
       const success = await saveAllPrompts(promptsToSave);
       if (!success) {
         console.error('Failed to save prompts to server');
-        setError('Failed to save prompts to server');
+        setExecutionError('Failed to save prompts to server');
       }
     } catch (error) {
       console.error('Error saving prompts:', error);
-      setError(`Error saving prompts: ${error instanceof Error ? error.message : String(error)}`);
+      setExecutionError(`Error saving prompts: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setSavingPrompts(false);
     }
   };
 
+  //Get stable diffusion api data
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -71,11 +75,10 @@ export function PromptsManager() {
       }
     };
 
-    // Only fetch once when component mounts
     fetchData();
-  }, []); 
+  }, []);
 
-  // Load prompts from server
+  //Load prompts from server
   useEffect(() => {
     const loadPromptsFromServer = async () => {
       setIsLoadingPrompts(true);
@@ -84,7 +87,7 @@ export function PromptsManager() {
         setPrompts(loadedPrompts);
       } catch (error) {
         console.error('Failed to load prompts from server:', error);
-        setError(`Failed to load prompts: ${error instanceof Error ? error.message : String(error)}`);
+        setExecutionError(`Failed to load prompts: ${error instanceof Error ? error.message : String(error)}`);
       } finally {
         setIsLoadingPrompts(false);
       }
@@ -100,7 +103,7 @@ export function PromptsManager() {
       name: 'New Prompt',
       text: '',
       negativePrompt: '',
-      seed: undefined,
+      seed: -1,
       steps: 20,
       sampler: 'Euler a',
       model: models[0],
@@ -108,7 +111,9 @@ export function PromptsManager() {
       height: 512,
       runCount: 1,
       tags: [],
-      loras: []
+      loras: [],
+      currentRun: 0,
+      stauts: 'idle',
     };
 
     const updatedPrompts = [...prompts, newPrompt];
@@ -117,9 +122,7 @@ export function PromptsManager() {
   };
 
   const handleUpdatePrompt = async (updatedPrompt: Prompt) => {
-    const updatedPrompts = prompts.map((p) =>
-      (p.id === updatedPrompt.id ? updatedPrompt : p)
-    );
+    const updatedPrompts = prompts.map((p) => (p.id === updatedPrompt.id ? updatedPrompt : p));
     setPrompts(updatedPrompts);
     await savePromptsToServer(updatedPrompts);
   };
@@ -133,11 +136,8 @@ export function PromptsManager() {
   const handleMovePrompt = async (id: string, direction: 'up' | 'down') => {
     const promptIndex = prompts.findIndex((p) => p.id === id);
     if (
-      (direction === 'up' && promptIndex === 0) ||
-      (direction === 'down' && promptIndex === prompts.length - 1)
-    ) {
-      return;
-    }
+      (direction === 'up' && promptIndex === 0) || (direction === 'down' && promptIndex === prompts.length - 1)
+    ) { return; }
 
     const newPrompts = [...prompts];
     const newIndex = direction === 'up' ? promptIndex - 1 : promptIndex + 1;
@@ -149,117 +149,100 @@ export function PromptsManager() {
     await savePromptsToServer(newPrompts);
   };
 
-  const executePrompt = async (prompt: Prompt): Promise<number> => {
-    let successfulRuns = 0;
 
-    setExecutingPromptId(prompt.id);
-    setCurrentRun(0);
-    setTotalRuns(prompt.runCount);
-
-    for (let i = 0; i < prompt.runCount; i++) {
-      // Removed the cancellation check
-
-      setCurrentRun(i + 1);
-      setCurrentProgress(0);
-
-      try {
-        // Simulate progress updates during generation
-        const progressUpdateInterval = setInterval(() => {
-          setCurrentProgress(prev => {
-            const newProgress = prev + 5; // Increment by 5%
-            return newProgress >= 95 ? 95 : newProgress; // Cap at 95% until completion
-          });
-        }, 500);
-
-        const result = await api.generateImage(prompt);
-
-        clearInterval(progressUpdateInterval);
-        setCurrentProgress(100);
-
-        if (result) {
-          successfulRuns++;
-          setSuccessCount(prev => prev + 1);
-        } else {
-          setFailureCount(prev => prev + 1);
-        }
-
-        // Short delay to show 100% before moving to next image
-        await new Promise(resolve => setTimeout(resolve, 500));
-      } catch (err) {
-        console.error(`Error running prompt ${prompt.id} (${i + 1}/${prompt.runCount}):`, err);
-        setFailureCount(prev => prev + 1);
-        setCurrentProgress(0);
-      }
-    }
-
-    return successfulRuns;
-  };
-
-  //Handle execution of all prompts
-  const handleExecuteAll = async () => {
-    if (!api.isConnected) {
-      setError("Not connected to API. Please check connection.");
-      return;
-    }
-
-    if (prompts.length === 0) {
-      setError("No prompts to execute. Please add prompts first.");
-      return;
-    }
-
-    // Start execution
-    setStatus('executing');
-    setCurrentProgress(0);
-    setCurrentRun(0);
-    setSuccessCount(0);
-    setFailureCount(0);
-    setError(null);
-
-    try {
-      for (const prompt of prompts) {
-        // Removed the cancellation check
-        await executePrompt(prompt);
-      }
-
-      setStatus('completed');
-      setExecutingPromptId(null);
-    } catch (err) {
-      console.error('Error during batch execution:', err);
-      setError(`Error during execution: ${err instanceof Error ? err.message : String(err)}`);
-      setStatus('failed');
-      setExecutingPromptId(null);
-    }
-  };
-
-  // Handle execution of a single prompt
+  //Handle execution of a single prompt
   const handleExecutePrompt = async (promptToExecute: Prompt) => {
-    if (!api.isConnected) {
-      setError("Not connected to API. Please check connection.");
-      return;
-    }
-
-    // Set up execution for just this prompt
     setStatus('executing');
-    setCurrentProgress(0);
-    setCurrentRun(0);
-    setSuccessCount(0);
-    setFailureCount(0);
-    setError(null);
+    setCurrentPromptIndex(1);
+    setPromptsToRunCount(promptToExecute.runCount);
 
     try {
       await executePrompt(promptToExecute);
       setStatus('completed');
-      setExecutingPromptId(null);
     } catch (err) {
       console.error('Error during prompt execution:', err);
-      setError(`Error during execution: ${err instanceof Error ? err.message : String(err)}`);
+      setExecutionError(`Error during execution: ${err instanceof Error ? err.message : String(err)}`);
       setStatus('failed');
-      setExecutingPromptId(null);
     }
+
+    resetExecution();
   };
+
+  //Handle execution of all prompts
+  const handleExecuteAll = async () => {
+    setStatus('executing');
+    setCurrentPromptIndex(1);
+    setPromptsToRunCount(prompts.map((p) => p.runCount).reduce((a, b) => a + b, 0));
+
+    try {
+      for (const prompt of prompts) {
+        await executePrompt(prompt);
+      }
+    } catch (err) {
+      console.error('Error during batch execution:', err);
+      setExecutionError(`Error during execution: ${err instanceof Error ? err.message : String(err)}`);
+      setStatus('failed');
+    }
+
+    resetExecution();
+  };
+
+  const resetExecution = () => {
+    setStatus('idle');
+    setCurrentPromptIndex(0);
+    setPromptsToRunCount(0);
+    setSuccessCount(0);
+    setFailureCount(0);
+    setExecutionError(null);
+  }
+
+
+  const executePrompt = async (prompt: Prompt): Promise<void> => {
+    setExecutingPromptId(prompt.id);
+
+    prompt.currentRun = 0;
+    for (let i = 0; i < prompt.runCount; i++) {
+      try {
+        const result = await api.generateImage(prompt);
+
+        if (result) { setSuccessCount(prev => prev + 1); }
+        else { setFailureCount(prev => prev + 1); }
+        setCurrentPromptIndex(prev => prev + 1);
+      } catch (err) {
+        console.error(`Error running prompt ${prompt.id} (${prompt.currentRun}/${prompt.runCount}):`, err);
+        setFailureCount(prev => prev + 1);
+      }
+
+      prompt.currentRun = i + 1;
+    }
+
+    prompt.currentRun = prompt.runCount;
+
+    setExecutingPromptId(null);
+    return;
+  };
+
+
+
 
   return (
     <div>
+      {/* Replaced basic h3 with a better progress indicator */}
+      {status === 'executing' && promptsToRunCount > 0 && (
+        <div className="mb-4">
+          <div className="flex justify-between text-sm font-medium mb-1">
+            <span>Execution Progress</span>
+            <span>{currentPromptIndex} of {promptsToRunCount} ({Math.round((currentPromptIndex / promptsToRunCount) * 100)}%)</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+            <div
+              className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+              style={{ width: `${(currentPromptIndex / promptsToRunCount) * 100}%` }}
+            ></div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Prompt List</h2>
         <div className="flex gap-2">
@@ -320,22 +303,22 @@ export function PromptsManager() {
         </Alert>
       )}
 
-      {status === 'failed' && error && (
+      {status === 'failed' && executionError && (
         <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Execution Failed</AlertTitle>
           <AlertDescription>
-            {error}
+            {executionError}
           </AlertDescription>
         </Alert>
       )}
 
-      {error && status !== 'failed' && (
+      {executionError && status !== 'failed' && (
         <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>
-            {error}
+            {executionError}
           </AlertDescription>
         </Alert>
       )}
@@ -351,11 +334,6 @@ export function PromptsManager() {
             onPromptUpdate={handleUpdatePrompt}
             isExecuting={status === 'executing' && executingPromptId === prompt.id}
             isApiConnected={api.isConnected}
-            executionProgress={{
-              currentRun: currentRun,
-              totalRuns: totalRuns,
-              currentProgress: currentProgress
-            }}
             availableSamplers={samplers}
             availableModels={models}
             availableLoras={loras}

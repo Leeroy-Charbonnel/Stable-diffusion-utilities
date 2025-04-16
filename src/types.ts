@@ -18,9 +18,12 @@ export interface Prompt {
   model?: string;
   width?: number;
   height?: number;
-  runCount: number;
   tags: string[];
   loras?: LoraConfig[];
+
+  runCount: number;
+  currentRun: number;
+  stauts: string;
 }
 
 export interface GeneratedImage {

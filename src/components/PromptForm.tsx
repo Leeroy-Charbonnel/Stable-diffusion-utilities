@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { XIcon, Trash } from 'lucide-react';
 import { Prompt } from '@/types';
-import { copyToAppClipboard, getFromAppClipboard, handleContextMenu } from '@/lib/clipboard';
 import { Slider } from "@/components/ui/slider"
 import { NumberInput } from '@/components/ui/number-input';
 
@@ -28,22 +27,20 @@ export function PromptForm({
   availableLoras = [],
 }: PromptFormProps) {
 
-  const isUpdating = useRef(false);
   const [formData, setFormData] = useState<Prompt>(prompt!);
   const [tagInput, setTagInput] = useState('');
+
+  //Set initial form data when prompt prop changes
+  useEffect(() => {
+    if (prompt) {
+      setFormData(prompt);
+    }
+  }, [prompt]);
 
   const handleFormChange = (updatedData: Partial<Prompt>) => {
     const newFormData = { ...formData, ...updatedData };
     setFormData(newFormData);
-
-    if (!isUpdating.current && prompt?.id) {
-      isUpdating.current = true;
-
-      setTimeout(() => {
-        onPromptUpdate({ ...newFormData });
-        isUpdating.current = false;
-      }, 0);
-    }
+    onPromptUpdate(newFormData);
   };
 
   const handleChange = (name: string, value: any) => {
@@ -68,16 +65,24 @@ export function PromptForm({
 
   const addTags = (tag: string) => {
     const tags = tag.split(/\s+/);
+    const updatedTags = [...formData.tags];
+    let hasNewTags = false;
+
     tags.forEach(t => {
-      if (!formData.tags.includes(t) && t != "") {
-        handleFormChange({ tags: [...formData.tags, t] });
+      if (!updatedTags.includes(t) && t !== "") {
+        updatedTags.push(t);
+        hasNewTags = true;
       }
     });
+
+    if (hasNewTags) {
+      handleFormChange({ tags: updatedTags });
+    }
+
     setTagInput('');
   };
 
   const removeTag = (tag: string) => {
-    console.log("remove tag");
     handleFormChange({ tags: formData.tags.filter((t) => t !== tag) });
   };
 
@@ -104,22 +109,9 @@ export function PromptForm({
   };
 
   return (
-    <form className="space-y-3">
+    <div className="space-y-3">
       <div>
-        <div
-          onContextMenu={(e) =>
-            handleContextMenu(e, 'prompt', formData.text, {
-              copy: () => copyToAppClipboard('prompt', formData.text),
-              paste: () => {
-                const clipboard = getFromAppClipboard<string>('prompt');
-                if (clipboard) {
-                  handleFormChange({ text: clipboard });
-                }
-              }
-            })
-          }
-          className="relative"
-        >
+        <div className="relative">
           <Textarea
             id="text"
             name="text"
@@ -132,20 +124,7 @@ export function PromptForm({
       </div>
 
       <div>
-        <div
-          onContextMenu={(e) =>
-            handleContextMenu(e, 'negativePrompt', formData.negativePrompt, {
-              copy: () => copyToAppClipboard('negativePrompt', formData.negativePrompt),
-              paste: () => {
-                const clipboard = getFromAppClipboard<string>('negativePrompt');
-                if (clipboard) {
-                  handleFormChange({ negativePrompt: clipboard });
-                }
-              }
-            })
-          }
-          className="relative"
-        >
+        <div className="relative">
           <Textarea
             id="negativePrompt"
             name="negativePrompt"
@@ -226,7 +205,7 @@ export function PromptForm({
           <div className="space-y-1">
             {formData.loras.map((lora) => (
               <div key={lora.name} className="grid grid-cols-2 gap-2 p-1 border rounded-md">
-                <div className="flex-1  font-medium">{lora.name}</div>
+                <div className="flex-1 font-medium">{lora.name}</div>
                 <div className="flex items-center gap-1 w-full">
                   <span className="text-xs text-muted-foreground w-10">{lora.weight.toFixed(2)}</span>
 
@@ -251,21 +230,7 @@ export function PromptForm({
           <Input id="tags" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleTagKeyDown} placeholder="Add tags (press Enter to add)" className="h-8 flex-1" />
           <Button type="button" variant="default" size="sm" onClick={() => addTags(tagInput)} disabled={tagInput === ''}>Add</Button>
         </div>
-        <div
-          className="flex flex-wrap gap-1 mt-1"
-          onContextMenu={(e) =>
-            handleContextMenu(e, 'tags', formData.tags, {
-              copy: () => copyToAppClipboard('tags', formData.tags),
-              paste: () => {
-                const clipboard = getFromAppClipboard<string[]>('tags');
-                if (clipboard) {
-                  const mergedTags = [...new Set([...formData.tags, ...clipboard])];
-                  handleFormChange({ tags: mergedTags });
-                }
-              }
-            })
-          }
-        >
+        <div className="flex flex-wrap gap-1 mt-1">
           {formData.tags.map((tag) => (
             <Badge key={tag} variant="secondary" className="flex items-center justify-center gap-1 text-xs py-1">
               {tag}
@@ -277,6 +242,6 @@ export function PromptForm({
           ))}
         </div>
       </div>
-    </form>
+    </div>
   );
 }
