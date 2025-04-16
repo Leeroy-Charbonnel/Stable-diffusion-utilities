@@ -8,6 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { XIcon, Trash } from 'lucide-react';
 import { Prompt } from '@/types';
 import { copyToAppClipboard, getFromAppClipboard, handleContextMenu } from '@/lib/clipboard';
+import { Slider } from "@/components/ui/slider"
+import { NumberInput } from '@/components/ui/number-input';
+
 
 type PromptFormProps = {
   prompt?: Prompt;
@@ -43,11 +46,7 @@ export function PromptForm({
     }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-
+  const handleChange = (name: string, value: any) => {
     if (['seed', 'steps', 'width', 'height', 'runCount'].includes(name)) {
       const numValue = value === '' ? undefined : parseInt(value, 10);
       handleFormChange({ [name]: numValue });
@@ -78,6 +77,7 @@ export function PromptForm({
   };
 
   const removeTag = (tag: string) => {
+    console.log("remove tag");
     handleFormChange({ tags: formData.tags.filter((t) => t !== tag) });
   };
 
@@ -124,7 +124,7 @@ export function PromptForm({
             id="text"
             name="text"
             value={formData.text}
-            onChange={handleChange}
+            onChange={(e) => handleChange('text', e.target.value)}
             placeholder="Enter prompt text..."
             className="min-h-20"
           />
@@ -150,7 +150,7 @@ export function PromptForm({
             id="negativePrompt"
             name="negativePrompt"
             value={formData.negativePrompt}
-            onChange={handleChange}
+            onChange={(e) => handleChange('negativePrompt', e.target.value)}
             placeholder="Enter negative prompt text..."
             className="min-h-16"
           />
@@ -160,19 +160,21 @@ export function PromptForm({
       <div className="grid grid-cols-4 gap-2">
         <div>
           <Label htmlFor="seed" className="text-xs pb-1">Seed</Label>
-          <Input id="seed" name="seed" type="number" value={formData.seed !== undefined ? formData.seed : ''} onChange={handleChange} placeholder="Random" className="h-8" />
+          <Input id="seed" type="number" value={formData.seed !== undefined ? formData.seed : -1} onChange={(e) => handleChange('seed', e.target.value)} placeholder="Random" className="h-8"></Input>
         </div>
         <div>
           <Label htmlFor="steps" className="text-xs pb-1">Steps</Label>
-          <Input id="steps" name="steps" type="number" value={formData.steps} onChange={handleChange} required min={1} max={150} className="h-8" />
+          <NumberInput containerClassName="w-auto" id="steps" value={formData.steps} onChange={(e) => handleChange('steps', e)} required min={1} max={150} className="h-8" />
+
         </div>
         <div>
           <Label htmlFor="width" className="text-xs pb-1">Width</Label>
-          <Input id="width" name="width" type="number" value={formData.width} onChange={handleChange} required step={8} min={64} max={2048} className="h-8" />
+          <NumberInput id="width" value={formData.width} onChange={(e) => handleChange('width', e)} required min={64} max={2048} className="h-8" />
+
         </div>
         <div>
           <Label htmlFor="height" className="text-xs pb-1">Height</Label>
-          <Input id="height" name="height" type="number" value={formData.height} onChange={handleChange} required step={8} min={64} max={2048} className="h-8" />
+          <NumberInput id="height" value={formData.height} onChange={(e) => handleChange('height', e)} required min={64} max={2048} className="h-8" />
         </div>
       </div>
 
@@ -203,7 +205,7 @@ export function PromptForm({
         </div>
         <div className='flex-auto'>
           <Label htmlFor="runCount" className="text-xs pb-1">Run Count</Label>
-          <Input id="runCount" name="runCount" type="number" value={formData.runCount} onChange={handleChange} required min={1} max={999} className="h-8" />
+          <NumberInput id="runCount" value={formData.runCount} onChange={(e) => handleChange('runCount', e)} required min={1} max={999} className="h-8" />
         </div>
       </div>
 
@@ -227,7 +229,10 @@ export function PromptForm({
                 <div className="flex-1  font-medium">{lora.name}</div>
                 <div className="flex items-center gap-1 w-full">
                   <span className="text-xs text-muted-foreground w-10">{lora.weight.toFixed(2)}</span>
-                  <Input type="range" min={0} max={2} step={0.05} value={lora.weight} onChange={(e) => updateLoraWeight(lora.name, parseFloat(e.target.value))} className="flex-1 h-2" />
+
+                  <Slider defaultValue={[lora.weight]} max={2} step={0.1} onValueChange={(value: number[]) => updateLoraWeight(lora.name, value[0])} />
+
+
                   <Button type="button" variant="ghost" size="icon" onClick={() => removeLora(lora.name)} className="h-6 w-6" >
                     <Trash className="h-3 w-3" />
                   </Button>
@@ -262,9 +267,12 @@ export function PromptForm({
           }
         >
           {formData.tags.map((tag) => (
-            <Badge key={tag} variant="secondary" className="flex items-center gap-1 text-xs py-1">
+            <Badge key={tag} variant="secondary" className="flex items-center justify-center gap-1 text-xs py-1">
               {tag}
-              <XIcon className="h-3 w-3 cursor-pointer" onClick={() => removeTag(tag)} />
+              <div className="h-3 w-3 cursor-pointer" onClick={() => removeTag(tag)} >
+                <XIcon size={12} />
+              </div>
+
             </Badge>
           ))}
         </div>

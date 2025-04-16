@@ -33,23 +33,17 @@
     "id": "ad0c7401-11aa-452d-b851-e1bef5323f77",
     "isOpen": true,
     "name": "New Prompt",
-    "text": "",
+    "text": "mp",
     "negativePrompt": "",
-    "steps": 20,
+    "steps": 5,
     "sampler": "Euler a",
     "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
-    "width": 512,
+    "width": 511,
     "height": 512,
-    "runCount": 10,
     "tags": [
-      "fefef",
       ""
     ],
     "loras": [
-      {
-        "name": "ral-dissolve-flux",
-        "weight": 1
-      },
       {
         "name": "bichu-v0612",
         "weight": 1
