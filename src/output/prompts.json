@@ -1,7 +1,7 @@
 [
   {
     "id": "524c3b05-31c0-40eb-bb22-caaad40ccb66",
-    "name": "New Promptfefefefefefefefe",
+    "name": "1",
     "text": "fefefefeeeeeefefefefefefefefefefe",
     "negativePrompt": "fefefefefaaaaaaaaaaaaaaaaaaaaaaaa",
     "steps": 20,
@@ -10,7 +10,69 @@
     "width": 512,
     "height": 512,
     "runCount": 1,
+    "tags": [
+      "feeffe"
+    ],
+    "loras": []
+  },
+  {
+    "id": "efaa29d0-9dfb-4b18-944e-bb91ea2c3b1d",
+    "name": "2",
+    "text": "2ff",
+    "negativePrompt": "",
+    "steps": 20,
+    "sampler": "Euler a",
+    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
+    "width": 512,
+    "height": 512,
+    "runCount": 1,
     "tags": [],
+    "loras": []
+  },
+  {
+    "id": "ad0c7401-11aa-452d-b851-e1bef5323f77",
+    "isOpen": true,
+    "name": "New Prompt",
+    "text": "",
+    "negativePrompt": "",
+    "steps": 20,
+    "sampler": "Euler a",
+    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
+    "width": 512,
+    "height": 512,
+    "runCount": 10,
+    "tags": [
+      "fefef",
+      ""
+    ],
+    "loras": [
+      {
+        "name": "ral-dissolve-flux",
+        "weight": 1
+      },
+      {
+        "name": "bichu-v0612",
+        "weight": 1
+      }
+    ]
+  },
+  {
+    "id": "a356bb5d-333a-4d80-b249-c319ac6cdd7a",
+    "isOpen": true,
+    "name": "New Prompt",
+    "text": "fef",
+    "negativePrompt": "",
+    "steps": 20,
+    "sampler": "Euler a",
+    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
+    "width": 512,
+    "height": 512,
+    "runCount": 1,
+    "tags": [
+      "ihiheg eg e ef fe",
+      "e",
+      "ttgggt"
+    ],
     "loras": []
   }
 ]

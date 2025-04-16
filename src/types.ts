@@ -3,19 +3,23 @@ export interface LoraConfig {
   weight: number;
 }
 
+export type ExecutionStatus = 'idle' | 'executing' | 'completed' | 'failed';
+
+
 export interface Prompt {
   id: string;
+  isOpen: boolean;
   name: string;
   text: string;
   negativePrompt?: string;
-  seed?: number; 
+  seed?: number;
   steps?: number;
   sampler?: string;
   model?: string;
   width?: number;
   height?: number;
   runCount: number;
-  tags?: string[];
+  tags: string[];
   loras?: LoraConfig[];
 }
 

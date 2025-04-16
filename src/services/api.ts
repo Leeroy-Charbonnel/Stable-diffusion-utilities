@@ -166,21 +166,6 @@ export class ApiService {
     }
   }
 
-  // Get the current SD model
-  async getCurrentModel(): Promise<string | null> {
-    console.log(`Fetching current model from ${this.apiUrl}/sdapi/v1/options`);
-    try {
-      const response = await fetch(`${this.apiUrl}/sdapi/v1/options`);
-      if (!response.ok) throw new Error(`Failed to fetch current model, status: ${response.status}`);
-
-      const data = await response.json();
-      console.log(`Current model fetched:`, data.sd_model_checkpoint);
-      return data.sd_model_checkpoint || null;
-    } catch (error) {
-      console.error('Failed to get current model:', error);
-      return null;
-    }
-  }
 
   // Get available LoRAs
   async getLoras(): Promise<any[]> {

@@ -2,23 +2,21 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PlusCircle, Play, CheckCircle, AlertCircle } from 'lucide-react';
-import { Prompt } from '@/types';
+import { ExecutionStatus, Prompt } from '@/types';
 import { PromptCard } from './PromptCard';
 import { useApi } from '@/contexts/ApiContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { generateUUID } from '@/lib/utils';
 import { getAllPrompts, saveAllPrompts } from '@/lib/promptsApi';
 
-type ExecutionStatus = 'idle' | 'executing' | 'completed' | 'failed';
 
 export function PromptsManager() {
   const api = useApi();
   const [prompts, setPrompts] = useState<Prompt[]>([]);
-  const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
   const [isLoadingPrompts, setIsLoadingPrompts] = useState(false);
   const [savingPrompts, setSavingPrompts] = useState(false);
 
-  // Execution state
+  //Execution state
   const [status, setStatus] = useState<ExecutionStatus>('idle');
   const [executingPromptId, setExecutingPromptId] = useState<string | null>(null);
   const [currentProgress, setCurrentProgress] = useState(0);
@@ -28,14 +26,11 @@ export function PromptsManager() {
   const [successCount, setSuccessCount] = useState(0);
   const [failureCount, setFailureCount] = useState(0);
 
-  // State for API data
   const [samplers, setSamplers] = useState<string[]>([]);
   const [models, setModels] = useState<string[]>([]);
   const [loras, setLoras] = useState<any[]>([]);
-  const [currentModel, setCurrentModel] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  //Save prompts to the server
   const savePromptsToServer = async (promptsToSave: Prompt[]) => {
     try {
       setSavingPrompts(true);
@@ -52,26 +47,21 @@ export function PromptsManager() {
     }
   };
 
-  // Fetch API data only once on component mount
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Test API connection first
         const connected = await api.checkConnection();
 
         if (connected) {
-          // Fetch all required data in parallel
-          const [samplersData, modelsData, currentModelData, lorasData] = await Promise.all([
+          const [samplersData, modelsData, lorasData] = await Promise.all([
             api.api.getSamplers(),
             api.api.getModels(),
-            api.api.getCurrentModel(),
             api.api.getLoras()
           ]);
 
           setSamplers(samplersData);
           setModels(modelsData);
-          if (currentModelData) setCurrentModel(currentModelData);
           setLoras(lorasData);
         }
       } catch (error) {
@@ -83,9 +73,9 @@ export function PromptsManager() {
 
     // Only fetch once when component mounts
     fetchData();
-  }, []); // Empty dependency array to prevent infinite loop
+  }, []); 
 
-  // Load prompts from server on initial render
+  // Load prompts from server
   useEffect(() => {
     const loadPromptsFromServer = async () => {
       setIsLoadingPrompts(true);
@@ -104,16 +94,16 @@ export function PromptsManager() {
   }, []);
 
   const handleAddPrompt = async () => {
-    // Create a new prompt with default values
     const newPrompt: Prompt = {
       id: generateUUID(),
+      isOpen: true,
       name: 'New Prompt',
       text: '',
       negativePrompt: '',
       seed: undefined,
       steps: 20,
       sampler: 'Euler a',
-      model: currentModel,
+      model: models[0],
       width: 512,
       height: 512,
       runCount: 1,
@@ -121,15 +111,9 @@ export function PromptsManager() {
       loras: []
     };
 
-    // Add it to the prompts array
     const updatedPrompts = [...prompts, newPrompt];
     setPrompts(updatedPrompts);
-
-    // Save to server
     await savePromptsToServer(updatedPrompts);
-
-    // Set it as the currently editing prompt
-    setEditingPromptId(newPrompt.id);
   };
 
   const handleUpdatePrompt = async (updatedPrompt: Prompt) => {
@@ -137,16 +121,12 @@ export function PromptsManager() {
       (p.id === updatedPrompt.id ? updatedPrompt : p)
     );
     setPrompts(updatedPrompts);
-    
-    // Save to server
     await savePromptsToServer(updatedPrompts);
   };
 
   const handleDeletePrompt = async (id: string) => {
     const updatedPrompts = prompts.filter((p) => p.id !== id);
     setPrompts(updatedPrompts);
-    
-    // Save to server
     await savePromptsToServer(updatedPrompts);
   };
 
@@ -166,17 +146,9 @@ export function PromptsManager() {
     newPrompts.splice(newIndex, 0, promptToMove);
 
     setPrompts(newPrompts);
-    
-    // Save to server
     await savePromptsToServer(newPrompts);
   };
 
-  const toggleEditPrompt = (id: string) => {
-    setEditingPromptId(currentId => currentId === id ? null : id);
-  };
-
-  // Execution related functions
-  //Execute a single prompt with the specified count
   const executePrompt = async (prompt: Prompt): Promise<number> => {
     let successfulRuns = 0;
 
@@ -373,13 +345,12 @@ export function PromptsManager() {
           <PromptCard
             key={prompt.id}
             prompt={prompt}
-            onEditToggle={() => toggleEditPrompt(prompt.id)}
             onDelete={() => handleDeletePrompt(prompt.id)}
             onMove={handleMovePrompt}
             onRunPrompt={handleExecutePrompt}
-            isOpen={editingPromptId === prompt.id}
             onPromptUpdate={handleUpdatePrompt}
             isExecuting={status === 'executing' && executingPromptId === prompt.id}
+            isApiConnected={api.isConnected}
             executionProgress={{
               currentRun: currentRun,
               totalRuns: totalRuns,
@@ -388,7 +359,6 @@ export function PromptsManager() {
             availableSamplers={samplers}
             availableModels={models}
             availableLoras={loras}
-            currentModel={currentModel}
           />
         ))}
       </div>

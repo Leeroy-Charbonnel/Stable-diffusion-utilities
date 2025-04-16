@@ -41,16 +41,14 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       
       if (connected) {
         //If connected, load samplers, models, and loras
-        const [samplers, models, currentModelName, loras] = await Promise.all([
+        const [samplers, models, loras] = await Promise.all([
           apiService.getSamplers(),
           apiService.getModels(),
-          apiService.getCurrentModel(),
           apiService.getLoras()
         ]);
         
         setAvailableSamplers(samplers);
         setAvailableModels(models);
-        if (currentModelName) setCurrentModel(currentModelName);
         setAvailableLoras(loras);
       } else {
         setError("Connection failed. Check if SD server is running.");

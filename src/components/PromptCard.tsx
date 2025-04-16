@@ -11,14 +11,12 @@ import { PromptForm } from './PromptForm';
 
 type PromptCardProps = {
   prompt: Prompt;
-  onEditToggle: () => void;
   onDelete: () => void;
   onMove: (id: string, direction: 'up' | 'down') => void;
   onPromptUpdate: (updatedPrompt: Prompt) => void;
   onRunPrompt: (prompt: Prompt) => void;
-
-  isOpen: boolean;
   isExecuting?: boolean;
+  isApiConnected?: boolean;
   executionProgress?: {
     currentRun: number;
     totalRuns: number;
@@ -28,27 +26,24 @@ type PromptCardProps = {
   availableSamplers?: string[];
   availableModels?: string[];
   availableLoras?: any[];
-  currentModel?: string;
 };
 
 export function PromptCard({
   prompt,
-  onEditToggle,
   onDelete,
   onMove,
   onPromptUpdate,
   onRunPrompt,
-  isOpen = false,
   isExecuting = false,
+  isApiConnected = false,
   executionProgress = { currentRun: 0, totalRuns: 0, currentProgress: 0 },
   availableSamplers = [],
   availableModels = [],
-  availableLoras = [],
-  currentModel = ''
+  availableLoras = []
 }: PromptCardProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(prompt.name);
-  const [isAccordionOpen, setIsAccordionOpen] = useState(isOpen);
+  const [isAccordionOpen, setIsAccordionOpen] = useState(prompt.isOpen);
 
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,9 +73,14 @@ export function PromptCard({
     }
   };
 
-  const totalProgress = prompt.runCount > 1
-    ? (executionProgress.currentRun / prompt.runCount) * 100
-    : executionProgress.currentProgress;
+
+
+  isExecuting = prompt.name == "1" || prompt.name == "2"
+  // const totalProgress = prompt.runCount > 1
+  //   ? (executionProgress.currentRun / prompt.runCount) * 100
+  //   : executionProgress.currentProgress;
+
+  const totalProgress = 50
 
   return (
     <Card className="overflow-hidden p-0">
@@ -116,7 +116,7 @@ export function PromptCard({
                 ))}
             </div>
             <div className="flex items-center space-x-1 ml-2">
-              <Button variant="outline" size="sm" onClick={() => { onRunPrompt(prompt); }} className="h-7 text-xs" disabled={isExecuting}>
+              <Button variant="outline" size="sm" onClick={() => { onRunPrompt(prompt); }} className="h-7 text-xs" disabled={isExecuting || !isApiConnected}>
                 <Play className="mr-1 h-3 w-3" />
                 Run
               </Button>
@@ -164,18 +164,16 @@ export function PromptCard({
             <div className="p-4">
               <PromptForm
                 prompt={prompt}
-                onSubmit={onPromptUpdate}
-                onCancel={onEditToggle}
+                onPromptUpdate={onPromptUpdate}
                 availableSamplers={availableSamplers}
                 availableModels={availableModels}
                 availableLoras={availableLoras}
-                currentModel={currentModel}
               />
             </div>
           </AccordionContent>
 
           {!isAccordionOpen && prompt.tags && prompt.tags.length > 0 && (
-            <div className="px-3 py-2 border-b">
+            <div className={`px-3 ${isExecuting ? "pb-2" : "py-2"} border-b`}>
               <div className="flex flex-wrap gap-1">
                 {prompt.tags.map(tag => (
                   <Badge key={tag} variant="secondary" className="text-xs px-1 py-0 h-5">
