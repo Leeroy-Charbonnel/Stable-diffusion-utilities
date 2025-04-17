@@ -56,7 +56,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { getAllPrompts, saveAllPrompts } from '@/lib/promptsApi';
+import { getAllPrompts, saveAllPrompts } from '@/services/promptsApi';
 
 export function ImageViewer() {
   const { generatedImages, getImageData, deleteImage, updateImageTags, refreshImages } = useApi();

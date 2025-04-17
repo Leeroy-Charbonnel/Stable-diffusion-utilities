@@ -7,7 +7,7 @@ import { PromptCard } from './PromptCard';
 import { useApi } from '@/contexts/ApiContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { generateUUID } from '@/lib/utils';
-import { getAllPrompts, saveAllPrompts } from '@/lib/promptsApi';
+import { getAllPrompts, saveAllPrompts } from '@/services/promptsApi';
 import { Progress } from '@/components/ui/progress';
 
 

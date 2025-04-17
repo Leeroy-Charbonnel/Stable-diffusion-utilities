@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiService, ApiService } from '@/services/api';
+import { apiService, ApiService } from '@/services/stableDiffusionApi';
 import { Prompt, GeneratedImage } from '@/types';
 
 interface ApiContextType {
