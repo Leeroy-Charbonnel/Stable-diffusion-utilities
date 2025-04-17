@@ -5,12 +5,10 @@ import {
   getImageData as getStoredImageData,
   updateImageMetadata,
   deleteImage as deleteStoredImage
-} from '@/lib/fileSystemApi';
+} from '@/services/fileSystemApi';
+import { SD_API_BASE_URL } from '@/lib/constants';
 
-// Configure the base URL for the Stable Diffusion API
-const API_BASE_URL = 'http://localhost:7860'; // Default local address for AUTOMATIC1111
-
-// API request types based on AUTOMATIC1111 API schema
+//API request types based on AUTOMATIC1111 API schema
 export interface Text2ImageRequest {
   prompt: string;
   negative_prompt?: string;
@@ -38,35 +36,35 @@ export interface Text2ImageRequest {
 }
 
 export interface Text2ImageResponse {
-  images: string[]; // base64 encoded images
+  images: string[]; //base64 encoded images
   parameters: any;
   info: string;
 }
 
-// API service class
+//API service class
 export class ApiService {
   private apiUrl: string;
   private cachedImages: GeneratedImage[] = [];
   private isLoadingImages: boolean = false;
 
-  constructor(baseUrl = API_BASE_URL) {
+  constructor(baseUrl = SD_API_BASE_URL) {
     this.apiUrl = baseUrl;
     console.log(`ApiService initialized with base URL: ${baseUrl}`);
     this.loadImages();
   }
 
-  // Set the base URL for the API
+  //Set the base URL for the API
   setBaseUrl(url: string) {
     console.log(`API base URL changed from ${this.apiUrl} to ${url}`);
     this.apiUrl = url;
   }
 
-  // Get the API base URL
+  //Get the API base URL
   getBaseUrl(): string {
     return this.apiUrl;
   }
 
-  // Test the API connection
+  //Test the API connection
   async testConnection(): Promise<boolean> {
     console.log(`Testing API connection to ${this.apiUrl}`);
     try {
@@ -75,7 +73,7 @@ export class ApiService {
         headers: {
           'Accept': 'application/json',
         },
-        // Add a timeout to prevent hanging on connection issues
+        //Add a timeout to prevent hanging on connection issues
         signal: AbortSignal.timeout(5000)
       });
       console.log(`API connection test result: ${response.ok ? 'SUCCESS' : 'FAILED'}, status: ${response.status}`);
@@ -86,7 +84,7 @@ export class ApiService {
     }
   }
 
-  // Get available samplers
+  //Get available samplers
   async getSamplers(): Promise<string[]> {
     console.log(`Fetching samplers from ${this.apiUrl}/sdapi/v1/samplers`);
     try {
@@ -102,7 +100,7 @@ export class ApiService {
     }
   }
 
-  // Get available SD models
+  //Get available SD models
   async getModels(): Promise<string[]> {
     console.log(`Fetching models from ${this.apiUrl}/sdapi/v1/sd-models`);
     try {
@@ -118,7 +116,7 @@ export class ApiService {
     }
   }
 
-  // Generate an image using text-to-image
+  //Generate an image using text-to-image
   async generateImage(params: Text2ImageRequest): Promise<Text2ImageResponse | null> {
     console.log(`Generating image with params:`, params);
     try {
@@ -144,7 +142,7 @@ export class ApiService {
     }
   }
 
-  // Set the current SD model
+  //Set the current SD model
   async setModel(modelTitle: string): Promise<boolean> {
     console.log(`Setting model to: ${modelTitle}`);
     try {
@@ -166,8 +164,7 @@ export class ApiService {
     }
   }
 
-
-  // Get available LoRAs
+  //Get available LoRAs
   async getLoras(): Promise<any[]> {
     console.log(`Fetching LoRAs from ${this.apiUrl}/sdapi/v1/loras`);
     try {
@@ -183,18 +180,18 @@ export class ApiService {
     }
   }
 
-  // Save generated image with metadata
+  //Save generated image with metadata
   async saveGeneratedImage(promptId: string, imageBase64: string, promptData: Prompt): Promise<GeneratedImage | null> {
     console.log(`Saving generated image for prompt ID: ${promptId}`);
     try {
-      // Generate a unique ID for the image
+      //Generate a unique ID for the image
       const imageId = crypto.randomUUID();
 
-      // Save using file system API
+      //Save using file system API
       const savedImage = await saveGeneratedImage(imageId, imageBase64, promptData);
 
       if (savedImage) {
-        // Update the cached images
+        //Update the cached images
         this.cachedImages.push(savedImage);
         console.log(`Image saved successfully with ID: ${imageId}`);
       } else {
@@ -208,7 +205,7 @@ export class ApiService {
     }
   }
 
-  // Load images from the file system API
+  //Load images from the file system API
   private async loadImages() {
     if (this.isLoadingImages) return;
 
@@ -224,19 +221,19 @@ export class ApiService {
     }
   }
 
-  // Refresh images from storage
+  //Refresh images from storage
   async refreshImages() {
     console.log('Refreshing images from storage...');
     await this.loadImages();
     return this.cachedImages;
   }
 
-  // Get all saved images
+  //Get all saved images
   getStoredImages(): GeneratedImage[] {
     return this.cachedImages;
   }
 
-  // Get image data by ID
+  //Get image data by ID
   async getImageData(imageId: string): Promise<string | null> {
     try {
       const imageData = await getStoredImageData(imageId);
@@ -247,13 +244,13 @@ export class ApiService {
     }
   }
 
-  // Delete an image
+  //Delete an image
   async deleteImage(imageId: string): Promise<boolean> {
     console.log(`Deleting image with ID: ${imageId}`);
     const success = await deleteStoredImage(imageId);
 
     if (success) {
-      // Update cache
+      //Update cache
       this.cachedImages = this.cachedImages.filter(img => img.id !== imageId);
       console.log(`Image with ID ${imageId} deleted successfully`);
     } else {
@@ -263,13 +260,13 @@ export class ApiService {
     return success;
   }
 
-  // Update image metadata
+  //Update image metadata
   async updateImageMetadata(imageId: string, updates: Partial<GeneratedImage>): Promise<boolean> {
     console.log(`Updating metadata for image ID: ${imageId}`, updates);
     const success = await updateImageMetadata(imageId, updates);
 
     if (success) {
-      // Update cache
+      //Update cache
       this.cachedImages = this.cachedImages.map(img =>
         img.id === imageId ? { ...img, ...updates } : img
       );
@@ -282,5 +279,5 @@ export class ApiService {
   }
 }
 
-// Export a singleton instance of the API service
+//Export a singleton instance of the API service
 export const apiService = new ApiService();

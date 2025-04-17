@@ -1,6 +1,6 @@
 import { serve } from "bun";
 import { join, dirname, relative } from "path";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { exec } from "child_process";
 import { ImageMetadata, SaveImageRequest, Prompt } from "./types";
 
@@ -98,8 +98,8 @@ const server = serve({
     console.log(path);
 
     if (path.startsWith('/images/')) {
-      // For image requests, look in the output directory
-      const imagePath = path.substring(8); // Remove '/images/'
+      //For image requests, look in the output directory
+      const imagePath = path.substring(8); //Remove '/images/'
       const filePath = toAbsolutePath(imagePath);
       const file = Bun.file(filePath);
       const exists = await file.exists();
@@ -150,6 +150,61 @@ const server = serve({
         });
       }
 
+      //GET /api/images/:id - Get a specific image and its data
+      if (apiPath.startsWith('/images/') && req.method === "GET") {
+        try {
+          const id = apiPath.split('/')[2];
+          const metadata = await readMetadata();
+          const image = metadata.find(img => img.id === id);
+
+          if (!image) {
+            return new Response(JSON.stringify({
+              success: false,
+              error: 'Image not found'
+            }), {
+              status: 404,
+              headers: { ...headers, "Content-Type": "application/json" }
+            });
+          }
+
+          //Convert to absolute path
+          const filePath = toAbsolutePath(image.path);
+          const fileExists = await Bun.file(filePath).exists();
+
+          if (!fileExists) {
+            return new Response(JSON.stringify({
+              success: false,
+              error: 'Image file not found'
+            }), {
+              status: 404,
+              headers: { ...headers, "Content-Type": "application/json" }
+            });
+          }
+
+          //Read the file as a buffer
+          const fileData = await readFile(filePath);
+
+          //Convert to base64 (without the data:image/png;base64, prefix)
+          const base64Data = Buffer.from(fileData).toString('base64');
+
+          return new Response(JSON.stringify({
+            success: true,
+            data: base64Data
+          }), {
+            headers: { ...headers, "Content-Type": "application/json" }
+          });
+        } catch (error) {
+          console.error('Error getting image:', error);
+          return new Response(JSON.stringify({
+            success: false,
+            error: String(error)
+          }), {
+            status: 500,
+            headers: { ...headers, "Content-Type": "application/json" }
+          });
+        }
+      }
+
       //POST /api/images - Save an image
       if (apiPath === '/images' && req.method === "POST") {
         try {
@@ -167,11 +222,11 @@ const server = serve({
             });
           }
 
-          // Store in default folder if no path specified
+          //Store in default folder if no path specified
           const relativePath = metadata.path || `${DEFAULT_FOLDER}/${metadata.filename}`;
           const filePath = toAbsolutePath(relativePath);
 
-          // Ensure the directory exists
+          //Ensure the directory exists
           await mkdir(dirname(filePath), { recursive: true });
 
           //Write image file
@@ -237,27 +292,27 @@ const server = serve({
 
           const currentImage = metadata[imageIndex];
 
-          // Handle path/folder changes
+          //Handle path/folder changes
           if (updates.path && updates.path !== currentImage.path) {
             try {
-              // Get current file location
+              //Get current file location
               const currentPath = toAbsolutePath(currentImage.path);
               const newPath = toAbsolutePath(updates.path);
 
-              // Check if the new path includes a folder
+              //Check if the new path includes a folder
               const folder = dirname(newPath);
               await mkdir(folder, { recursive: true });
 
-              // Read current file
+              //Read current file
               const currentFile = Bun.file(currentPath);
               if (await currentFile.exists()) {
-                // Read the image data
+                //Read the image data
                 const imageData = await currentFile.arrayBuffer();
 
-                // Write to new location
+                //Write to new location
                 await Bun.write(newPath, imageData);
 
-                // Delete old file
+                //Delete old file
                 await currentFile.delete();
               }
             } catch (e) {
@@ -292,7 +347,7 @@ const server = serve({
         }
       }
 
-      // DELETE /api/images/:id - Delete image
+      //DELETE /api/images/:id - Delete image
       if (apiPath.startsWith('/images/') && req.method === "DELETE") {
         try {
           const id = apiPath.split('/')[2];
@@ -309,17 +364,17 @@ const server = serve({
             });
           }
 
-          // Convert to absolute path
+          //Convert to absolute path
           const filePath = toAbsolutePath(image.path);
           const file = Bun.file(filePath);
           const exists = await file.exists();
 
-          // Delete file if it exists
+          //Delete file if it exists
           if (exists) {
             await file.delete();
           }
 
-          // Update metadata
+          //Update metadata
           const updatedMetadata = metadata.filter(item => item.id !== id);
           await saveMetadata(updatedMetadata);
 
@@ -338,17 +393,17 @@ const server = serve({
         }
       }
 
-      // GET /api/open-folder - Open output folder
+      //GET /api/open-folder - Open output folder
       if (apiPath === '/open-folder' && req.method === "POST") {
         try {
-          // Determine the platform-specific command to open a folder
+          //Determine the platform-specific command to open a folder
           const command = process.platform === 'win32'
             ? `explorer "${OUTPUT_DIR}"`
             : process.platform === 'darwin'
               ? `open "${OUTPUT_DIR}"`
               : `xdg-open "${OUTPUT_DIR}"`;
 
-          // Execute the command
+          //Execute the command
           exec(command, (error) => {
             if (error) {
               console.error('Error opening folder:', error);
@@ -372,7 +427,7 @@ const server = serve({
         }
       }
 
-      // GET /api/export - Export all data
+      //GET /api/export - Export all data
       if (apiPath === '/export' && req.method === "GET") {
         try {
           const metadata = await readMetadata();
@@ -394,14 +449,14 @@ const server = serve({
         }
       }
 
-      // If no API endpoint matched
+      //If no API endpoint matched
       return new Response('API endpoint not found', {
         status: 404,
         headers
       });
     }
 
-    // Default: Not found
+    //Default: Not found
     return new Response('Not found', {
       status: 404,
       headers
@@ -409,7 +464,7 @@ const server = serve({
   },
 });
 
-// Ensure the output directory exists when the server starts
+//Ensure the output directory exists when the server starts
 ensureOutputDir().then(() => {
   console.log(`Server running on port ${server.port}`);
   console.log(`Images will be saved to: ${OUTPUT_DIR}`);

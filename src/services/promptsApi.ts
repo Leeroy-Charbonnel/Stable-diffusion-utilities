@@ -1,5 +1,5 @@
 import { Prompt } from '@/types';
-import { FILE_API_BASE_URL } from './constants';
+import { FILE_API_BASE_URL } from '@/lib/constants';
 
 //Get all prompts from the server
 export const getAllPrompts = async (): Promise<Prompt[]> => {

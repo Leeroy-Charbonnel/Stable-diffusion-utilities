@@ -7,12 +7,19 @@ import { PromptCard } from './PromptCard';
 import { useApi } from '@/contexts/ApiContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { generateUUID } from '@/lib/utils';
-import { getAllPrompts, saveAllPrompts } from '@/services/promptsApi';
 import { Progress } from '@/components/ui/progress';
 
-
 export function PromptsManager() {
-  const api = useApi();
+  const {
+    stableDiffusionApi,
+    promptsApi,
+    isConnected,
+    isLoading: apiIsLoading,
+    error: apiError,
+    checkConnection,
+    generateImage
+  } = useApi();
+
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [isLoadingPrompts, setIsLoadingPrompts] = useState(false);
 
@@ -38,7 +45,7 @@ export function PromptsManager() {
 
   const savePromptsToServer = async (promptsToSave: Prompt[]) => {
     try {
-      const success = await saveAllPrompts(promptsToSave);
+      const success = await promptsApi.saveAllPrompts(promptsToSave);
       if (!success) {
         console.error('Failed to save prompts to server');
         setExecutionError('Failed to save prompts to server');
@@ -54,13 +61,13 @@ export function PromptsManager() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const connected = await api.checkConnection();
+        const connected = await checkConnection();
 
         if (connected) {
           const [samplersData, modelsData, lorasData] = await Promise.all([
-            api.api.getSamplers(),
-            api.api.getModels(),
-            api.api.getLoras()
+            stableDiffusionApi.getSamplers(),
+            stableDiffusionApi.getModels(),
+            stableDiffusionApi.getLoras()
           ]);
 
           setSamplers(samplersData);
@@ -82,7 +89,7 @@ export function PromptsManager() {
     const loadPromptsFromServer = async () => {
       setIsLoadingPrompts(true);
       try {
-        const loadedPrompts = await getAllPrompts();
+        const loadedPrompts = await promptsApi.getAllPrompts();
         setPrompts(loadedPrompts);
       } catch (error) {
         console.error('Failed to load prompts from server:', error);
@@ -135,8 +142,11 @@ export function PromptsManager() {
   const handleMovePrompt = async (id: string, direction: 'up' | 'down') => {
     const promptIndex = prompts.findIndex((p) => p.id === id);
     if (
-      (direction === 'up' && promptIndex === 0) || (direction === 'down' && promptIndex === prompts.length - 1)
-    ) { return; }
+      (direction === 'up' && promptIndex === 0) ||
+      (direction === 'down' && promptIndex === prompts.length - 1)
+    ) {
+      return;
+    }
 
     const newPrompts = [...prompts];
     const newIndex = direction === 'up' ? promptIndex - 1 : promptIndex + 1;
@@ -160,7 +170,7 @@ export function PromptsManager() {
     setCurrentPromptIndex(0);
     setPromptsToRunCount(promptToExecute.runCount);
 
-    // Reset cancellation flag
+    //Reset cancellation flag
     cancelExecutionRef.current = false;
     setIsCancelling(false);
 
@@ -187,11 +197,11 @@ export function PromptsManager() {
     setCurrentPromptIndex(0);
     setExecutedPromptIds(new Set());
 
-    // Calculate total runs across all prompts
+    //Calculate total runs across all prompts
     const totalRuns = prompts.map(p => p.runCount).reduce((a, b) => a + b, 0);
     setPromptsToRunCount(totalRuns);
 
-    // Reset cancellation flag
+    //Reset cancellation flag
     cancelExecutionRef.current = false;
     setIsCancelling(false);
 
@@ -203,7 +213,7 @@ export function PromptsManager() {
         }
 
         const prompt = prompts[i];
-        // Add prompt to executed set to show correct UI state
+        //Add prompt to executed set to show correct UI state
         setExecutedPromptIds(prev => new Set([...prev, prompt.id]));
 
         await executePrompt(prompt);
@@ -224,7 +234,7 @@ export function PromptsManager() {
   };
 
   const resetExecution = () => {
-    // Reset all prompts to idle state
+    //Reset all prompts to idle state
     const resetPrompts = prompts.map(p => ({
       ...p,
       currentRun: 0,
@@ -233,7 +243,7 @@ export function PromptsManager() {
     setPrompts(resetPrompts);
     savePromptsToServer(resetPrompts);
 
-    // Clear execution state
+    //Clear execution state
     setExecutingPromptId(null);
     setExecutedPromptIds(new Set());
     setIsCancelling(false);
@@ -245,14 +255,14 @@ export function PromptsManager() {
 
     prompt.currentRun = 0;
     for (let i = 0; i < prompt.runCount; i++) {
-      // Check if execution has been cancelled
+      //Check if execution has been cancelled
       if (cancelExecutionRef.current) {
         console.log(`Execution cancelled for prompt ${prompt.id}`);
         break;
       }
 
       try {
-        const result = await api.generateImage(prompt);
+        const result = await generateImage(prompt);
 
         if (result) { setSuccessCount(prev => prev + 1); }
         else { setFailureCount(prev => prev + 1); }
@@ -264,7 +274,7 @@ export function PromptsManager() {
 
       prompt.currentRun = i + 1;
 
-      // Update prompt state in the list
+      //Update prompt state in the list
       setPrompts(currentPrompts =>
         currentPrompts.map(p =>
           p.id === prompt.id ? { ...p, currentRun: i + 1 } : p
@@ -305,7 +315,7 @@ export function PromptsManager() {
           ) : (
             <Button
               onClick={handleExecuteAll}
-              disabled={!api.isConnected || prompts.length === 0 || status === 'executing' || isLoadingPrompts}
+              disabled={!isConnected || prompts.length === 0 || status === 'executing' || isLoadingPrompts}
             >
               <Play className="mr-2 h-4 w-4" />
               Start Execution
@@ -319,7 +329,7 @@ export function PromptsManager() {
       </div>
 
       {/* Connection Status */}
-      {api.isConnected ? (
+      {isConnected ? (
         <Alert className="mb-4 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
           <CheckCircle className="h-4 w-4" />
           <AlertTitle>Connected</AlertTitle>
@@ -332,7 +342,7 @@ export function PromptsManager() {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Not Connected</AlertTitle>
           <AlertDescription>
-            {api.error || "Not connected to the Stable Diffusion API. Check your connection settings."}
+            {apiError || "Not connected to the Stable Diffusion API. Check your connection settings."}
           </AlertDescription>
         </Alert>
       )}
@@ -344,7 +354,6 @@ export function PromptsManager() {
           </div>
         </Card>
       )}
-
 
       {status === 'completed' && (
         <Alert className="mb-4 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
@@ -393,7 +402,7 @@ export function PromptsManager() {
             onCancelExecution={
               executingPromptId === prompt.id ? handleInterruptExecution : undefined
             }
-            isApiConnected={api.isConnected}
+            isApiConnected={isConnected}
             availableSamplers={samplers}
             availableModels={models}
             availableLoras={loras}

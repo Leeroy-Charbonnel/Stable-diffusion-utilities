@@ -1,19 +1,31 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiService, ApiService } from '@/services/stableDiffusionApi';
 import { Prompt, GeneratedImage } from '@/types';
 
+import { apiService, ApiService } from '@/services/stableDiffusionApi';
+import * as fileSystemApi from '@/services/fileSystemApi';
+import * as promptsApi from '@/services/promptsApi';
+
 interface ApiContextType {
-  api: ApiService;
+  //Service objects
+  stableDiffusionApi: ApiService;
+  fileSystemApi: typeof fileSystemApi;
+  promptsApi: typeof promptsApi;
+
+  //Connection state
   isConnected: boolean;
   isLoading: boolean;
   error: string | null;
   generatedImages: GeneratedImage[];
+
+  //API functions
   checkConnection: () => Promise<boolean>;
   generateImage: (prompt: Prompt) => Promise<GeneratedImage | null>;
   refreshImages: () => void;
   deleteImage: (id: string) => Promise<boolean>;
   updateImageTags: (id: string, tags: string[]) => Promise<boolean>;
+  updateImageMetadata: (id: string, updates: Partial<GeneratedImage>) => Promise<boolean>;
   setModel: (modelName: string) => Promise<boolean>;
+  exportAllData: () => Promise<boolean>;
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
@@ -89,7 +101,7 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       //Take the first image (since we're only generating one per request)
       const imageBase64 = result.images[0];
 
-      //Save the generated image
+      //Save the generated image using fileSystemApi directly
       const savedImage = await apiService.saveGeneratedImage(prompt.id, imageBase64, prompt);
 
       if (savedImage) {
@@ -133,20 +145,40 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Function to set the current model
+  const updateImageMetadata = async (id: string, updates: Partial<GeneratedImage>): Promise<boolean> => {
+    try {
+      const success = await apiService.updateImageMetadata(id, updates);
+      if (success) {
+        refreshImages();
+      }
+      return success;
+    } catch (err) {
+      setError("Error updating image metadata: " + (err instanceof Error ? err.message : String(err)));
+      return false;
+    }
+  };
+
+  //Function to set the current model
   const setModel = async (modelName: string): Promise<boolean> => {
     try {
       setIsLoading(true);
       const success = await apiService.setModel(modelName);
-      if (success) {
-        setCurrentModel(modelName);
-      }
       return success;
     } catch (err) {
       setError("Failed to set model: " + (err instanceof Error ? err.message : String(err)));
       return false;
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  //Export all data
+  const exportData = async (): Promise<boolean> => {
+    try {
+      return await fileSystemApi.exportAllData();
+    } catch (err) {
+      setError("Error exporting data: " + (err instanceof Error ? err.message : String(err)));
+      return false;
     }
   };
 
@@ -158,7 +190,9 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, []);
 
   const value = {
-    api: apiService,
+    stableDiffusionApi: apiService,
+    fileSystemApi,
+    promptsApi,
     isConnected,
     isLoading,
     error,
@@ -168,7 +202,9 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     refreshImages,
     deleteImage,
     updateImageTags,
+    updateImageMetadata,
     setModel,
+    exportAllData: exportData,
   };
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;

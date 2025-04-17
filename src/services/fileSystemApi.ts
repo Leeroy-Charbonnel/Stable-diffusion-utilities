@@ -1,5 +1,5 @@
 import { GeneratedImage, ImageMetadata, Prompt } from '@/types';
-import { FILE_API_BASE_URL } from './constants';
+import { FILE_API_BASE_URL } from '@/lib/constants';
 
 export const saveGeneratedImage = async (
   imageId: string,
@@ -148,7 +148,6 @@ export const deleteImage = async (id: string): Promise<boolean> => {
   }
 };
 
-
 export const exportAllData = async (): Promise<boolean> => {
   try {
     const response = await fetch(`${FILE_API_BASE_URL}/export`);
@@ -178,6 +177,24 @@ export const exportAllData = async (): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error('Error exporting data:', error);
+    return false;
+  }
+};
+
+export const openOutputFolder = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(`${FILE_API_BASE_URL}/open-folder`, {
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.success;
+  } catch (error) {
+    console.error('Error opening output folder:', error);
     return false;
   }
 };

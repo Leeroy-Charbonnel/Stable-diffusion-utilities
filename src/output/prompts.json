@@ -66,5 +66,26 @@
     "currentRun": 0,
     "stauts": "idle",
     "status": "idle"
+  },
+  {
+    "id": "4e10108b-56ee-4603-a4d1-ba0001fc4d66",
+    "name": "A delicate rose sculpted entir...",
+    "text": "A delicate rose sculpted entirely from translucent glass and shimmering crystal, with light refracting through its petals like a prism. Set against a soft black velvet background to enhance the glow and elegance. Hyperrealistic style, high detail, ethereal lighting.",
+    "negativePrompt": "",
+    "seed": -1,
+    "steps": 20,
+    "sampler": "Euler a",
+    "width": 512,
+    "height": 512,
+    "runCount": 1,
+    "tags": [
+      "flower",
+      "rose",
+      "crystal",
+      "glass"
+    ],
+    "isOpen": false,
+    "currentRun": 0,
+    "stauts": "idle"
   }
 ]

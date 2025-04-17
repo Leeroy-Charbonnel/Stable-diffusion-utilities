@@ -1,75 +1,55 @@
 // src/components/ImageViewer.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardFooter
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter
-} from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Search,
-  Tag,
-  Trash2,
   Image as ImageIcon,
-  XIcon,
   InfoIcon,
-  Download,
-  Plus,
-  Copy,
-  TerminalSquare,
-  FileDown,
   RefreshCw,
-  Repeat,
   Folder,
-  ChevronDown,
   FolderOpen,
-  CheckSquare,
-  MoreVertical
+  Trash2,
+  Sliders
 } from 'lucide-react';
 import { useApi } from '@/contexts/ApiContext';
 import { GeneratedImage, Prompt } from '@/types';
-import { exportAllData } from '@/lib/fileSystemApi';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { STORAGE_KEY } from '@/lib/constants';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { getAllPrompts, saveAllPrompts } from '@/services/promptsApi';
+
+// Import our new component files
+import { FilterPanel } from './FilterPanel';
+import { ImageCard } from './ImageCard';
+import { ImageDetailsDialog } from './ImageDetailsDialog';
 
 export function ImageViewer() {
-  const { generatedImages, getImageData, deleteImage, updateImageTags, refreshImages } = useApi();
+  const {
+    generatedImages,
+    stableDiffusionApi,
+    fileSystemApi,
+    promptsApi,
+    deleteImage,
+    refreshImages,
+    updateImageTags,
+    updateImageMetadata
+  } = useApi();
+
   const [filteredImages, setFilteredImages] = useState<GeneratedImage[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
+  const [selectedLoras, setSelectedLoras] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [availableLoras, setAvailableLoras] = useState<string[]>([]);
   const [promptCopied, setPromptCopied] = useState(false);
-  const [showExportSuccess, setShowExportSuccess] = useState(false);
   const [createPromptDialogOpen, setCreatePromptDialogOpen] = useState(false);
   const [newPromptName, setNewPromptName] = useState('');
   const [imageDataCache, setImageDataCache] = useState<Record<string, string>>({});
@@ -79,37 +59,49 @@ export function ImageViewer() {
   const [selectedFolder, setSelectedFolder] = useState<string>('default');
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number, y: number } | null>(null);
+  const [showFilters, setShowFilters] = useState(true);
 
-  // Ref for the context menu click handler
+  //Ref for the context menu click handler
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
-  // Load image data for a specific image
+  //Load image data for a specific image
   const loadImageData = useCallback(async (imageId: string) => {
     if (imageDataCache[imageId]) {
       return imageDataCache[imageId];
     }
 
     try {
-      const data = await getImageData(imageId);
-      if (data) {
-        setImageDataCache(prev => ({ ...prev, [imageId]: data }));
-        return data;
+      //We need the full image data which includes the base64 content
+      const response = await fetch(`/api/images/${imageId}`);
+
+      if (!response.ok) {
+        console.error(`Failed to load image ${imageId}: ${response.status}`);
+        return null;
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        // The server returns a base64 string - we need to prepend the data URL prefix
+        const imageUrl = `data:image/png;base64,${data.data}`;
+        setImageDataCache(prev => ({ ...prev, [imageId]: imageUrl }));
+        return imageUrl;
       }
     } catch (error) {
       console.error(`Error loading image ${imageId}:`, error);
     }
 
     return null;
-  }, [imageDataCache, getImageData]);
+  }, [imageDataCache]);
 
-  // Refresh images
+  //Refresh images
   const handleRefresh = async () => {
     setIsLoading(true);
     try {
       await refreshImages();
-      // Clear image data cache
+      //Clear image data cache
       setImageDataCache({});
-      // Also, scan for folders
+      //Also, scan for folders
       scanForFolders();
     } catch (error) {
       console.error('Error refreshing images:', error);
@@ -118,9 +110,9 @@ export function ImageViewer() {
     }
   };
 
-  // Scan for available folders
+  //Scan for available folders
   const scanForFolders = useCallback(() => {
-    // Extract folders from image paths
+    //Extract folders from image paths
     const folders = new Set<string>(['default']);
     generatedImages.forEach(img => {
       const folder = img.path.includes('/') ? img.path.split('/')[0] : 'default';
@@ -129,35 +121,23 @@ export function ImageViewer() {
     setAvailableFolders(Array.from(folders).sort());
   }, [generatedImages]);
 
-  // Open output folder
-  const openOutputFolder = () => {
-    // Using Electron-like approach, but this would need a proper backend implementation
+  //Open output folder
+  const openOutputFolder = async () => {
     try {
-      // This is a placeholder - would need actual implementation
-      // In a real app, you'd make a request to the server to open the folder
-      fetch('/api/open-folder', { method: 'POST' })
-        .then(response => response.json())
-        .then(data => {
-          if (!data.success) {
-            console.error('Failed to open folder');
-          }
-        })
-        .catch(error => {
-          console.error('Error opening folder:', error);
-        });
+      const success = await fileSystemApi.openOutputFolder();
+      if (!success) {
+        console.error('Failed to open folder');
+      }
     } catch (error) {
       console.error('Error opening folder:', error);
     }
   };
 
-  // Handle moving images to a folder
+  //Handle moving images to a folder
   const moveImagesToFolder = async (imageIds: string[], folder: string) => {
     setIsLoading(true);
     try {
-      // In a real app, you'd make a request to move the files
-      // For now, we'll just update the metadata path
-
-      // Process each image
+      //Process each image
       for (const imageId of imageIds) {
         const image = generatedImages.find(img => img.id === imageId);
         if (image) {
@@ -165,12 +145,12 @@ export function ImageViewer() {
           const filename = currentPath.includes('/') ? currentPath.split('/').pop()! : currentPath;
           const newPath = folder === 'default' ? filename : `${folder}/${filename}`;
 
-          // Update image metadata with new path
+          //Update image metadata with new path
           await updateImageMetadata(imageId, { path: newPath });
         }
       }
 
-      // Refresh after moving
+      //Refresh after moving
       await refreshImages();
       setSelectedImages([]);
     } catch (error) {
@@ -181,41 +161,18 @@ export function ImageViewer() {
     }
   };
 
-  // Update image metadata
-  const updateImageMetadata = async (imageId: string, updates: Partial<GeneratedImage>) => {
-    try {
-      // This would need to be implemented in your API
-      const response = await fetch(`/api/images/${imageId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updates),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to update image metadata: ${response.statusText}`);
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error updating image metadata:', error);
-      return false;
-    }
-  };
-
-  // Handle bulk delete
+  //Handle bulk delete
   const handleBulkDelete = async () => {
     if (selectedImages.length === 0) return;
 
     setIsLoading(true);
     try {
-      // Delete each selected image
+      //Delete each selected image
       for (const imageId of selectedImages) {
         await deleteImage(imageId);
       }
 
-      // Clear selection
+      //Clear selection
       setSelectedImages([]);
     } catch (error) {
       console.error('Error deleting images:', error);
@@ -225,7 +182,7 @@ export function ImageViewer() {
     }
   };
 
-  // Toggle image selection
+  //Toggle image selection
   const toggleImageSelection = (imageId: string) => {
     setSelectedImages(prev =>
       prev.includes(imageId)
@@ -234,45 +191,52 @@ export function ImageViewer() {
     );
   };
 
-  // Select all images
+  //Select all images
   const selectAllImages = () => {
     if (selectedImages.length === filteredImages.length) {
-      // If all are selected, deselect all
+      //If all are selected, deselect all
       setSelectedImages([]);
     } else {
-      // Otherwise, select all filtered images
+      //Otherwise, select all filtered images
       setSelectedImages(filteredImages.map(img => img.id));
     }
   };
 
-  // Check if an image is in a specific folder
-  const isImageInFolder = (image: GeneratedImage, folder: string) => {
-    if (folder === 'default') {
-      return !image.path.includes('/');
-    }
-    return image.path.startsWith(`${folder}/`);
-  };
-
-  // Get image folder
+  //Get image folder
   const getImageFolder = (image: GeneratedImage) => {
     return image.path.includes('/')
       ? image.path.split('/')[0]
       : 'default';
   };
 
-  //Extract all unique tags from images
+  //Extract all unique tags, models, and loras from images
   useEffect(() => {
     const tags = new Set<string>();
-    generatedImages.forEach(img => {
-      img.tags?.forEach(tag => tags.add(tag));
-    });
-    setAvailableTags(Array.from(tags).sort());
+    const models = new Set<string>();
+    const loras = new Set<string>();
 
-    // Also scan for folders
+    generatedImages.forEach(img => {
+      //Extract tags
+      img.tags?.forEach(tag => tags.add(tag));
+
+      //Extract models
+      if (img.model) {
+        models.add(img.model);
+      }
+
+      //For loras, we would need to extract from the prompt or metadata
+      //This is a placeholder for LoRA extraction
+    });
+
+    setAvailableTags(Array.from(tags).sort());
+    setAvailableModels(Array.from(models).sort());
+    setAvailableLoras(Array.from(loras).sort());
+
+    //Also scan for folders
     scanForFolders();
   }, [generatedImages, scanForFolders]);
 
-  //Filter images based on search query and selected tags
+  //Filter images based on search query, selected tags, models, and loras
   useEffect(() => {
     let filtered = [...generatedImages];
 
@@ -293,13 +257,25 @@ export function ImageViewer() {
       );
     }
 
+    //Filter by selected models
+    if (selectedModels.length > 0) {
+      filtered = filtered.filter((img) =>
+        img.model && selectedModels.includes(img.model)
+      );
+    }
+
+    //Filter by selected loras (placeholder - implement based on your LoRA storage)
+    if (selectedLoras.length > 0) {
+      // Implement LoRA filtering logic here based on how LoRAs are stored
+    }
+
     //Sort by creation date, newest first
     filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     setFilteredImages(filtered);
-  }, [generatedImages, searchQuery, selectedTags]);
+  }, [generatedImages, searchQuery, selectedTags, selectedModels, selectedLoras]);
 
-  // Handle clicks outside context menu to close it
+  //Handle clicks outside context menu to close it
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
@@ -313,9 +289,9 @@ export function ImageViewer() {
     };
   }, []);
 
-  // Preload images when filtered images change
+  //Preload images when filtered images change
   useEffect(() => {
-    // Preload the first few images
+    //Preload the first few images
     const preloadCount = Math.min(9, filteredImages.length);
     const preloadImages = async () => {
       for (let i = 0; i < preloadCount; i++) {
@@ -338,6 +314,28 @@ export function ImageViewer() {
     );
   };
 
+  const toggleModelFilter = (model: string) => {
+    setSelectedModels((prev) =>
+      prev.includes(model)
+        ? prev.filter((m) => m !== model)
+        : [...prev, model]
+    );
+  };
+
+  const toggleLoraFilter = (lora: string) => {
+    setSelectedLoras((prev) =>
+      prev.includes(lora)
+        ? prev.filter((l) => l !== lora)
+        : [...prev, lora]
+    );
+  };
+
+  const clearAllFilters = () => {
+    setSelectedTags([]);
+    setSelectedModels([]);
+    setSelectedLoras([]);
+  };
+
   const handleDeleteImage = async () => {
     if (!selectedImage) return;
 
@@ -346,7 +344,7 @@ export function ImageViewer() {
       const success = await deleteImage(selectedImage.id);
 
       if (success) {
-        // Remove from cache
+        //Remove from cache
         const newCache = { ...imageDataCache };
         delete newCache[selectedImage.id];
         setImageDataCache(newCache);
@@ -362,18 +360,14 @@ export function ImageViewer() {
     }
   };
 
-  const handleAddTag = async () => {
-    if (!tagInput.trim() || !selectedImage) return;
+  const handleAddTag = async (tag: string) => {
+    if (!tag.trim() || !selectedImage) return;
 
     try {
       const newTags = [...selectedImage.tags];
-      if (!newTags.includes(tagInput.trim())) {
-        newTags.push(tagInput.trim());
-        const success = await updateImageTags(selectedImage.id, newTags);
-
-        if (success) {
-          setTagInput('');
-        }
+      if (!newTags.includes(tag.trim())) {
+        newTags.push(tag.trim());
+        await updateImageTags(selectedImage.id, newTags);
       }
     } catch (error) {
       console.error('Error adding tag:', error);
@@ -404,38 +398,16 @@ export function ImageViewer() {
     }
   };
 
-  const handleCopyPrompt = () => {
-    if (!selectedImage) return;
-
-    navigator.clipboard.writeText(selectedImage.prompt);
-    setPromptCopied(true);
-    setTimeout(() => setPromptCopied(false), 2000);
-  };
-
-  const handleExportData = async () => {
-    setIsLoading(true);
-    try {
-      if (await exportAllData()) {
-        setShowExportSuccess(true);
-        setTimeout(() => setShowExportSuccess(false), 3000);
-      }
-    } catch (error) {
-      console.error('Error exporting data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleCreatePrompt = async () => {
     if (!selectedImage || !newPromptName.trim()) return;
 
     try {
       setIsLoading(true);
 
-      // Get existing prompts
-      const existingPrompts = await getAllPrompts();
+      //Get existing prompts
+      const existingPrompts = await promptsApi.getAllPrompts();
 
-      // Create a new prompt based on the selected image
+      //Create a new prompt based on the selected image
       const newPrompt: Prompt = {
         id: crypto.randomUUID(),
         name: newPromptName.trim(),
@@ -448,20 +420,23 @@ export function ImageViewer() {
         height: selectedImage.height,
         runCount: 1,
         tags: [...selectedImage.tags],
+        isOpen: true,
+        currentRun: 0,
+        stauts: 'idle',
       };
 
-      // Add new prompt
+      //Add new prompt
       existingPrompts.push(newPrompt);
 
-      // Save to server
-      const success = await saveAllPrompts(existingPrompts);
+      //Save to server
+      const success = await promptsApi.saveAllPrompts(existingPrompts);
 
       if (!success) {
         console.error('Failed to save prompt');
         return;
       }
 
-      // Close dialogs
+      //Close dialogs
       setCreatePromptDialogOpen(false);
       setDetailDialogOpen(false);
       setSelectedImage(null);
@@ -473,16 +448,15 @@ export function ImageViewer() {
     }
   };
 
-
-  // Updated handleReRunImage function to use the file-based API
+  //Updated handleReRunImage function to use the file-based API
   const handleReRunImage = async (image: GeneratedImage) => {
     try {
       setIsLoading(true);
 
-      // Get existing prompts
-      const existingPrompts = await getAllPrompts();
+      //Get existing prompts
+      const existingPrompts = await promptsApi.getAllPrompts();
 
-      // Create a new prompt based on the image
+      //Create a new prompt based on the image
       const newPrompt: Prompt = {
         id: crypto.randomUUID(),
         name: `Rerun: ${image.prompt.substring(0, 20)}...`,
@@ -495,20 +469,23 @@ export function ImageViewer() {
         height: image.height,
         runCount: 1,
         tags: [...image.tags],
+        isOpen: true,
+        currentRun: 0,
+        stauts: 'idle',
       };
 
-      // Add new prompt
+      //Add new prompt
       existingPrompts.push(newPrompt);
 
-      // Save to server
-      const success = await saveAllPrompts(existingPrompts);
+      //Save to server
+      const success = await promptsApi.saveAllPrompts(existingPrompts);
 
       if (!success) {
         console.error('Failed to save prompt');
         return;
       }
 
-      // Navigate to prompts tab
+      //Navigate to prompts tab
       const promptsButton = document.querySelector('button[data-tab="prompts"]');
       if (promptsButton) {
         (promptsButton as HTMLButtonElement).click();
@@ -521,7 +498,7 @@ export function ImageViewer() {
   };
 
   const handleImageClick = async (image: GeneratedImage) => {
-    // Load image data if not already loaded
+    //Load image data if not already loaded
     if (!imageDataCache[image.id]) {
       await loadImageData(image.id);
     }
@@ -532,13 +509,20 @@ export function ImageViewer() {
 
   const handleContextMenu = (e: React.MouseEvent, imageId: string) => {
     e.preventDefault();
-    // Add to selection if not already selected
+    //Add to selection if not already selected
     if (!selectedImages.includes(imageId)) {
       setSelectedImages(prev => [...prev, imageId]);
     }
 
-    // Set context menu position
+    //Set context menu position
     setContextMenuPosition({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleOpenCreatePromptDialog = () => {
+    if (selectedImage) {
+      setNewPromptName(selectedImage.prompt.substring(0, 30) + '...' || 'New Prompt');
+      setCreatePromptDialogOpen(true);
+    }
   };
 
   //If there are no images
@@ -555,10 +539,6 @@ export function ImageViewer() {
             <Button onClick={openOutputFolder} variant="outline">
               <FolderOpen className="mr-2 h-4 w-4" />
               Open Folder
-            </Button>
-            <Button onClick={handleExportData} variant="outline" disabled={isLoading}>
-              <FileDown className="mr-2 h-4 w-4" />
-              Export Data
             </Button>
           </div>
         </div>
@@ -577,265 +557,139 @@ export function ImageViewer() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">Image Gallery</h2>
+    <div className="flex flex-col md:flex-row gap-4">
+      {/* Main Content */}
+      <div className="flex-1">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Image Gallery</h2>
 
-        <div className="flex gap-2">
-          <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            {isLoading ? 'Refreshing...' : 'Refresh'}
-          </Button>
-          <Button onClick={openOutputFolder} variant="outline">
-            <FolderOpen className="mr-2 h-4 w-4" />
-            Open Folder
-          </Button>
-          <Button onClick={handleExportData} variant="outline" disabled={isLoading}>
-            <FileDown className="mr-2 h-4 w-4" />
-            Export Data
-          </Button>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search images..."
-              className="pl-8 w-64"
-              value={searchQuery}
-              onChange={handleSearchChange}
-            />
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setShowFilters(!showFilters)}
+              variant="outline"
+              className="md:hidden"
+            >
+              <Sliders className="h-4 w-4 mr-2" />
+              {showFilters ? 'Hide Filters' : 'Show Filters'}
+            </Button>
+            <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              {isLoading ? 'Refreshing...' : 'Refresh'}
+            </Button>
+            <Button onClick={openOutputFolder} variant="outline">
+              <FolderOpen className="mr-2 h-4 w-4" />
+              Open Folder
+            </Button>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search images..."
+                className="pl-8 w-64"
+                value={searchQuery}
+                onChange={handleSearchChange}
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      {showExportSuccess && (
-        <Alert className="mb-4 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-          <InfoIcon className="h-4 w-4" />
-          <AlertTitle>Export Successful</AlertTitle>
-          <AlertDescription>
-            All image data has been exported successfully.
-          </AlertDescription>
-        </Alert>
-      )}
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center">
+            <Checkbox
+              id="select-all"
+              checked={selectedImages.length > 0 && selectedImages.length === filteredImages.length}
+              className="mr-2"
+              onClick={selectAllImages}
+            />
+            <label htmlFor="select-all" className="text-sm cursor-pointer">
+              {selectedImages.length === 0
+                ? "Select All"
+                : selectedImages.length === filteredImages.length
+                  ? "Deselect All"
+                  : `Selected ${selectedImages.length}`}
+            </label>
 
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex-1">
-          {availableTags.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Tag className="h-4 w-4" />
-                <span className="text-sm font-medium">Filter by tags:</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {availableTags.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant={selectedTags.includes(tag) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => toggleTagFilter(tag)}
-                  >
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
+            {selectedImages.length > 0 && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFolderDialogOpen(true)}
+                  className="ml-2"
+                >
+                  <Folder className="h-4 w-4 mr-1" />
+                  Move to Folder
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  className="ml-2 text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete ({selectedImages.length})
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
-        <div className="ml-4 flex items-center">
-          <Checkbox
-            id="select-all"
-            checked={selectedImages.length > 0 && selectedImages.length === filteredImages.length}
-            className="mr-2"
-            onClick={selectAllImages}
-          />
-          <label htmlFor="select-all" className="text-sm cursor-pointer">
-            {selectedImages.length === 0
-              ? "Select All"
-              : selectedImages.length === filteredImages.length
-                ? "Deselect All"
-                : `Selected ${selectedImages.length}`}
-          </label>
-
-          {selectedImages.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setFolderDialogOpen(true)}
-              className="ml-2"
-            >
-              <Folder className="h-4 w-4 mr-1" />
-              Move to Folder
-            </Button>
-          )}
-
-          {selectedImages.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDeleteDialogOpen(true)}
-              className="ml-2 text-destructive"
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete ({selectedImages.length})
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {filteredImages.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <InfoIcon className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Matching Images</h3>
-            <p className="text-muted-foreground">
-              Try adjusting your search query or tag filters to find images.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredImages.map((image) => {
-            const imageFolder = getImageFolder(image);
-
-            return (
-              <Card
+        {filteredImages.length === 0 ? (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <InfoIcon className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-4" />
+              <h3 className="text-lg font-medium mb-2">No Matching Images</h3>
+              <p className="text-muted-foreground">
+                Try adjusting your search query or filters to find images.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredImages.map((image) => (
+              <ImageCard
                 key={image.id}
-                className={`overflow-hidden group relative ${selectedImages.includes(image.id) ? 'ring-2 ring-primary' : ''
-                  }`}
-                onContextMenu={(e) => handleContextMenu(e, image.id)}
-              >
-                <div className="absolute top-2 left-2 z-10">
-                  <Checkbox
-                    checked={selectedImages.includes(image.id)}
-                    className="h-5 w-5 bg-background/80"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleImageSelection(image.id);
-                    }}
-                  />
-                </div>
+                image={image}
+                imageData={imageDataCache[image.id] || null}
+                isSelected={selectedImages.includes(image.id)}
+                toggleSelection={toggleImageSelection}
+                onImageClick={handleImageClick}
+                onMoveToFolder={moveImagesToFolder}
+                onDeleteClick={(image) => {
+                  setSelectedImage(image);
+                  setDeleteDialogOpen(true);
+                }}
+                onReRunClick={handleReRunImage}
+                availableFolders={availableFolders}
+                onContextMenu={handleContextMenu}
+                getImageFolder={getImageFolder}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
-                <div className="absolute top-2 right-2 z-10">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 bg-background/80 rounded-full">
-                        <Folder className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-48" align="end">
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-sm">Move to folder</h4>
-                        <div className="space-y-1">
-                          {availableFolders.map(folder => (
-                            <div
-                              key={folder}
-                              className={`text-sm px-2 py-1.5 rounded cursor-pointer flex items-center ${imageFolder === folder
-                                  ? 'bg-accent text-accent-foreground'
-                                  : 'hover:bg-accent hover:text-accent-foreground'
-                                }`}
-                              onClick={() => {
-                                if (imageFolder !== folder) {
-                                  moveImagesToFolder([image.id], folder);
-                                }
-                              }}
-                            >
-                              {imageFolder === folder && <CheckSquare className="mr-2 h-4 w-4" />}
-                              {folder}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+      {/* Filters Panel (right side) */}
+      <div className={`w-full md:w-64 space-y-6 ${showFilters ? 'block' : 'hidden md:block'}`}>
+        <FilterPanel
+          availableTags={availableTags}
+          selectedTags={selectedTags}
+          toggleTagFilter={toggleTagFilter}
 
-                <div className="relative aspect-square">
-                  {imageDataCache[image.id] ? (
-                    <img
-                      src={imageDataCache[image.id]}
-                      alt={image.prompt}
-                      className="object-cover w-full h-full cursor-pointer"
-                      onClick={() => handleImageClick(image)}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div
-                      className="flex items-center justify-center w-full h-full bg-muted cursor-pointer"
-                      onClick={() => handleImageClick(image)}
-                    >
-                      <ImageIcon className="h-10 w-10 text-muted-foreground" />
-                    </div>
-                  )}
+          availableModels={availableModels}
+          selectedModels={selectedModels}
+          toggleModelFilter={toggleModelFilter}
 
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => handleImageClick(image)}
-                    >
-                      Details
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="bg-accent"
-                      onClick={() => handleReRunImage(image)}
-                    >
-                      <Repeat className="h-4 w-4 mr-1" />
-                      Re-run
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => {
-                        setSelectedImage(image);
-                        setDeleteDialogOpen(true);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+          availableLoras={availableLoras}
+          selectedLoras={selectedLoras}
+          toggleLoraFilter={toggleLoraFilter}
 
-                <CardFooter className="flex flex-col items-start pt-4">
-                  <div className="flex justify-between w-full items-start mb-2">
-                    <p className="text-sm line-clamp-2 font-medium">
-                      {image.prompt.substring(0, 100)}
-                      {image.prompt.length > 100 ? "..." : ""}
-                    </p>
-                  </div>
+          availableFolders={availableFolders}
+          onFolderSelect={(folder) => moveImagesToFolder(selectedImages, folder)}
 
-                  <div className="flex justify-between w-full">
-                    {imageFolder !== 'default' && (
-                      <Badge variant="outline" className="mr-1">
-                        <Folder className="h-3 w-3 mr-1" />
-                        {imageFolder}
-                      </Badge>
-                    )}
-
-                    <div className="flex-1" />
-
-                    {image.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1 justify-end">
-                        {image.tags.slice(0, 3).map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {image.tags.length > 3 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{image.tags.length - 3}
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </CardFooter>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+          clearAllFilters={clearAllFilters}
+        />
+      </div>
 
       {/* Context Menu */}
       {contextMenuPosition && (
@@ -946,161 +800,6 @@ export function ImageViewer() {
         </DialogContent>
       </Dialog>
 
-      {/* Image Details Dialog */}
-      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="max-w-3xl h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Image Details</DialogTitle>
-          </DialogHeader>
-
-          {selectedImage && (
-            <div className="grid md:grid-cols-2 gap-4 flex-1 overflow-hidden">
-              <div className="relative aspect-square mx-auto max-h-[50vh] overflow-hidden">
-                {imageDataCache[selectedImage.id] ? (
-                  <img
-                    src={imageDataCache[selectedImage.id]}
-                    alt={selectedImage.prompt}
-                    className="object-contain w-full h-full"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center w-full h-full bg-muted">
-                    <ImageIcon className="h-16 w-16 text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-
-              <ScrollArea className="h-[50vh]">
-                <div className="space-y-4 p-1">
-                  <div className="flex justify-between">
-                    <h3 className="text-sm font-medium mb-1">Prompt</h3>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleCopyPrompt}
-                      className="h-6 px-2"
-                    >
-                      <Copy className="h-3.5 w-3.5 mr-1" />
-                      {promptCopied ? "Copied!" : "Copy"}
-                    </Button>
-                  </div>
-                  <p className="text-sm">{selectedImage.prompt}</p>
-
-                  {selectedImage.negativePrompt && (
-                    <div>
-                      <h3 className="text-sm font-medium mb-1">Negative Prompt</h3>
-                      <p className="text-sm">{selectedImage.negativePrompt}</p>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                    <div>
-                      <h3 className="text-xs font-medium">Seed</h3>
-                      <p className="text-sm">{selectedImage.seed ?? 'Random'}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-medium">Steps</h3>
-                      <p className="text-sm">{selectedImage.steps}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-medium">Sampler</h3>
-                      <p className="text-sm">{selectedImage.sampler}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-medium">Size</h3>
-                      <p className="text-sm">{selectedImage.width}×{selectedImage.height}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-medium">Created</h3>
-                      <p className="text-sm">
-                        {new Date(selectedImage.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-medium">Folder</h3>
-                      <p className="text-sm">
-                        {getImageFolder(selectedImage)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Tags</h3>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {selectedImage.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                          {tag}
-                          <XIcon
-                            className="h-3 w-3 cursor-pointer"
-                            onClick={() => handleRemoveTag(tag)}
-                          />
-                        </Badge>
-                      ))}
-                      {selectedImage.tags.length === 0 && (
-                        <p className="text-sm text-muted-foreground">No tags</p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 mt-2">
-                      <Input
-                        value={tagInput}
-                        onChange={(e) => setTagInput(e.target.value)}
-                        placeholder="Add a tag"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddTag();
-                          }
-                        }}
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={handleAddTag}
-                        disabled={!tagInput.trim()}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </ScrollArea>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setNewPromptName(selectedImage?.prompt.substring(0, 30) + '...' || 'New Prompt');
-                setCreatePromptDialogOpen(true);
-              }}
-            >
-              <TerminalSquare className="h-4 w-4 mr-2" />
-              Create Prompt
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (selectedImage) {
-                  handleReRunImage(selectedImage);
-                  setDetailDialogOpen(false);
-                }
-              }}
-            >
-              <Repeat className="h-4 w-4 mr-2" />
-              Re-run Image
-            </Button>
-            <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
-              Close
-            </Button>
-            <Button onClick={handleDownload}>
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Create Prompt Dialog */}
       <Dialog open={createPromptDialogOpen} onOpenChange={setCreatePromptDialogOpen}>
         <DialogContent>
@@ -1133,6 +832,20 @@ export function ImageViewer() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Image Details Dialog - Using the new component */}
+      <ImageDetailsDialog
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        selectedImage={selectedImage}
+        imageData={selectedImage ? imageDataCache[selectedImage.id] : null}
+        onCreatePrompt={handleOpenCreatePromptDialog}
+        onReRunImage={handleReRunImage}
+        onDownload={handleDownload}
+        onAddTag={handleAddTag}
+        onRemoveTag={handleRemoveTag}
+        getImageFolder={getImageFolder}
+      />
     </div>
   );
 }

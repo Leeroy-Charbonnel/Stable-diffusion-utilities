@@ -886,5 +886,63 @@
     ],
     "createdAt": "2025-04-17T20:16:37.216Z",
     "path": "default/img_caecc983-a768-4602-b2a3-fdab7d7f9e02.png"
+  },
+  {
+    "id": "f6c7e997-5110-40cb-a425-90db4c227903",
+    "filename": "img_f6c7e997-5110-40cb-a425-90db4c227903.png",
+    "prompt": "A delicate rose sculpted entirely from translucent glass and shimmering crystal, with light refracting through its petals like a prism. Set against a soft black velvet background to enhance the glow and elegance. Hyperrealistic style, high detail, ethereal lighting.",
+    "negativePrompt": "",
+    "seed": -1,
+    "steps": 20,
+    "width": 512,
+    "height": 512,
+    "sampler": "Euler a",
+    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
+    "tags": [
+      "flower",
+      "rose",
+      "crystal",
+      "glass"
+    ],
+    "createdAt": "2025-04-17T21:48:01.805Z",
+    "path": "default/img_f6c7e997-5110-40cb-a425-90db4c227903.png"
+  },
+  {
+    "id": "1194f3e6-4799-47e1-847d-846b1dabaa3c",
+    "filename": "img_1194f3e6-4799-47e1-847d-846b1dabaa3c.png",
+    "prompt": "A delicate rose sculpted entirely from translucent glass and shimmering crystal, with light refracting through its petals like a prism. Set against a soft black velvet background to enhance the glow and elegance. Hyperrealistic style, high detail, ethereal lighting.",
+    "negativePrompt": "",
+    "seed": -1,
+    "steps": 20,
+    "width": 512,
+    "height": 512,
+    "sampler": "Euler a",
+    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
+    "tags": [
+      "flower",
+      "rose",
+      "crystal",
+      "glass"
+    ],
+    "createdAt": "2025-04-17T21:48:04.697Z",
+    "path": "default/img_1194f3e6-4799-47e1-847d-846b1dabaa3c.png"
+  },
+  {
+    "id": "9fc1a99d-b89c-4a58-94cf-230334b1f932",
+    "filename": "img_9fc1a99d-b89c-4a58-94cf-230334b1f932.png",
+    "prompt": "An orchid blooming at night in a lush jungle, its petals glowing with soft bioluminescent blue and purple hues. Dewdrops sparkle on the flower, and fireflies dance in the background. Sci-fi botanical illustration, vibrant colors, mystical ambiance.",
+    "negativePrompt": "",
+    "seed": -1,
+    "steps": 20,
+    "width": 512,
+    "height": 512,
+    "sampler": "Euler a",
+    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
+    "tags": [
+      "flower",
+      "glowing"
+    ],
+    "createdAt": "2025-04-17T21:48:07.645Z",
+    "path": "default/img_9fc1a99d-b89c-4a58-94cf-230334b1f932.png"
   }
 ]
