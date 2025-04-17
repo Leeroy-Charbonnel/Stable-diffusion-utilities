@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { PlusCircle, Play, CheckCircle, AlertCircle } from 'lucide-react';
+import { PlusCircle, Play, CheckCircle, AlertCircle, StopCircle } from 'lucide-react';
 import { ExecutionStatus, Prompt } from '@/types';
 import { PromptCard } from './PromptCard';
 import { useApi } from '@/contexts/ApiContext';
@@ -16,16 +16,19 @@ export function PromptsManager() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [isLoadingPrompts, setIsLoadingPrompts] = useState(false);
 
-  //Execution state
   const [status, setStatus] = useState<ExecutionStatus>('idle');
 
   const [executingPromptId, setExecutingPromptId] = useState<string | null>(null);
   const [executionError, setExecutionError] = useState<string | null>(null);
+  const [executedPromptIds, setExecutedPromptIds] = useState<Set<string>>(new Set());
 
   const [successCount, setSuccessCount] = useState(0);
   const [failureCount, setFailureCount] = useState(0);
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
   const [promptsToRunCount, setPromptsToRunCount] = useState(0);
+
+  const cancelExecutionRef = useRef(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   //Stable diffusion api data
   const [samplers, setSamplers] = useState<string[]>([]);
@@ -145,16 +148,30 @@ export function PromptsManager() {
     await savePromptsToServer(newPrompts);
   };
 
+  //Handle interruption of execution
+  const handleInterruptExecution = () => {
+    setIsCancelling(true);
+    cancelExecutionRef.current = true;
+  };
 
   //Handle execution of a single prompt
   const handleExecutePrompt = async (promptToExecute: Prompt) => {
     setStatus('executing');
-    setCurrentPromptIndex(1);
+    setCurrentPromptIndex(0);
     setPromptsToRunCount(promptToExecute.runCount);
+
+    // Reset cancellation flag
+    cancelExecutionRef.current = false;
+    setIsCancelling(false);
 
     try {
       await executePrompt(promptToExecute);
-      setStatus('completed');
+
+      if (cancelExecutionRef.current) {
+        setStatus('idle');
+      } else {
+        setStatus('completed');
+      }
     } catch (err) {
       console.error('Error during prompt execution:', err);
       setExecutionError(`Error during execution: ${err instanceof Error ? err.message : String(err)}`);
@@ -168,10 +185,27 @@ export function PromptsManager() {
   const handleExecuteAll = async () => {
     setStatus('executing');
     setCurrentPromptIndex(0);
-    setPromptsToRunCount(prompts.map((p) => p.runCount).reduce((a, b) => a + b, 0));
+    setExecutedPromptIds(new Set());
+
+    // Calculate total runs across all prompts
+    const totalRuns = prompts.map(p => p.runCount).reduce((a, b) => a + b, 0);
+    setPromptsToRunCount(totalRuns);
+
+    // Reset cancellation flag
+    cancelExecutionRef.current = false;
+    setIsCancelling(false);
 
     try {
-      for (const prompt of prompts) {
+      for (let i = 0; i < prompts.length; i++) {
+        if (cancelExecutionRef.current) {
+          console.log("Execution cancelled");
+          break;
+        }
+
+        const prompt = prompts[i];
+        // Add prompt to executed set to show correct UI state
+        setExecutedPromptIds(prev => new Set([...prev, prompt.id]));
+
         await executePrompt(prompt);
       }
     } catch (err) {
@@ -180,24 +214,43 @@ export function PromptsManager() {
       setStatus('failed');
     }
 
+    if (cancelExecutionRef.current) {
+      setStatus('idle');
+    } else if (status !== 'failed') {
+      setStatus('completed');
+    }
+
     resetExecution();
   };
 
   const resetExecution = () => {
-    setStatus('idle');
-    setCurrentPromptIndex(0);
-    setPromptsToRunCount(0);
-    setSuccessCount(0);
-    setFailureCount(0);
-    setExecutionError(null);
-  }
+    // Reset all prompts to idle state
+    const resetPrompts = prompts.map(p => ({
+      ...p,
+      currentRun: 0,
+      status: 'idle'
+    }));
+    setPrompts(resetPrompts);
+    savePromptsToServer(resetPrompts);
 
+    // Clear execution state
+    setExecutingPromptId(null);
+    setExecutedPromptIds(new Set());
+    setIsCancelling(false);
+    cancelExecutionRef.current = false;
+  }
 
   const executePrompt = async (prompt: Prompt): Promise<void> => {
     setExecutingPromptId(prompt.id);
 
     prompt.currentRun = 0;
     for (let i = 0; i < prompt.runCount; i++) {
+      // Check if execution has been cancelled
+      if (cancelExecutionRef.current) {
+        console.log(`Execution cancelled for prompt ${prompt.id}`);
+        break;
+      }
+
       try {
         const result = await api.generateImage(prompt);
 
@@ -210,6 +263,13 @@ export function PromptsManager() {
       }
 
       prompt.currentRun = i + 1;
+
+      // Update prompt state in the list
+      setPrompts(currentPrompts =>
+        currentPrompts.map(p =>
+          p.id === prompt.id ? { ...p, currentRun: i + 1 } : p
+        )
+      );
     }
 
     prompt.currentRun = prompt.runCount;
@@ -217,9 +277,6 @@ export function PromptsManager() {
     setExecutingPromptId(null);
     return;
   };
-
-
-
 
   return (
     <div>
@@ -236,13 +293,24 @@ export function PromptsManager() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Prompt List</h2>
         <div className="flex gap-2">
-          <Button
-            onClick={handleExecuteAll}
-            disabled={!api.isConnected || prompts.length === 0 || status === 'executing' || isLoadingPrompts}
-          >
-            <Play className="mr-2 h-4 w-4" />
-            Start Execution
-          </Button>
+          {status === 'executing' ? (
+            <Button
+              onClick={handleInterruptExecution}
+              variant="destructive"
+              disabled={isCancelling}
+            >
+              <StopCircle className="mr-2 h-4 w-4" />
+              {isCancelling ? 'Stopping...' : 'Stop Execution'}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleExecuteAll}
+              disabled={!api.isConnected || prompts.length === 0 || status === 'executing' || isLoadingPrompts}
+            >
+              <Play className="mr-2 h-4 w-4" />
+              Start Execution
+            </Button>
+          )}
           <Button onClick={handleAddPrompt} disabled={isLoadingPrompts}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Prompt
@@ -317,7 +385,14 @@ export function PromptsManager() {
             onMove={handleMovePrompt}
             onRunPrompt={handleExecutePrompt}
             onPromptUpdate={handleUpdatePrompt}
-            isExecuting={status === 'executing' && executingPromptId === prompt.id}
+            isExecuting={
+              (status === 'executing' && executingPromptId === prompt.id) ||
+              (status === 'executing' && executedPromptIds.has(prompt.id))
+            }
+            isCurrentlyExecuting={status === 'executing' && executingPromptId === prompt.id}
+            onCancelExecution={
+              executingPromptId === prompt.id ? handleInterruptExecution : undefined
+            }
             isApiConnected={api.isConnected}
             availableSamplers={samplers}
             availableModels={models}

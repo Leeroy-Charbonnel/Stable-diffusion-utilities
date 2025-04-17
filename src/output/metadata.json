@@ -732,5 +732,159 @@
     ],
     "createdAt": "2025-04-16T22:30:20.649Z",
     "path": "default/img_12d6a35f-f351-4a5e-9638-cf95d5bfdfd3.png"
+  },
+  {
+    "id": "9f10f907-8427-413e-8f7b-ec541e049007",
+    "filename": "img_9f10f907-8427-413e-8f7b-ec541e049007.png",
+    "prompt": "A delicate rose sculpted entirely from translucent glass and shimmering crystal, with light refracting through its petals like a prism. Set against a soft black velvet background to enhance the glow and elegance. Hyperrealistic style, high detail, ethereal lighting.",
+    "negativePrompt": "",
+    "seed": -1,
+    "steps": 20,
+    "width": 512,
+    "height": 512,
+    "sampler": "Euler a",
+    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
+    "tags": [
+      "flower",
+      "rose",
+      "crystal",
+      "glass"
+    ],
+    "createdAt": "2025-04-17T20:15:49.440Z",
+    "path": "default/img_9f10f907-8427-413e-8f7b-ec541e049007.png"
+  },
+  {
+    "id": "a0daca52-03c7-4240-b077-47f8a8ac4ad2",
+    "filename": "img_a0daca52-03c7-4240-b077-47f8a8ac4ad2.png",
+    "prompt": "A delicate rose sculpted entirely from translucent glass and shimmering crystal, with light refracting through its petals like a prism. Set against a soft black velvet background to enhance the glow and elegance. Hyperrealistic style, high detail, ethereal lighting.",
+    "negativePrompt": "",
+    "seed": -1,
+    "steps": 20,
+    "width": 512,
+    "height": 512,
+    "sampler": "Euler a",
+    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
+    "tags": [
+      "flower",
+      "rose",
+      "crystal",
+      "glass"
+    ],
+    "createdAt": "2025-04-17T20:16:10.732Z",
+    "path": "default/img_a0daca52-03c7-4240-b077-47f8a8ac4ad2.png"
+  },
+  {
+    "id": "880b27c6-de48-41b6-8bb4-f7c61e18e130",
+    "filename": "img_880b27c6-de48-41b6-8bb4-f7c61e18e130.png",
+    "prompt": "A delicate rose sculpted entirely from translucent glass and shimmering crystal, with light refracting through its petals like a prism. Set against a soft black velvet background to enhance the glow and elegance. Hyperrealistic style, high detail, ethereal lighting.",
+    "negativePrompt": "",
+    "seed": -1,
+    "steps": 20,
+    "width": 512,
+    "height": 512,
+    "sampler": "Euler a",
+    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
+    "tags": [
+      "flower",
+      "rose",
+      "crystal",
+      "glass"
+    ],
+    "createdAt": "2025-04-17T20:16:13.870Z",
+    "path": "default/img_880b27c6-de48-41b6-8bb4-f7c61e18e130.png"
+  },
+  {
+    "id": "d6587171-af17-4973-9b53-db91909c8aca",
+    "filename": "img_d6587171-af17-4973-9b53-db91909c8aca.png",
+    "prompt": "A delicate rose sculpted entirely from translucent glass and shimmering crystal, with light refracting through its petals like a prism. Set against a soft black velvet background to enhance the glow and elegance. Hyperrealistic style, high detail, ethereal lighting.",
+    "negativePrompt": "",
+    "seed": -1,
+    "steps": 20,
+    "width": 512,
+    "height": 512,
+    "sampler": "Euler a",
+    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
+    "tags": [
+      "flower",
+      "rose",
+      "crystal",
+      "glass"
+    ],
+    "createdAt": "2025-04-17T20:16:25.443Z",
+    "path": "default/img_d6587171-af17-4973-9b53-db91909c8aca.png"
+  },
+  {
+    "id": "99e3eb08-7c3c-4ac8-bdb9-2b3c59832526",
+    "filename": "img_99e3eb08-7c3c-4ac8-bdb9-2b3c59832526.png",
+    "prompt": "A delicate rose sculpted entirely from translucent glass and shimmering crystal, with light refracting through its petals like a prism. Set against a soft black velvet background to enhance the glow and elegance. Hyperrealistic style, high detail, ethereal lighting.",
+    "negativePrompt": "",
+    "seed": -1,
+    "steps": 20,
+    "width": 512,
+    "height": 512,
+    "sampler": "Euler a",
+    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
+    "tags": [
+      "flower",
+      "rose",
+      "crystal",
+      "glass"
+    ],
+    "createdAt": "2025-04-17T20:16:28.379Z",
+    "path": "default/img_99e3eb08-7c3c-4ac8-bdb9-2b3c59832526.png"
+  },
+  {
+    "id": "cd7d3c9d-0e4c-4ceb-9c68-a913d33244f0",
+    "filename": "img_cd7d3c9d-0e4c-4ceb-9c68-a913d33244f0.png",
+    "prompt": "An orchid blooming at night in a lush jungle, its petals glowing with soft bioluminescent blue and purple hues. Dewdrops sparkle on the flower, and fireflies dance in the background. Sci-fi botanical illustration, vibrant colors, mystical ambiance.",
+    "negativePrompt": "",
+    "seed": -1,
+    "steps": 20,
+    "width": 512,
+    "height": 512,
+    "sampler": "Euler a",
+    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
+    "tags": [
+      "flower",
+      "glowing"
+    ],
+    "createdAt": "2025-04-17T20:16:31.326Z",
+    "path": "default/img_cd7d3c9d-0e4c-4ceb-9c68-a913d33244f0.png"
+  },
+  {
+    "id": "ffd3b71f-fea1-4d5f-a30a-47ef9d460839",
+    "filename": "img_ffd3b71f-fea1-4d5f-a30a-47ef9d460839.png",
+    "prompt": "An orchid blooming at night in a lush jungle, its petals glowing with soft bioluminescent blue and purple hues. Dewdrops sparkle on the flower, and fireflies dance in the background. Sci-fi botanical illustration, vibrant colors, mystical ambiance.",
+    "negativePrompt": "",
+    "seed": -1,
+    "steps": 20,
+    "width": 512,
+    "height": 512,
+    "sampler": "Euler a",
+    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
+    "tags": [
+      "flower",
+      "glowing"
+    ],
+    "createdAt": "2025-04-17T20:16:34.279Z",
+    "path": "default/img_ffd3b71f-fea1-4d5f-a30a-47ef9d460839.png"
+  },
+  {
+    "id": "caecc983-a768-4602-b2a3-fdab7d7f9e02",
+    "filename": "img_caecc983-a768-4602-b2a3-fdab7d7f9e02.png",
+    "prompt": "A steampunk-inspired sunflower with bronze and copper gears making up its petals and a glowing core. The stem is made of twisted metal pipes, and tiny steam vents release puffs of mist. Industrial sci-fi setting, intricate design, warm tones.",
+    "negativePrompt": "",
+    "seed": -1,
+    "steps": 20,
+    "width": 512,
+    "height": 512,
+    "sampler": "Euler a",
+    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
+    "tags": [
+      "flower",
+      "steampunk"
+    ],
+    "createdAt": "2025-04-17T20:16:37.216Z",
+    "path": "default/img_caecc983-a768-4602-b2a3-fdab7d7f9e02.png"
   }
 ]

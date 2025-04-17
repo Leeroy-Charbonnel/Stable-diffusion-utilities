@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, Check, X, Play, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, Check, X, Play, ChevronDown, ChevronUp, StopCircle } from 'lucide-react';
 import { Prompt } from '../types';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,9 @@ type PromptCardProps = {
   onMove: (id: string, direction: 'up' | 'down') => void;
   onPromptUpdate: (updatedPrompt: Prompt) => void;
   onRunPrompt: (prompt: Prompt) => void;
+  onCancelExecution?: () => void;
   isExecuting?: boolean;
+  isCurrentlyExecuting?: boolean;
   isApiConnected?: boolean;
   executionProgress?: {
     currentRun: number;
@@ -34,7 +36,9 @@ export function PromptCard({
   onMove,
   onPromptUpdate,
   onRunPrompt,
+  onCancelExecution,
   isExecuting = false,
+  isCurrentlyExecuting = false,
   isApiConnected = false,
   availableSamplers = [],
   availableModels = [],
@@ -43,7 +47,6 @@ export function PromptCard({
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(prompt.name);
   const [isAccordionOpen, setIsAccordionOpen] = useState(prompt.isOpen);
-
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNameValue(e.target.value);
@@ -72,7 +75,6 @@ export function PromptCard({
     }
   };
 
-
   const handleOpenAccordion = () => {
     setIsAccordionOpen(!isAccordionOpen);
     onPromptUpdate({
@@ -84,7 +86,7 @@ export function PromptCard({
   const currentProgress = (prompt.currentRun / prompt.runCount) * 100
 
   return (
-    <Card className="overflow-hidden p-0">
+    <Card className={`overflow-hidden p-0 ${isExecuting ? 'border-primary' : ''}`}>
       <Accordion
         type="single"
         collapsible
@@ -95,12 +97,9 @@ export function PromptCard({
         <AccordionItem value={prompt.id} className="border-none">
           <div className="px-3 py-2 flex items-center justify-between border-b">
             <div className="flex-1 truncate flex items-center">
-
               <AccordionTrigger disabled={isExecuting} className="hover:no-underline py-0 mr-2 flex"></AccordionTrigger>
 
-
               {isExecuting && (<h3 className="text-sm font-medium truncate">{prompt.name}</h3>)}
-
 
               {!isExecuting && (
                 isEditingName ? (
@@ -118,10 +117,23 @@ export function PromptCard({
                 ))}
             </div>
             <div className="flex items-center space-x-1 ml-2">
-              <Button variant="outline" size="sm" onClick={() => { onRunPrompt(prompt); }} className="h-7 text-xs" disabled={isExecuting || !isApiConnected}>
-                <Play className="mr-1 h-3 w-3" />
-                Run
-              </Button>
+              {isCurrentlyExecuting && onCancelExecution ? (
+                <Button variant="destructive" size="sm" onClick={onCancelExecution} className="h-7 text-xs">
+                  <StopCircle className="mr-1 h-3 w-3" />
+                  Stop
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => { onRunPrompt(prompt); }} 
+                  className="h-7 text-xs" 
+                  disabled={isExecuting || !isApiConnected}
+                >
+                  <Play className="mr-1 h-3 w-3" />
+                  Run
+                </Button>
+              )}
 
               <div className="text-xs bg-secondary text-secondary-foreground rounded py-1.5 px-3">{prompt.runCount}×</div>
 
@@ -145,19 +157,23 @@ export function PromptCard({
             </div>
           </div>
 
-
           {isExecuting && (
             <div className="px-3 py-2 space-y-2">
               <div className="w-full">
                 <div className="flex items-center gap-2">
-                  <Progress value={currentProgress} className="h-1 flex-1" />
+                  <Progress value={isCurrentlyExecuting ? currentProgress : (isExecuting ? 100 : 0)} className="h-1 flex-1" />
                   {
-                    prompt.runCount > 1 ?
-                      <span className="text-xs">{prompt.currentRun}/{prompt.runCount}</span>
-                      :
-                      <span className="text-xs">{Math.round(currentProgress)}%</span>
+                    isCurrentlyExecuting ? (
+                      prompt.runCount > 1 ?
+                        <span className="text-xs">{prompt.currentRun}/{prompt.runCount}</span>
+                        :
+                        <span className="text-xs">{Math.round(currentProgress)}%</span>
+                    ) : (
+                      isExecuting ? 
+                        <span className="text-xs">Completed</span> : 
+                        <span className="text-xs">Pending</span>
+                    )
                   }
-
                 </div>
               </div>
             </div>

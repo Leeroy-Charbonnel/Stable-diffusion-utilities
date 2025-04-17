@@ -20,7 +20,8 @@
     ],
     "loras": [],
     "currentRun": 0,
-    "stauts": "idle"
+    "stauts": "idle",
+    "status": "idle"
   },
   {
     "id": "da57c094-3a46-424d-a5e1-fff69f0202a5",
@@ -40,8 +41,9 @@
       "glowing"
     ],
     "loras": [],
-    "currentRun": 2,
-    "stauts": "idle"
+    "currentRun": 0,
+    "stauts": "idle",
+    "status": "idle"
   },
   {
     "id": "e036b2e6-f3bf-4be1-b63d-da69d3595074",
@@ -62,6 +64,7 @@
     ],
     "loras": [],
     "currentRun": 0,
-    "stauts": "idle"
+    "stauts": "idle",
+    "status": "idle"
   }
 ]

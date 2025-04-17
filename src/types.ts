@@ -3,7 +3,7 @@ export interface LoraConfig {
   weight: number;
 }
 
-export type ExecutionStatus = 'idle' | 'executing' | 'completed' | 'failed';
+export type ExecutionStatus = 'idle' | 'executing' | 'cancelling' | 'completed' | 'failed';
 
 
 export interface Prompt {

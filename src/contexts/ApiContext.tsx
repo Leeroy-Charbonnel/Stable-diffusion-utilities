@@ -7,12 +7,6 @@ interface ApiContextType {
   isConnected: boolean;
   isLoading: boolean;
   error: string | null;
-
-  availableSamplers: string[];
-  availableModels: string[];
-  availableLoras: any[];
-
-  
   generatedImages: GeneratedImage[];
   checkConnection: () => Promise<boolean>;
   generateImage: (prompt: Prompt) => Promise<GeneratedImage | null>;
@@ -28,34 +22,16 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [availableSamplers, setAvailableSamplers] = useState<string[]>([]);
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
-  const [currentModel, setCurrentModel] = useState<string>('');
-  const [availableLoras, setAvailableLoras] = useState<any[]>([]);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
-  
+
   const checkConnection = async (): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     try {
       const connected = await apiService.testConnection();
       setIsConnected(connected);
-      
-      if (connected) {
-        //If connected, load samplers, models, and loras
-        const [samplers, models, loras] = await Promise.all([
-          apiService.getSamplers(),
-          apiService.getModels(),
-          apiService.getLoras()
-        ]);
-        
-        setAvailableSamplers(samplers);
-        setAvailableModels(models);
-        setAvailableLoras(loras);
-      } else {
-        setError("Connection failed. Check if SD server is running.");
-      }
-      
+
+      if (!connected) { setError("Connection failed. Check if SD server is running."); }
       return connected;
     } catch (err) {
       setError("API error: " + (err instanceof Error ? err.message : String(err)));
@@ -74,30 +50,25 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const generateImage = async (prompt: Prompt): Promise<GeneratedImage | null> => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      //Map our Prompt type to the API's Text2ImageRequest
       const params: any = {
         prompt: prompt.text,
         negative_prompt: prompt.negativePrompt,
-        seed: prompt.seed === undefined ? -1 : prompt.seed, //Use -1 for random seed
+        seed: prompt.seed === undefined ? -1 : prompt.seed,
         steps: prompt.steps || 20,
         width: prompt.width || 512,
         height: prompt.height || 512,
         sampler_name: prompt.sampler || "Euler a",
-        cfg_scale: 7.5, //Default value
+        cfg_scale: 7.5,
         batch_size: 1,
-        n_iter: 1, //Number of batches
+        n_iter: 1,
       };
-      
-      // Add model override if specified and different from current
-      if (prompt.model && prompt.model !== currentModel) {
-        params.override_settings = {
-          sd_model_checkpoint: prompt.model
-        };
-      }
-      
-      // Add LoRAs if specified
+
+      params.override_settings = {
+        sd_model_checkpoint: prompt.model
+      };
+
       if (prompt.loras && prompt.loras.length > 0) {
         params.alwayson_scripts = {
           lora: {
@@ -108,25 +79,25 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         };
       }
-      
+
       const result = await apiService.generateImage(params);
-      
+
       if (!result || !result.images || result.images.length === 0) {
         throw new Error("Failed to generate image");
       }
-      
+
       //Take the first image (since we're only generating one per request)
       const imageBase64 = result.images[0];
-      
+
       //Save the generated image
       const savedImage = await apiService.saveGeneratedImage(prompt.id, imageBase64, prompt);
-      
+
       if (savedImage) {
         //Refresh the image list
         refreshImages();
         return savedImage;
       }
-      
+
       return null;
     } catch (err) {
       setError("Error generating image: " + (err instanceof Error ? err.message : String(err)));
@@ -179,6 +150,7 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  //Load images on initial mount
   useEffect(() => {
     refreshImages();
     checkConnection();
@@ -190,10 +162,6 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isConnected,
     isLoading,
     error,
-    availableSamplers,
-    availableModels,
-    currentModel,
-    availableLoras,
     generatedImages,
     checkConnection,
     generateImage,
