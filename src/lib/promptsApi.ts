@@ -19,7 +19,6 @@ export const getAllPrompts = async (): Promise<Prompt[]> => {
     return result.data;
   } catch (error) {
     console.error('Error getting prompts:', error);
-    //Return empty array on error
     return [];
   }
 };

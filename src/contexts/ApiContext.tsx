@@ -7,10 +7,12 @@ interface ApiContextType {
   isConnected: boolean;
   isLoading: boolean;
   error: string | null;
+
   availableSamplers: string[];
   availableModels: string[];
-  currentModel: string;
   availableLoras: any[];
+
+  
   generatedImages: GeneratedImage[];
   checkConnection: () => Promise<boolean>;
   generateImage: (prompt: Prompt) => Promise<GeneratedImage | null>;
@@ -177,7 +179,6 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  //Load images on initial mount
   useEffect(() => {
     refreshImages();
     checkConnection();

@@ -72,6 +72,15 @@ export function PromptCard({
     }
   };
 
+
+  const handleOpenAccordion = () => {
+    setIsAccordionOpen(!isAccordionOpen);
+    onPromptUpdate({
+      ...prompt,
+      isOpen: !isAccordionOpen
+    });
+  };
+
   const currentProgress = (prompt.currentRun / prompt.runCount) * 100
 
   return (
@@ -79,8 +88,9 @@ export function PromptCard({
       <Accordion
         type="single"
         collapsible
+        defaultValue={isAccordionOpen ? prompt.id : undefined}
         className="w-full"
-        onValueChange={(value) => setIsAccordionOpen(!!value)}
+        onValueChange={handleOpenAccordion}
       >
         <AccordionItem value={prompt.id} className="border-none">
           <div className="px-3 py-2 flex items-center justify-between border-b">

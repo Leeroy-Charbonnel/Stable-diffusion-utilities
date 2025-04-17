@@ -55,9 +55,6 @@ export const saveGeneratedImage = async (
   }
 };
 
-/**
- * Get all image metadata
- */
 export const getAllImageMetadata = async (): Promise<GeneratedImage[]> => {
   try {
     const response = await fetch(`${FILE_API_BASE_URL}/images`);
@@ -79,9 +76,6 @@ export const getAllImageMetadata = async (): Promise<GeneratedImage[]> => {
   }
 };
 
-/**
- * Get image data by ID
- */
 export const getImageData = async (imageId: string): Promise<string | null> => {
   try {
     const response = await fetch(`${FILE_API_BASE_URL}/images/${imageId}`);
@@ -107,9 +101,6 @@ export const getImageData = async (imageId: string): Promise<string | null> => {
   }
 };
 
-/**
- * Update image metadata
- */
 export const updateImageMetadata = async (
   id: string,
   updates: Partial<GeneratedImage>
@@ -137,9 +128,6 @@ export const updateImageMetadata = async (
   }
 };
 
-/**
- * Delete image
- */
 export const deleteImage = async (id: string): Promise<boolean> => {
   try {
     const response = await fetch(`${FILE_API_BASE_URL}/images/${id}`, {
@@ -160,9 +148,7 @@ export const deleteImage = async (id: string): Promise<boolean> => {
   }
 };
 
-/**
- * Export all data as JSON
- */
+
 export const exportAllData = async (): Promise<boolean> => {
   try {
     const response = await fetch(`${FILE_API_BASE_URL}/export`);
@@ -177,7 +163,6 @@ export const exportAllData = async (): Promise<boolean> => {
       throw new Error(result.error || 'Failed to export data');
     }
 
-    // Create a download link for the exported data
     const dataStr = JSON.stringify(result.data, null, 2);
     const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
 

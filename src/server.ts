@@ -1,13 +1,31 @@
 import { serve } from "bun";
-import { join, dirname } from "path";
+import { join, dirname, relative } from "path";
 import { mkdir } from "node:fs/promises";
 import { exec } from "child_process";
 import { ImageMetadata, SaveImageRequest, Prompt } from "./types";
 
 //Output directory
 const OUTPUT_DIR = join(import.meta.dir, 'output');
+const DEFAULT_FOLDER = 'default';
 const METADATA_FILE = join(OUTPUT_DIR, 'metadata.json');
 const PROMPTS_FILE = join(OUTPUT_DIR, 'prompts.json');
+
+//Helper functions for path handling
+const toAbsolutePath = (relativePath: string) => join(OUTPUT_DIR, relativePath);
+const toRelativePath = (absolutePath: string) => {
+  const rel = relative(OUTPUT_DIR, absolutePath);
+  return rel.startsWith('..') ? absolutePath : rel; //If outside OUTPUT_DIR, keep absolute
+};
+
+//Ensure output directory exists
+const ensureOutputDir = async () => {
+  try {
+    await mkdir(OUTPUT_DIR, { recursive: true });
+    await mkdir(join(OUTPUT_DIR, DEFAULT_FOLDER), { recursive: true });
+  } catch (err) {
+    //Ignore if directory already exists
+  }
+};
 
 const readMetadata = async (): Promise<ImageMetadata[]> => {
   try {
@@ -24,6 +42,7 @@ const readMetadata = async (): Promise<ImageMetadata[]> => {
 
 const saveMetadata = async (metadata: ImageMetadata[]): Promise<boolean> => {
   try {
+    await ensureOutputDir(); //Ensure directory exists
     console.log("Saving metadata");
     await Bun.write(METADATA_FILE, JSON.stringify(metadata, null, 2));
     return true;
@@ -50,13 +69,8 @@ const readPrompts = async (): Promise<Prompt[]> => {
 //Save prompts to file
 const savePrompts = async (prompts: Prompt[]): Promise<boolean> => {
   try {
+    await ensureOutputDir(); //Ensure directory exists
     console.log("Saving prompts");
-    //Create output directory if it doesn't exist
-    try {
-      await mkdir(OUTPUT_DIR, { recursive: true });
-    } catch (err) {
-      //Ignore if directory already exists
-    }
     await Bun.write(PROMPTS_FILE, JSON.stringify(prompts, null, 2));
     return true;
   } catch (error) {
@@ -74,7 +88,7 @@ const server = serve({
     const headers = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Headers": "Content-Type"
     };
 
     if (req.method === "OPTIONS") {
@@ -84,7 +98,9 @@ const server = serve({
     console.log(path);
 
     if (path.startsWith('/images/')) {
-      const filePath = join(OUTPUT_DIR, path.substring(8));
+      // For image requests, look in the output directory
+      const imagePath = path.substring(8); // Remove '/images/'
+      const filePath = toAbsolutePath(imagePath);
       const file = Bun.file(filePath);
       const exists = await file.exists();
 
@@ -151,15 +167,23 @@ const server = serve({
             });
           }
 
-          let filePath = join(OUTPUT_DIR, metadata.filename);
+          // Store in default folder if no path specified
+          const relativePath = metadata.path || `${DEFAULT_FOLDER}/${metadata.filename}`;
+          const filePath = toAbsolutePath(relativePath);
+
+          // Ensure the directory exists
+          await mkdir(dirname(filePath), { recursive: true });
 
           //Write image file
           const base64Data = imageBase64.replace(/^data:image\/png;base64,/, '');
           await Bun.write(filePath, Buffer.from(base64Data, 'base64'));
 
-          //Save metadata
+          //Save metadata - store only relative path
           const allMetadata = await readMetadata();
-          const newImageMetadata: ImageMetadata = { ...metadata, path: filePath };
+          const newImageMetadata: ImageMetadata = {
+            ...metadata,
+            path: relativePath
+          };
 
           allMetadata.push(newImageMetadata);
           await saveMetadata(allMetadata);
@@ -217,20 +241,12 @@ const server = serve({
           if (updates.path && updates.path !== currentImage.path) {
             try {
               // Get current file location
-              const currentPath = join(OUTPUT_DIR, currentImage.path);
-              const newPath = join(OUTPUT_DIR, updates.path);
+              const currentPath = toAbsolutePath(currentImage.path);
+              const newPath = toAbsolutePath(updates.path);
 
               // Check if the new path includes a folder
-              if (updates.path.includes('/')) {
-                const folder = dirname(newPath);
-                const folderExists = await Bun.file(folder).exists();
-
-                // Create folder if it doesn't exist
-                if (!folderExists) {
-                  await mkdir(folder, { recursive: true });
-                  console.log(`Created folder: ${folder}`);
-                }
-              }
+              const folder = dirname(newPath);
+              await mkdir(folder, { recursive: true });
 
               // Read current file
               const currentFile = Bun.file(currentPath);
@@ -293,7 +309,8 @@ const server = serve({
             });
           }
 
-          const filePath = join(OUTPUT_DIR, image.path);
+          // Convert to absolute path
+          const filePath = toAbsolutePath(image.path);
           const file = Bun.file(filePath);
           const exists = await file.exists();
 
@@ -392,7 +409,11 @@ const server = serve({
   },
 });
 
-console.log(`Server running on port ${server.port}`);
-console.log(`Images will be saved to: ${OUTPUT_DIR}`);
-console.log(`Metadata file: ${METADATA_FILE}`);
-console.log(`Prompts file: ${PROMPTS_FILE}`);
+// Ensure the output directory exists when the server starts
+ensureOutputDir().then(() => {
+  console.log(`Server running on port ${server.port}`);
+  console.log(`Images will be saved to: ${OUTPUT_DIR}`);
+  console.log(`Default folder: ${join(OUTPUT_DIR, DEFAULT_FOLDER)}`);
+  console.log(`Metadata file: ${METADATA_FILE}`);
+  console.log(`Prompts file: ${PROMPTS_FILE}`);
+});

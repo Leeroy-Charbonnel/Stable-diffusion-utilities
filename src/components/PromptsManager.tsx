@@ -8,17 +8,16 @@ import { useApi } from '@/contexts/ApiContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { generateUUID } from '@/lib/utils';
 import { getAllPrompts, saveAllPrompts } from '@/lib/promptsApi';
+import { Progress } from '@/components/ui/progress';
 
 
 export function PromptsManager() {
   const api = useApi();
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [isLoadingPrompts, setIsLoadingPrompts] = useState(false);
-  const [savingPrompts, setSavingPrompts] = useState(false);
 
   //Execution state
   const [status, setStatus] = useState<ExecutionStatus>('idle');
-
 
   const [executingPromptId, setExecutingPromptId] = useState<string | null>(null);
   const [executionError, setExecutionError] = useState<string | null>(null);
@@ -36,7 +35,6 @@ export function PromptsManager() {
 
   const savePromptsToServer = async (promptsToSave: Prompt[]) => {
     try {
-      setSavingPrompts(true);
       const success = await saveAllPrompts(promptsToSave);
       if (!success) {
         console.error('Failed to save prompts to server');
@@ -45,8 +43,6 @@ export function PromptsManager() {
     } catch (error) {
       console.error('Error saving prompts:', error);
       setExecutionError(`Error saving prompts: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setSavingPrompts(false);
     }
   };
 
@@ -171,7 +167,7 @@ export function PromptsManager() {
   //Handle execution of all prompts
   const handleExecuteAll = async () => {
     setStatus('executing');
-    setCurrentPromptIndex(1);
+    setCurrentPromptIndex(0);
     setPromptsToRunCount(prompts.map((p) => p.runCount).reduce((a, b) => a + b, 0));
 
     try {
@@ -227,18 +223,12 @@ export function PromptsManager() {
 
   return (
     <div>
-      {/* Replaced basic h3 with a better progress indicator */}
       {status === 'executing' && promptsToRunCount > 0 && (
-        <div className="mb-4">
-          <div className="flex justify-between text-sm font-medium mb-1">
-            <span>Execution Progress</span>
+        <div className="flex mb-4 align-center">
+          <div className='text-nowrap'>Execution progress :</div>
+          <Progress className='h-1 m-auto mx-5' value={(currentPromptIndex / promptsToRunCount) * 100}></Progress>
+          <div className="flex justify-between text-sm font-medium mb-1 text-nowrap">
             <span>{currentPromptIndex} of {promptsToRunCount} ({Math.round((currentPromptIndex / promptsToRunCount) * 100)}%)</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-            <div
-              className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-              style={{ width: `${(currentPromptIndex / promptsToRunCount) * 100}%` }}
-            ></div>
           </div>
         </div>
       )}
@@ -248,12 +238,12 @@ export function PromptsManager() {
         <div className="flex gap-2">
           <Button
             onClick={handleExecuteAll}
-            disabled={!api.isConnected || prompts.length === 0 || status === 'executing' || isLoadingPrompts || savingPrompts}
+            disabled={!api.isConnected || prompts.length === 0 || status === 'executing' || isLoadingPrompts}
           >
             <Play className="mr-2 h-4 w-4" />
             Start Execution
           </Button>
-          <Button onClick={handleAddPrompt} disabled={isLoadingPrompts || savingPrompts}>
+          <Button onClick={handleAddPrompt} disabled={isLoadingPrompts}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Prompt
           </Button>
@@ -287,11 +277,6 @@ export function PromptsManager() {
         </Card>
       )}
 
-      {savingPrompts && (
-        <Card className="p-4 mb-4">
-          <div className="text-center text-muted-foreground">Saving prompts...</div>
-        </Card>
-      )}
 
       {status === 'completed' && (
         <Alert className="mb-4 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
