@@ -142,28 +142,6 @@ export class ApiService {
     }
   }
 
-  //Set the current SD model
-  async setModel(modelTitle: string): Promise<boolean> {
-    console.log(`Setting model to: ${modelTitle}`);
-    try {
-      const response = await fetch(`${this.apiUrl}/sdapi/v1/options`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sd_model_checkpoint: modelTitle,
-        }),
-      });
-
-      console.log(`Set model response: ${response.ok ? 'SUCCESS' : 'FAILED'}, status: ${response.status}`);
-      return response.ok;
-    } catch (error) {
-      console.error('Failed to set model:', error);
-      return false;
-    }
-  }
-
   //Get available LoRAs
   async getLoras(): Promise<any[]> {
     console.log(`Fetching LoRAs from ${this.apiUrl}/sdapi/v1/loras`);

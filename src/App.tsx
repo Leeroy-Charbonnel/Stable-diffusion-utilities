@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react';
 import { PromptsManager } from './components/PromptsManager';
 import { ImageViewer } from './components/ImageViewer';
-import { ApiProvider } from './contexts/ApiContext';
+import { ApiProvider, useApi } from './contexts/ApiContext';
 import { Button } from '@/components/ui/button';
-import { Image, ListChecks } from 'lucide-react';
+import { AlertCircle, CheckCircle, Image, ListChecks } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from './components/ui/alert';
 
 function App() {
   const [activeTab, setActiveTab] = useState<'prompts' | 'images'>(
@@ -13,6 +14,15 @@ function App() {
       return (savedTab === 'images' ? 'images' : 'prompts');
     }
   );
+
+
+
+  const {
+    isConnected,
+    error: apiError,
+  } = useApi();
+
+
 
   useEffect(() => {
     localStorage.setItem('sd-utilities-activeTab', activeTab);
@@ -53,6 +63,28 @@ function App() {
               Images
             </Button>
           </nav>
+
+
+
+
+          {/* Connection Status */}
+          {isConnected ? (
+            <Alert className="mb-4 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+              <CheckCircle className="h-4 w-4" />
+              <AlertTitle>Connected</AlertTitle>
+              <AlertDescription>
+                Successfully connected to Stable Diffusion API.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Not Connected</AlertTitle>
+              <AlertDescription>
+                {apiError || "Not connected to the Stable Diffusion API. Check your connection settings."}
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
 
         <div className="flex-1 overflow-auto">

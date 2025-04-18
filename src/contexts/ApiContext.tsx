@@ -11,21 +11,13 @@ interface ApiContextType {
   fileSystemApi: typeof fileSystemApi;
   promptsApi: typeof promptsApi;
 
-  //Connection state
+  //SD Connection state
   isConnected: boolean;
   isLoading: boolean;
   error: string | null;
-  generatedImages: GeneratedImage[];
 
-  //API functions
   checkConnection: () => Promise<boolean>;
   generateImage: (prompt: Prompt) => Promise<GeneratedImage | null>;
-  refreshImages: () => void;
-  deleteImage: (id: string) => Promise<boolean>;
-  updateImageTags: (id: string, tags: string[]) => Promise<boolean>;
-  updateImageMetadata: (id: string, updates: Partial<GeneratedImage>) => Promise<boolean>;
-  setModel: (modelName: string) => Promise<boolean>;
-  exportAllData: () => Promise<boolean>;
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
@@ -34,7 +26,6 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
 
   const checkConnection = async (): Promise<boolean> => {
     setIsLoading(true);
@@ -54,10 +45,6 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  const refreshImages = () => {
-    const images = apiService.getStoredImages();
-    setGeneratedImages(images);
-  };
 
   const generateImage = async (prompt: Prompt): Promise<GeneratedImage | null> => {
     setIsLoading(true);
@@ -98,18 +85,6 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         throw new Error("Failed to generate image");
       }
 
-      //Take the first image (since we're only generating one per request)
-      const imageBase64 = result.images[0];
-
-      //Save the generated image using fileSystemApi directly
-      const savedImage = await apiService.saveGeneratedImage(prompt.id, imageBase64, prompt);
-
-      if (savedImage) {
-        //Refresh the image list
-        refreshImages();
-        return savedImage;
-      }
-
       return null;
     } catch (err) {
       setError("Error generating image: " + (err instanceof Error ? err.message : String(err)));
@@ -119,74 +94,10 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  const deleteImage = async (id: string): Promise<boolean> => {
-    try {
-      const success = await apiService.deleteImage(id);
-      if (success) {
-        refreshImages();
-      }
-      return success;
-    } catch (err) {
-      setError("Error deleting image: " + (err instanceof Error ? err.message : String(err)));
-      return false;
-    }
-  };
-
-  const updateImageTags = async (id: string, tags: string[]): Promise<boolean> => {
-    try {
-      const success = await apiService.updateImageMetadata(id, { tags });
-      if (success) {
-        refreshImages();
-      }
-      return success;
-    } catch (err) {
-      setError("Error updating image tags: " + (err instanceof Error ? err.message : String(err)));
-      return false;
-    }
-  };
-
-  const updateImageMetadata = async (id: string, updates: Partial<GeneratedImage>): Promise<boolean> => {
-    try {
-      const success = await apiService.updateImageMetadata(id, updates);
-      if (success) {
-        refreshImages();
-      }
-      return success;
-    } catch (err) {
-      setError("Error updating image metadata: " + (err instanceof Error ? err.message : String(err)));
-      return false;
-    }
-  };
-
-  //Function to set the current model
-  const setModel = async (modelName: string): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      const success = await apiService.setModel(modelName);
-      return success;
-    } catch (err) {
-      setError("Failed to set model: " + (err instanceof Error ? err.message : String(err)));
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  //Export all data
-  const exportData = async (): Promise<boolean> => {
-    try {
-      return await fileSystemApi.exportAllData();
-    } catch (err) {
-      setError("Error exporting data: " + (err instanceof Error ? err.message : String(err)));
-      return false;
-    }
-  };
 
   //Load images on initial mount
   useEffect(() => {
-    refreshImages();
     checkConnection();
-    //eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const value = {
@@ -196,15 +107,8 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isConnected,
     isLoading,
     error,
-    generatedImages,
     checkConnection,
     generateImage,
-    refreshImages,
-    deleteImage,
-    updateImageTags,
-    updateImageMetadata,
-    setModel,
-    exportAllData: exportData,
   };
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;

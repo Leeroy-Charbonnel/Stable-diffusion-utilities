@@ -14,20 +14,22 @@ export function PromptsManager() {
     stableDiffusionApi,
     promptsApi,
     isConnected,
-    isLoading: apiIsLoading,
     error: apiError,
     checkConnection,
     generateImage
   } = useApi();
 
+  const [status, setStatus] = useState<ExecutionStatus>('idle');
+
+
+
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [isLoadingPrompts, setIsLoadingPrompts] = useState(false);
 
-  const [status, setStatus] = useState<ExecutionStatus>('idle');
 
   const [executingPromptId, setExecutingPromptId] = useState<string | null>(null);
-  const [executionError, setExecutionError] = useState<string | null>(null);
   const [executedPromptIds, setExecutedPromptIds] = useState<Set<string>>(new Set());
+  const [executionError, setExecutionError] = useState<string | null>(null);
 
   const [successCount, setSuccessCount] = useState(0);
   const [failureCount, setFailureCount] = useState(0);
@@ -167,6 +169,8 @@ export function PromptsManager() {
   //Handle execution of a single prompt
   const handleExecutePrompt = async (promptToExecute: Prompt) => {
     setStatus('executing');
+    setSuccessCount(0);
+    setFailureCount(0);
     setCurrentPromptIndex(0);
     setPromptsToRunCount(promptToExecute.runCount);
 
@@ -176,12 +180,7 @@ export function PromptsManager() {
 
     try {
       await executePrompt(promptToExecute);
-
-      if (cancelExecutionRef.current) {
-        setStatus('idle');
-      } else {
-        setStatus('completed');
-      }
+      setStatus('completed');
     } catch (err) {
       console.error('Error during prompt execution:', err);
       setExecutionError(`Error during execution: ${err instanceof Error ? err.message : String(err)}`);
@@ -194,6 +193,8 @@ export function PromptsManager() {
   //Handle execution of all prompts
   const handleExecuteAll = async () => {
     setStatus('executing');
+    setSuccessCount(0);
+    setFailureCount(0);
     setCurrentPromptIndex(0);
     setExecutedPromptIds(new Set());
 
@@ -213,9 +214,7 @@ export function PromptsManager() {
         }
 
         const prompt = prompts[i];
-        //Add prompt to executed set to show correct UI state
         setExecutedPromptIds(prev => new Set([...prev, prompt.id]));
-
         await executePrompt(prompt);
       }
     } catch (err) {
@@ -224,9 +223,7 @@ export function PromptsManager() {
       setStatus('failed');
     }
 
-    if (cancelExecutionRef.current) {
-      setStatus('idle');
-    } else if (status !== 'failed') {
+    if (status !== 'failed') {
       setStatus('completed');
     }
 
@@ -315,7 +312,7 @@ export function PromptsManager() {
           ) : (
             <Button
               onClick={handleExecuteAll}
-              disabled={!isConnected || prompts.length === 0 || status === 'executing' || isLoadingPrompts}
+              disabled={!isConnected || prompts.length === 0 || isLoadingPrompts || status === 'executing'}
             >
               <Play className="mr-2 h-4 w-4" />
               Start Execution
@@ -328,24 +325,7 @@ export function PromptsManager() {
         </div>
       </div>
 
-      {/* Connection Status */}
-      {isConnected ? (
-        <Alert className="mb-4 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-          <CheckCircle className="h-4 w-4" />
-          <AlertTitle>Connected</AlertTitle>
-          <AlertDescription>
-            Successfully connected to Stable Diffusion API.
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Not Connected</AlertTitle>
-          <AlertDescription>
-            {apiError || "Not connected to the Stable Diffusion API. Check your connection settings."}
-          </AlertDescription>
-        </Alert>
-      )}
+
 
       {(isLoading || isLoadingPrompts) && (
         <Card className="p-4 mb-4">

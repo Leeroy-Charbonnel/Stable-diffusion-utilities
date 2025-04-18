@@ -86,6 +86,7 @@
     ],
     "isOpen": false,
     "currentRun": 0,
-    "stauts": "idle"
+    "stauts": "idle",
+    "status": "idle"
   }
 ]
