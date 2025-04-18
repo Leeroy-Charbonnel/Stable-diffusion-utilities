@@ -1,17 +1,14 @@
 import { join, dirname } from "path";
-import { mkdir } from "node:fs/promises";
+import { mkdir, unlink } from "node:fs/promises";
+import { existsSync, copyFileSync, unlinkSync } from "node:fs";
 import { exec } from "child_process";
 import { ImageMetadata, Prompt } from "./types";
 import { DEFAULT_OUTPUT_FOLDER, DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER, METADATA_FILE_NAME, PROMPTS_FILE_NAME } from "./lib/constants";
 
 //Constants
 const OUTPUT_DIR: string = join(import.meta.dir, DEFAULT_OUTPUT_FOLDER);
-const OUTPUT_IMAGES_SAVE_FOLDER: string = join(OUTPUT_DIR, DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER);
 const METADATA_FILE: string = join(OUTPUT_DIR, METADATA_FILE_NAME);
 const PROMPTS_FILE: string = join(OUTPUT_DIR, PROMPTS_FILE_NAME);
-
-//Utility functions
-const toAbsolutePath = (relativePath: string): string => join(OUTPUT_DIR, relativePath);
 
 async function ensureDirectories(path: string): Promise<void> {
   const dirPath = path.includes('.') ? path.substring(0, path.lastIndexOf('/')) : path;
@@ -61,6 +58,19 @@ async function savePrompts(prompts: Prompt[]): Promise<boolean> {
   } catch (error) {
     console.error('Error saving prompts:', error);
     return false;
+  }
+}
+
+async function getAllFolders(): Promise<string[]> {
+  try {
+    const { readdir } = require('fs/promises');
+
+    const entries = await readdir(OUTPUT_DIR, { withFileTypes: true });
+    const folders = entries.filter((entry: any) => entry.isDirectory()).map((dir: any) => dir.name);
+    return folders;
+  } catch (error) {
+    console.error('Error reading folders:', error);
+    return [DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER];
   }
 }
 
@@ -131,7 +141,8 @@ const server = Bun.serve({
 
           //Save image file
           const filename = `${metadata.id}.png`;
-          const filePath = `${OUTPUT_IMAGES_SAVE_FOLDER}/${filename}`;
+          const folderPath = join(OUTPUT_DIR, metadata.folder || DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER);
+          const filePath = join(folderPath, filename);
           await ensureDirectories(dirname(filePath));
 
           console.log(`Saving image to: ${filePath}`);
@@ -143,13 +154,150 @@ const server = Bun.serve({
           const newImageMetadata: ImageMetadata = {
             ...metadata,
             path: filePath,
-            folder: DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER
+            folder: metadata.folder || DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER
           };
 
           allMetadata.push(newImageMetadata);
           await saveMetadata(allMetadata);
 
           return Response.json({ success: true, data: newImageMetadata }, { headers: corsHeaders });
+        } catch (error) {
+          return Response.json({ success: false, error: String(error) },
+            { status: 500, headers: corsHeaders });
+        }
+      }
+    },
+
+    //Get image by ID
+    "/api/images/:id": {
+      GET: async (req: BunRequest) => {
+        try {
+          const imageId = req.params?.id;
+          console.log(`Getting image by ID: ${imageId}`);
+
+          if (!imageId) {
+            return Response.json({ success: false, error: 'Image ID not provided' },
+              { status: 400, headers: corsHeaders });
+          }
+
+          const metadata = await readMetadata();
+          const imageMetadata = metadata.find(img => img.id === imageId);
+
+          if (!imageMetadata) {
+            return Response.json({ success: false, error: 'Image not found' },
+              { status: 404, headers: corsHeaders });
+          }
+
+          const file = Bun.file(imageMetadata.path);
+          if (!await file.exists()) {
+            return Response.json({ success: false, error: 'Image file not found' },
+              { status: 404, headers: corsHeaders });
+          }
+
+          return new Response(await file.arrayBuffer(), {
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "image/png"
+            }
+          });
+        } catch (error) {
+          return Response.json({ success: false, error: String(error) },
+            { status: 500, headers: corsHeaders });
+        }
+      },
+
+      //Delete image
+      DELETE: async (req: BunRequest) => {
+        try {
+          const imageId = req.params?.id;
+          if (!imageId) {
+            return Response.json({ success: false, error: 'Image ID not provided' },
+              { status: 400, headers: corsHeaders });
+          }
+
+          const metadata = await readMetadata();
+          const imageIndex = metadata.findIndex(img => img.id === imageId);
+
+          if (imageIndex === -1) {
+            return Response.json({ success: false, error: 'Image not found in metadata' },
+              { status: 404, headers: corsHeaders });
+          }
+
+          //Delete the file
+          const imagePath = metadata[imageIndex].path;
+          try {
+            await unlink(imagePath);
+          } catch (err) {
+            console.error(`Failed to delete file at ${imagePath}:`, err);
+          }
+
+          //Update metadata
+          metadata.splice(imageIndex, 1);
+          await saveMetadata(metadata);
+
+          return Response.json({ success: true }, { headers: corsHeaders });
+        } catch (error) {
+          return Response.json({ success: false, error: String(error) },
+            { status: 500, headers: corsHeaders });
+        }
+      }
+    },
+
+    //Move image to folder
+    "/api/images/:id/move": {
+      POST: async (req: BunRequest) => {
+        try {
+          const imageId = req.params?.id;
+          if (!imageId) {
+            return Response.json({ success: false, error: 'Image ID not provided' },
+              { status: 400, headers: corsHeaders });
+          }
+
+          const { folder } = await req.json() as { folder: string };
+          if (!folder) {
+            return Response.json({ success: false, error: 'Folder not provided' },
+              { status: 400, headers: corsHeaders });
+          }
+
+          const metadata = await readMetadata();
+          const imageIndex = metadata.findIndex(img => img.id === imageId);
+
+          if (imageIndex === -1) {
+            return Response.json({ success: false, error: 'Image not found' },
+              { status: 404, headers: corsHeaders });
+          }
+
+          const image = metadata[imageIndex];
+          const oldPath = image.path;
+
+          //Create folder if it doesn't exist
+          const folderPath = join(OUTPUT_DIR, folder);
+          await ensureDirectories(folderPath);
+
+          //Move the file
+          const filename = `${imageId}.png`;
+          const newPath = join(folderPath, filename);
+
+          try {
+            //Copy then delete (to handle cross-device moves)
+            if (existsSync(oldPath)) {
+              copyFileSync(oldPath, newPath);
+              unlinkSync(oldPath);
+            }
+          } catch (err) {
+            console.error(`Failed to move file from ${oldPath} to ${newPath}:`, err);
+            return Response.json({ success: false, error: `Failed to move file: ${err}` },
+              { status: 500, headers: corsHeaders });
+          }
+
+          //Update metadata
+          metadata[imageIndex] = { ...image, path: newPath, folder };
+          await saveMetadata(metadata);
+
+          return Response.json({
+            success: true,
+            data: metadata[imageIndex]
+          }, { headers: corsHeaders });
         } catch (error) {
           return Response.json({ success: false, error: String(error) },
             { status: 500, headers: corsHeaders });
@@ -173,6 +321,19 @@ const server = Bun.serve({
           });
 
           return Response.json({ success: true }, { headers: corsHeaders });
+        } catch (error) {
+          return Response.json({ success: false, error: String(error) },
+            { status: 500, headers: corsHeaders });
+        }
+      }
+    },
+
+    //Get all folders
+    "/api/folders": {
+      GET: async () => {
+        try {
+          const folders = await getAllFolders();
+          return Response.json({ success: true, data: folders }, { headers: corsHeaders });
         } catch (error) {
           return Response.json({ success: false, error: String(error) },
             { status: 500, headers: corsHeaders });

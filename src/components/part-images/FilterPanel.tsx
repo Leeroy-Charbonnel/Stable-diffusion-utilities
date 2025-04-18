@@ -13,7 +13,7 @@ interface FilterPanelProps {
   selectedTags: string[];
   selectedModels: string[];
   selectedLoras: string[];
-
+  selectedFolders?: string[];
 
   toggleTagFilter: (tag: string) => void;
   toggleModelFilter: (model: string) => void;
@@ -32,6 +32,7 @@ export function FilterPanel({
   selectedTags,
   selectedModels,
   selectedLoras,
+  selectedFolders = [],
 
   toggleTagFilter,
   toggleModelFilter,
@@ -40,7 +41,7 @@ export function FilterPanel({
 
   clearAllFilters
 }: FilterPanelProps) {
-  const hasActiveFilters = selectedTags.length > 0 || selectedModels.length > 0 || selectedLoras.length > 0;
+  const hasActiveFilters = selectedTags.length > 0 || selectedModels.length > 0 || selectedLoras.length > 0 || selectedFolders.length > 0;
 
   return (
     <Card className="p-4">
@@ -134,19 +135,19 @@ export function FilterPanel({
         <div>
           <h3 className="font-medium text-sm flex items-center mb-2">
             <Folder className="h-4 w-4 mr-2" />
-            Folders
+            Filter by Folder
           </h3>
           <ScrollArea className="h-32">
-            <div className="space-y-1">
+            <div className="flex flex-wrap gap-1.5">
               {availableFolders.map((folder) => (
-                <div
+                <Badge
                   key={folder}
-                  className="text-sm py-1.5 px-2 rounded hover:bg-accent cursor-pointer flex items-center"
+                  variant={selectedFolders.includes(folder) ? "default" : "outline"}
+                  className="cursor-pointer"
                   onClick={() => onFolderSelect(folder)}
                 >
-                  <Folder className="h-3 w-3 mr-2" />
                   {folder}
-                </div>
+                </Badge>
               ))}
             </div>
           </ScrollArea>

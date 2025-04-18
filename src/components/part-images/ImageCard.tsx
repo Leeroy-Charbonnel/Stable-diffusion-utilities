@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Folder, CheckSquare, Image as ImageIcon, Trash2, Repeat } from 'lucide-react';
 import { ImageMetadata } from '@/types';
+import { getImageUrl } from '@/services/fileSystemApi';
 
 interface ImageCardProps {
   image: ImageMetadata;
@@ -31,7 +32,8 @@ export function ImageCard({
   onContextMenu,
 }: ImageCardProps) {
   const imageFolder = image.folder;
-  console.log(image);
+  const imageUrl = getImageUrl(image.id);
+
   return (
     <Card
       key={image.id}
@@ -84,17 +86,25 @@ export function ImageCard({
       </div>
 
       <div className="relative aspect-square">
-        <img
-          src={image.path}
-          alt={image.prompt}
-          className="object-cover w-full h-full cursor-pointer"
-          onClick={() => onImageClick(image)}
-        />
-
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={image.prompt}
+            className="object-cover w-full h-full cursor-pointer"
+            onClick={() => onImageClick(image)}
+          />
+        ) : (
+          <div
+            className="w-full h-full flex items-center justify-center bg-muted cursor-pointer"
+            onClick={() => onImageClick(image)}
+          >
+            <ImageIcon className="h-12 w-12 text-muted-foreground" />
+          </div>
+        )}
 
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
           <Button size="sm" variant="secondary" onClick={() => onImageClick(image)}>Details</Button>
-          <Button size="sm" variant="outline" className="bg-accent" onClick={() => onReRunClick(image)}><Repeat className="h-4 w-4 mr-1" />Create prompt</Button>
+          {/* <Button size="sm" variant="outline" className="bg-accent" onClick={() => onReRunClick(image)}><Repeat className="h-4 w-4 mr-1" />Create prompt</Button> */}
           <Button size="sm" variant="destructive" onClick={() => onDeleteClick(image)}><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
@@ -105,7 +115,10 @@ export function ImageCard({
         </div>
 
         <div className="flex justify-between w-full">
-          {imageFolder !== 'default' && (<Badge variant="outline" className="mr-1"><Folder className="h-3 w-3 mr-1" />{imageFolder}</Badge>
+          {imageFolder !== 'default' && (
+            <Badge variant="outline" className="mr-1">
+              <Folder className="h-3 w-3 mr-1" />{imageFolder}
+            </Badge>
           )}
 
           <div className="flex-1" />
