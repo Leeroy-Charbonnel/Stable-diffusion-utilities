@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Prompt, GeneratedImage } from '@/types';
+import { ImageMetadata, Prompt } from '@/types';
 
 import { apiService, ApiService } from '@/services/stableDiffusionApi';
 import * as fileSystemApi from '@/services/fileSystemApi';
 import * as promptsApi from '@/services/promptsApi';
+import { generateUUID } from '@/lib/utils';
 
 interface ApiContextType {
   //Service objects
@@ -16,8 +17,16 @@ interface ApiContextType {
   isLoading: boolean;
   error: string | null;
 
+  //Generated images
+  generatedImages: ImageMetadata[];
+
+  //API methods
   checkConnection: () => Promise<boolean>;
-  generateImage: (prompt: Prompt) => Promise<GeneratedImage | null>;
+  generateImage: (prompt: Prompt) => Promise<ImageMetadata | null>;
+  refreshImages: () => Promise<void>;
+  deleteImage: (id: string) => Promise<boolean>;
+  updateImageTags: (id: string, tags: string[]) => Promise<boolean>;
+  updateImageMetadata: (id: string, updates: Partial<ImageMetadata>) => Promise<boolean>;
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
@@ -26,7 +35,9 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [generatedImages, setGeneratedImages] = useState<ImageMetadata[]>([]);
 
+  //Check connection to Stable Diffusion API
   const checkConnection = async (): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
@@ -45,8 +56,8 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-
-  const generateImage = async (prompt: Prompt): Promise<GeneratedImage | null> => {
+  //Generate an image based on a prompt
+  const generateImage = async (prompt: Prompt): Promise<ImageMetadata | null> => {
     setIsLoading(true);
     setError(null);
 
@@ -85,7 +96,14 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         throw new Error("Failed to generate image");
       }
 
-      return null;
+      //Save the generated image
+      const generatedImage = await fileSystemApi.saveGeneratedImage(
+        generateUUID(),
+        result.images[0],
+        prompt
+      );
+
+      return generatedImage;
     } catch (err) {
       setError("Error generating image: " + (err instanceof Error ? err.message : String(err)));
       return null;
@@ -94,8 +112,67 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  //Refresh the list of generated images
+  const refreshImages = async (): Promise<void> => {
+    try {
+      const images = await fileSystemApi.getAllImageMetadata();
+      setGeneratedImages(images);
+    } catch (err) {
+      setError("Error refreshing images: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
 
-  useEffect(() => { checkConnection(); }, []);
+  //Delete an image
+  const deleteImage = async (id: string): Promise<boolean> => {
+    try {
+      const success = await fileSystemApi.deleteImage(id);
+      if (success) {
+        setGeneratedImages(prev => prev.filter(img => img.id !== id));
+      }
+      return success;
+    } catch (err) {
+      setError("Error deleting image: " + (err instanceof Error ? err.message : String(err)));
+      return false;
+    }
+  };
+
+  //Update an image's tags
+  const updateImageTags = async (id: string, tags: string[]): Promise<boolean> => {
+    try {
+      const success = await fileSystemApi.updateImageMetadata(id, { tags });
+      if (success) {
+        setGeneratedImages(prev => prev.map(img =>
+          img.id === id ? { ...img, tags } : img
+        ));
+      }
+      return success;
+    } catch (err) {
+      setError("Error updating image tags: " + (err instanceof Error ? err.message : String(err)));
+      return false;
+    }
+  };
+
+  //Update an image's metadata
+  const updateImageMetadata = async (id: string, updates: Partial<ImageMetadata>): Promise<boolean> => {
+    try {
+      const success = await fileSystemApi.updateImageMetadata(id, updates);
+      if (success) {
+        setGeneratedImages(prev => prev.map(img =>
+          img.id === id ? { ...img, ...updates } : img
+        ));
+      }
+      return success;
+    } catch (err) {
+      setError("Error updating image metadata: " + (err instanceof Error ? err.message : String(err)));
+      return false;
+    }
+  };
+
+  //Load images on initial mount
+  useEffect(() => {
+    checkConnection();
+    refreshImages();
+  }, []);
 
   const value = {
     stableDiffusionApi: apiService,
@@ -104,8 +181,13 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isConnected,
     isLoading,
     error,
+    generatedImages,
     checkConnection,
     generateImage,
+    refreshImages,
+    deleteImage,
+    updateImageTags,
+    updateImageMetadata,
   };
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;

@@ -164,7 +164,7 @@ export function PromptsManager() {
 
   //Handle execution of a single prompt
   const handleExecutePrompt = async (promptToExecute: Prompt) => {
-    setStatus('executing');
+    setStatus('single-execution');
     setSuccessCount(0);
     setFailureCount(0);
     setCurrentPromptIndex(0);
@@ -188,7 +188,7 @@ export function PromptsManager() {
 
   //Handle execution of all prompts
   const handleExecuteAll = async () => {
-    setStatus('executing');
+    setStatus('global-execution');
     setSuccessCount(0);
     setFailureCount(0);
     setCurrentPromptIndex(0);
@@ -283,7 +283,7 @@ export function PromptsManager() {
 
   return (
     <div>
-      {status === 'executing' && promptsToRunCount > 0 && (
+      {(status === 'single-execution' || status === 'global-execution') && promptsToRunCount > 0 && (
         <div className="flex mb-4 align-center">
           <div className='text-nowrap'>Execution progress :</div>
           <Progress className='h-1 m-auto mx-5' value={(currentPromptIndex / promptsToRunCount) * 100}></Progress>
@@ -296,7 +296,7 @@ export function PromptsManager() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Prompt List</h2>
         <div className="flex gap-2">
-          {status === 'executing' ? (
+          {status === 'global-execution' ? (
             <Button
               onClick={handleInterruptExecution}
               variant="destructive"
@@ -308,7 +308,7 @@ export function PromptsManager() {
           ) : (
             <Button
               onClick={handleExecuteAll}
-              disabled={!isConnected || prompts.length === 0 || isLoadingPrompts || status === 'executing'}>
+              disabled={status == 'single-execution' || !isConnected || prompts.length === 0 || isLoadingPrompts}>
               <Play className="mr-2 h-4 w-4" />
               Start Execution
             </Button>
@@ -368,15 +368,11 @@ export function PromptsManager() {
             onDelete={() => handleDeletePrompt(prompt.id)}
             onMove={handleMovePrompt}
             onRunPrompt={handleExecutePrompt}
+            onCancelExecution={handleInterruptExecution}
             onPromptUpdate={handleUpdatePrompt}
-            isExecuting={
-              (status === 'executing' && executingPromptId === prompt.id) ||
-              (status === 'executing' && executedPromptIds.has(prompt.id))
-            }
-            isCurrentlyExecuting={status === 'executing' && executingPromptId === prompt.id}
-            onCancelExecution={
-              executingPromptId === prompt.id ? handleInterruptExecution : undefined
-            }
+            isExecuted={executedPromptIds.has(prompt.id)}
+            isExecuting={status === 'global-execution' || status === 'single-execution'}
+            isCurrentlyExecuting={executingPromptId === prompt.id}
             isApiConnected={isConnected}
             availableSamplers={samplers}
             availableModels={models}

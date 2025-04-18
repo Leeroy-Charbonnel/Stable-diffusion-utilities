@@ -7,12 +7,13 @@ export const saveGeneratedImage = async (
   promptData: Prompt
 ): Promise<GeneratedImage | null> => {
   try {
-    const timestamp = new Date().toISOString();
-    const filename = `img_${imageId}.png`;
+    console.log('Saving generated image');
 
-    const metadata = {
+    const timestamp = new Date().toISOString();
+    const metadata: ImageMetadata = {
       id: imageId,
-      filename: filename,
+      folder: '',
+      promptId: promptData.id,
       prompt: promptData.text,
       negativePrompt: promptData.negativePrompt,
       seed: promptData.seed,
@@ -21,20 +22,15 @@ export const saveGeneratedImage = async (
       height: promptData.height,
       sampler: promptData.sampler,
       model: promptData.model,
-      tags: promptData.tags || [],
+      tags: promptData.tags,
       createdAt: timestamp,
-    } as ImageMetadata;
+    };
+
 
     const response = await fetch(`${FILE_API_BASE_URL}/images`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        id: imageId,
-        imageBase64,
-        metadata,
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64, metadata }),
     });
 
     if (!response.ok) {

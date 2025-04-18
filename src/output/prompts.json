@@ -1,7 +1,7 @@
 [
   {
     "id": "229fbb64-8651-4ca9-95dc-57c46bfc787f",
-    "isOpen": false,
+    "isOpen": true,
     "name": "New Prompt5",
     "text": "A delicate rose sculpted entirely from translucent glass and shimmering crystal, with light refracting through its petals like a prism. Set against a soft black velvet background to enhance the glow and elegance. Hyperrealistic style, high detail, ethereal lighting.",
     "negativePrompt": "",
@@ -11,7 +11,7 @@
     "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
     "width": 512,
     "height": 512,
-    "runCount": 2,
+    "runCount": 1,
     "tags": [
       "flower",
       "rose",

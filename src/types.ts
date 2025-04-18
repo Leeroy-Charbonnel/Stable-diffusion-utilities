@@ -3,7 +3,7 @@ export interface LoraConfig {
   weight: number;
 }
 
-export type ExecutionStatus = 'idle' | 'cancelling' | 'completed' | 'failed' | 'executing';
+export type ExecutionStatus = 'idle' | 'global-execution' | 'single-execution' | 'cancelling' | 'completed' | 'failed';
 
 
 export interface Prompt {
@@ -12,12 +12,12 @@ export interface Prompt {
   name: string;
   text: string;
   negativePrompt?: string;
-  seed?: number;
-  steps?: number;
-  sampler?: string;
-  model?: string;
-  width?: number;
-  height?: number;
+  seed: number;
+  steps: number;
+  sampler: string;
+  model: string;
+  width: number;
+  height: number;
   tags: string[];
   loras?: LoraConfig[];
 
@@ -26,28 +26,10 @@ export interface Prompt {
   stauts: string;
 }
 
-export interface GeneratedImage {
-  id: string;
-  promptId: string;
-  filename: string;
-  path: string;
-  prompt: string;
-  negativePrompt?: string;
-  seed?: number;
-  steps?: number;
-  sampler?: string;
-  width?: number;
-  height?: number;
-  tags: string[];
-  createdAt: string;
-}
-
-
-
 export interface ImageMetadata {
   id: string;
-  path: string;
-  filename: string;
+  folder: string;
+  promptId: string;
   prompt: string;
   negativePrompt?: string;
   seed: number;

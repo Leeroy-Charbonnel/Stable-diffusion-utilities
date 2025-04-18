@@ -6,7 +6,7 @@
   "scripts": {
     "server": "node src/server.js",
     "dev:frontend": "vite",
-    "dev": "concurrently \"bun run src/server.ts\" \"npm run dev:frontend\""
+    "dev": "concurrently \"bun run --watch src/server.ts\" \"npm run dev:frontend\""
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.4",

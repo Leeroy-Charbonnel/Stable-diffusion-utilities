@@ -16,6 +16,7 @@ type PromptCardProps = {
   onPromptUpdate: (updatedPrompt: Prompt) => void;
   onRunPrompt: (prompt: Prompt) => void;
   onCancelExecution?: () => void;
+  isExecuted?: boolean;
   isExecuting?: boolean;
   isCurrentlyExecuting?: boolean;
   isApiConnected?: boolean;
@@ -37,6 +38,7 @@ export function PromptCard({
   onPromptUpdate,
   onRunPrompt,
   onCancelExecution,
+  isExecuted = false,
   isExecuting = false,
   isCurrentlyExecuting = false,
   isApiConnected = false,
@@ -54,10 +56,7 @@ export function PromptCard({
 
   const saveNameChange = () => {
     if (nameValue.trim()) {
-      onPromptUpdate({
-        ...prompt,
-        name: nameValue
-      });
+      onPromptUpdate({ ...prompt, name: nameValue });
       setIsEditingName(false);
     }
   };
@@ -77,10 +76,7 @@ export function PromptCard({
 
   const handleOpenAccordion = () => {
     setIsAccordionOpen(!isAccordionOpen);
-    onPromptUpdate({
-      ...prompt,
-      isOpen: !isAccordionOpen
-    });
+    onPromptUpdate({ ...prompt, isOpen: !isAccordionOpen });
   };
 
   const currentProgress = (prompt.currentRun / prompt.runCount) * 100
@@ -123,11 +119,11 @@ export function PromptCard({
                   Stop
                 </Button>
               ) : (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => { onRunPrompt(prompt); }} 
-                  className="h-7 text-xs" 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { onRunPrompt(prompt); }}
+                  className="h-7 text-xs"
                   disabled={isExecuting || !isApiConnected}
                 >
                   <Play className="mr-1 h-3 w-3" />
@@ -157,23 +153,12 @@ export function PromptCard({
             </div>
           </div>
 
-          {isExecuting && (
+          {(isExecuted || isCurrentlyExecuting) && (
             <div className="px-3 py-2 space-y-2">
               <div className="w-full">
                 <div className="flex items-center gap-2">
-                  <Progress value={isCurrentlyExecuting ? currentProgress : (isExecuting ? 100 : 0)} className="h-1 flex-1" />
-                  {
-                    isCurrentlyExecuting ? (
-                      prompt.runCount > 1 ?
-                        <span className="text-xs">{prompt.currentRun}/{prompt.runCount}</span>
-                        :
-                        <span className="text-xs">{Math.round(currentProgress)}%</span>
-                    ) : (
-                      isExecuting ? 
-                        <span className="text-xs">Completed</span> : 
-                        <span className="text-xs">Pending</span>
-                    )
-                  }
+                  <Progress value={currentProgress} className="h-1 flex-1" />
+                  <span className="text-xs">{prompt.currentRun}/{prompt.runCount}</span>
                 </div>
               </div>
             </div>
