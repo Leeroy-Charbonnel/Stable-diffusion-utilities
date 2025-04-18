@@ -12,6 +12,7 @@ export const saveGeneratedImage = async (
     const timestamp = new Date().toISOString();
     const metadata: ImageMetadata = {
       id: imageId,
+      path: '',
       folder: '',
       promptId: promptData.id,
       prompt: promptData.text,
@@ -22,6 +23,7 @@ export const saveGeneratedImage = async (
       height: promptData.height,
       sampler: promptData.sampler,
       model: promptData.model,
+      loras: promptData.loras || [],
       tags: promptData.tags,
       createdAt: timestamp,
     };
@@ -69,31 +71,6 @@ export const getAllImageMetadata = async (): Promise<ImageMetadata[]> => {
   } catch (error) {
     console.error('Error getting images:', error);
     return [];
-  }
-};
-
-export const getImageData = async (imageId: string): Promise<string | null> => {
-  try {
-    const response = await fetch(`${FILE_API_BASE_URL}/images/${imageId}`);
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        console.warn(`Image not found: ${imageId}`);
-        return null;
-      }
-      throw new Error(`API error: ${response.status}`);
-    }
-
-    const result = await response.json();
-
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to get image');
-    }
-
-    return result.data;
-  } catch (error) {
-    console.error(`Error getting image data for ID ${imageId}:`, error);
-    return null;
   }
 };
 

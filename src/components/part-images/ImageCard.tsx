@@ -9,7 +9,6 @@ import { ImageMetadata } from '@/types';
 
 interface ImageCardProps {
   image: ImageMetadata;
-  imageData: string | null;
   isSelected: boolean;
   toggleSelection: (imageId: string) => void;
   onImageClick: (image: ImageMetadata) => void;
@@ -18,12 +17,10 @@ interface ImageCardProps {
   onReRunClick: (image: ImageMetadata) => void;
   availableFolders: string[];
   onContextMenu: (e: React.MouseEvent, imageId: string) => void;
-  getImageFolder: (image: ImageMetadata) => string;
 }
 
 export function ImageCard({
   image,
-  imageData,
   isSelected,
   toggleSelection,
   onImageClick,
@@ -32,10 +29,9 @@ export function ImageCard({
   onReRunClick,
   availableFolders,
   onContextMenu,
-  getImageFolder
 }: ImageCardProps) {
-  const imageFolder = getImageFolder(image);
-
+  const imageFolder = image.folder;
+  console.log(image);
   return (
     <Card
       key={image.id}
@@ -88,64 +84,28 @@ export function ImageCard({
       </div>
 
       <div className="relative aspect-square">
-        {imageData ? (
-          <img
-            src={imageData}
-            alt={image.prompt}
-            className="object-cover w-full h-full cursor-pointer"
-            onClick={() => onImageClick(image)}
-            loading="lazy"
-          />
-        ) : (
-          <div
-            className="flex items-center justify-center w-full h-full bg-muted cursor-pointer"
-            onClick={() => onImageClick(image)}
-          >
-            <ImageIcon className="h-10 w-10 text-muted-foreground" />
-          </div>
-        )}
+        <img
+          src={image.path}
+          alt={image.prompt}
+          className="object-cover w-full h-full cursor-pointer"
+          onClick={() => onImageClick(image)}
+        />
+
 
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => onImageClick(image)}
-          >
-            Details
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-accent"
-            onClick={() => onReRunClick(image)}
-          >
-            <Repeat className="h-4 w-4 mr-1" />
-            Re-run
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => onDeleteClick(image)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <Button size="sm" variant="secondary" onClick={() => onImageClick(image)}>Details</Button>
+          <Button size="sm" variant="outline" className="bg-accent" onClick={() => onReRunClick(image)}><Repeat className="h-4 w-4 mr-1" />Create prompt</Button>
+          <Button size="sm" variant="destructive" onClick={() => onDeleteClick(image)}><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
 
       <CardFooter className="flex flex-col items-start pt-4">
         <div className="flex justify-between w-full items-start mb-2">
-          <p className="text-sm line-clamp-2 font-medium">
-            {image.prompt.substring(0, 100)}
-            {image.prompt.length > 100 ? "..." : ""}
-          </p>
+          <p className="text-sm line-clamp-2 font-medium truncate">{image.prompt.substring(0, 100)}</p>
         </div>
 
         <div className="flex justify-between w-full">
-          {imageFolder !== 'default' && (
-            <Badge variant="outline" className="mr-1">
-              <Folder className="h-3 w-3 mr-1" />
-              {imageFolder}
-            </Badge>
+          {imageFolder !== 'default' && (<Badge variant="outline" className="mr-1"><Folder className="h-3 w-3 mr-1" />{imageFolder}</Badge>
           )}
 
           <div className="flex-1" />

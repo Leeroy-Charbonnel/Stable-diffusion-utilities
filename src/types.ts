@@ -28,6 +28,7 @@ export interface Prompt {
 
 export interface ImageMetadata {
   id: string;
+  path: string;
   folder: string;
   promptId: string;
   prompt: string;
@@ -38,6 +39,7 @@ export interface ImageMetadata {
   height: number;
   sampler: string;
   model: string;
+  loras: LoraConfig[];
   tags: string[];
   createdAt: string;
 }

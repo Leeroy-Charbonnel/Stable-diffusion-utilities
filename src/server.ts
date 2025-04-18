@@ -142,6 +142,7 @@ const server = Bun.serve({
           const allMetadata = await readMetadata();
           const newImageMetadata: ImageMetadata = {
             ...metadata,
+            path: filePath,
             folder: DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER
           };
 
