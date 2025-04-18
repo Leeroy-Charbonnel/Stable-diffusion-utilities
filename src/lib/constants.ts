@@ -1,9 +1,8 @@
-import { Prompt } from "@/types";
-
-export const STORAGE_KEY = 'sd-utilities-prompts';
-export const METADATA_KEY = 'sd-utilities-metadata';
-export const IMAGES_KEY_PREFIX = 'sd-image-data-';
+export const DEFAULT_OUTPUT_FOLDER = 'output'; 
+export const DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER = 'default';
+export const METADATA_FILE_NAME = 'metadata.json';
+export const PROMPTS_FILE_NAME = 'prompts.json';
 
 export const FILE_API_BASE_URL = 'http://localhost:3001/api';
-export const SD_API_BASE_URL = 'http://localhost:7860'; //Default local address for AUTOMATIC1111
+export const SD_API_BASE_URL = 'http://localhost:7860';
 

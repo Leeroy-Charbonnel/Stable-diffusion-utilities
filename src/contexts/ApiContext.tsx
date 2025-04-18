@@ -95,10 +95,7 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
 
-  //Load images on initial mount
-  useEffect(() => {
-    checkConnection();
-  }, []);
+  useEffect(() => { checkConnection(); }, []);
 
   const value = {
     stableDiffusionApi: apiService,

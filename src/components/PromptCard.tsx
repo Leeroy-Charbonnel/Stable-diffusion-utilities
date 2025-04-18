@@ -86,7 +86,7 @@ export function PromptCard({
   const currentProgress = (prompt.currentRun / prompt.runCount) * 100
 
   return (
-    <Card className={`overflow-hidden p-0 ${isExecuting ? 'border-primary' : ''}`}>
+    <Card className={`overflow-hidden p-0`}>
       <Accordion
         type="single"
         collapsible

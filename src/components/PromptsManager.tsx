@@ -14,8 +14,6 @@ export function PromptsManager() {
     stableDiffusionApi,
     promptsApi,
     isConnected,
-    error: apiError,
-    checkConnection,
     generateImage
   } = useApi();
 
@@ -63,9 +61,7 @@ export function PromptsManager() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const connected = await checkConnection();
-
-        if (connected) {
+        if (isConnected) {
           const [samplersData, modelsData, lorasData] = await Promise.all([
             stableDiffusionApi.getSamplers(),
             stableDiffusionApi.getModels(),
@@ -312,8 +308,7 @@ export function PromptsManager() {
           ) : (
             <Button
               onClick={handleExecuteAll}
-              disabled={!isConnected || prompts.length === 0 || isLoadingPrompts || status === 'executing'}
-            >
+              disabled={!isConnected || prompts.length === 0 || isLoadingPrompts || status === 'executing'}>
               <Play className="mr-2 h-4 w-4" />
               Start Execution
             </Button>
