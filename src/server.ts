@@ -1,5 +1,5 @@
 import { join, dirname } from "path";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { exec } from "child_process";
 import { ImageMetadata, Prompt } from "./types";
 import { DEFAULT_OUTPUT_FOLDER, DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER, METADATA_FILE_NAME, PROMPTS_FILE_NAME } from "./lib/constants";
@@ -75,9 +75,26 @@ interface BunRequest extends Request {
   params?: Record<string, string>;
 }
 
+//Handle OPTIONS requests for CORS preflight
+function handleOptions() {
+  return new Response(null, {
+    status: 204, // No content
+    headers: corsHeaders
+  });
+}
+
 const server = Bun.serve({
   port: process.env.PORT || 3001,
-
+  fetch(req, server) {
+    if (req.method === "OPTIONS") { return handleOptions(); }
+    return server.fetch(req);
+  },
+  error(error) {
+    return new Response(`Error: ${error.message}`, {
+      status: 500,
+      headers: corsHeaders
+    });
+  },
   routes: {
     "/api/prompts": {
       //Get all prompts
@@ -110,7 +127,6 @@ const server = Bun.serve({
       POST: async (req: BunRequest) => {
         try {
           console.log("Saving image");
-          console.log(req.json());
           const { imageBase64, metadata } = await req.json() as { imageBase64: string, metadata: ImageMetadata }
 
           //Save image file
@@ -133,82 +149,6 @@ const server = Bun.serve({
           await saveMetadata(allMetadata);
 
           return Response.json({ success: true, data: newImageMetadata }, { headers: corsHeaders });
-        } catch (error) {
-          return Response.json({ success: false, error: String(error) },
-            { status: 500, headers: corsHeaders });
-        }
-      }
-    },
-
-
-    "/api/images/:id": {
-      //Update image metadata
-      PUT: async (req: BunRequest) => {
-        try {
-          const id = req.params?.id;
-          const updates = await req.json() as Partial<ImageMetadata>;
-          const metadata = await readMetadata();
-          const imageIndex = metadata.findIndex(item => item.id === id);
-
-          if (imageIndex === -1) {
-            return Response.json({ success: false, error: 'Image not found' },
-              { status: 404, headers: corsHeaders });
-          }
-
-          const currentImage = metadata[imageIndex];
-
-          //Handle file movement if path changed
-          if (updates.path && updates.path !== currentImage.path) {
-            const currentPath = toAbsolutePath(currentImage.path);
-            const newPath = toAbsolutePath(updates.path);
-
-            await ensureDirectories(dirname(newPath));
-            const currentFile = Bun.file(currentPath);
-
-            if (await currentFile.exists()) {
-              await Bun.write(newPath, await currentFile.arrayBuffer());
-              await currentFile.delete();
-            }
-          }
-
-          //Update metadata
-          const updatedMetadata = metadata.map(item =>
-            item.id === id ? { ...item, ...updates } : item
-          );
-
-          await saveMetadata(updatedMetadata);
-
-          return Response.json({
-            success: true,
-            data: updatedMetadata[imageIndex]
-          }, { headers: corsHeaders });
-        } catch (error) {
-          return Response.json({ success: false, error: String(error) },
-            { status: 500, headers: corsHeaders });
-        }
-      },
-      //DELETE /api/images/:id - Delete an image
-      DELETE: async (req: BunRequest) => {
-        try {
-          const id = req.params?.id;
-          const metadata = await readMetadata();
-          const image = metadata.find(img => img.id === id);
-
-          if (!image) {
-            return Response.json({ success: false, error: 'Image not found' },
-              { status: 404, headers: corsHeaders });
-          }
-
-          //Delete file if exists
-          const file = Bun.file(toAbsolutePath(image.path));
-          if (await file.exists()) {
-            await file.delete();
-          }
-
-          //Update metadata
-          await saveMetadata(metadata.filter(item => item.id !== id));
-
-          return Response.json({ success: true }, { headers: corsHeaders });
         } catch (error) {
           return Response.json({ success: false, error: String(error) },
             { status: 500, headers: corsHeaders });
@@ -240,8 +180,13 @@ const server = Bun.serve({
     },
 
     //Fallback for API routes
-    "/api/*": () => Response.json({ success: false, error: 'API endpoint not found' },
-      { status: 404, headers: corsHeaders }),
+    "/api/*": (req: BunRequest) => {
+      if (req.method === "OPTIONS") {
+        return handleOptions();
+      }
+      return Response.json({ success: false, error: 'API endpoint not found' },
+        { status: 404, headers: corsHeaders });
+    },
   }
 });
 

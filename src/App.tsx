@@ -1,9 +1,9 @@
 // src/App.tsx
 import { useState, useEffect } from 'react';
-import { PromptsManager } from '@/components/PromptsManager';
-import { ImageViewer } from '@/components/ImageViewer';
+import { PromptsManager } from '@/components/part-prompt/PromptsManager';
+import { ImageViewer } from '@/components/part-images/ImageViewer';
 import { ApiProvider } from '@/contexts/ApiContext';
-import { Sidebar } from '@/components/SideBar';
+import { Sidebar } from '@/components/Sidebar';
 
 function App() {
   const [activeTab, setActiveTab] = useState<'prompts' | 'images'>(

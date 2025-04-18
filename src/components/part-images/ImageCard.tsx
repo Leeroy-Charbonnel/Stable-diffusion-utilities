@@ -1,33 +1,24 @@
 import React from 'react';
-import { 
-  Card, 
-  CardFooter 
-} from '@/components/ui/card';
+import { Card, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { 
-  Folder, 
-  CheckSquare, 
-  Image as ImageIcon, 
-  Trash2, 
-  Repeat 
-} from 'lucide-react';
-import { GeneratedImage } from '@/types';
+import { Folder, CheckSquare, Image as ImageIcon, Trash2, Repeat } from 'lucide-react';
+import { ImageMetadata } from '@/types';
 
 interface ImageCardProps {
-  image: GeneratedImage;
+  image: ImageMetadata;
   imageData: string | null;
   isSelected: boolean;
   toggleSelection: (imageId: string) => void;
-  onImageClick: (image: GeneratedImage) => void;
+  onImageClick: (image: ImageMetadata) => void;
   onMoveToFolder: (imageId: string, folder: string) => void;
-  onDeleteClick: (image: GeneratedImage) => void;
-  onReRunClick: (image: GeneratedImage) => void;
+  onDeleteClick: (image: ImageMetadata) => void;
+  onReRunClick: (image: ImageMetadata) => void;
   availableFolders: string[];
   onContextMenu: (e: React.MouseEvent, imageId: string) => void;
-  getImageFolder: (image: GeneratedImage) => string;
+  getImageFolder: (image: ImageMetadata) => string;
 }
 
 export function ImageCard({
@@ -76,11 +67,10 @@ export function ImageCard({
                 {availableFolders.map(folder => (
                   <div
                     key={folder}
-                    className={`text-sm px-2 py-1.5 rounded cursor-pointer flex items-center ${
-                      imageFolder === folder
-                        ? 'bg-accent text-accent-foreground'
-                        : 'hover:bg-accent hover:text-accent-foreground'
-                    }`}
+                    className={`text-sm px-2 py-1.5 rounded cursor-pointer flex items-center ${imageFolder === folder
+                      ? 'bg-accent text-accent-foreground'
+                      : 'hover:bg-accent hover:text-accent-foreground'
+                      }`}
                     onClick={() => {
                       if (imageFolder !== folder) {
                         onMoveToFolder(image.id, folder);

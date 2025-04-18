@@ -1,4 +1,3 @@
-import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,43 +6,42 @@ import { Folder, Sliders, Tag, Settings } from 'lucide-react';
 
 interface FilterPanelProps {
   availableTags: string[];
-  selectedTags: string[];
-  toggleTagFilter: (tag: string) => void;
-  
   availableModels: string[];
-  selectedModels: string[];
-  toggleModelFilter: (model: string) => void;
-  
   availableLoras: string[];
-  selectedLoras: string[];
-  toggleLoraFilter: (lora: string) => void;
-  
   availableFolders: string[];
+
+  selectedTags: string[];
+  selectedModels: string[];
+  selectedLoras: string[];
+
+
+  toggleTagFilter: (tag: string) => void;
+  toggleModelFilter: (model: string) => void;
+  toggleLoraFilter: (lora: string) => void;
   onFolderSelect: (folder: string) => void;
-  
+
   clearAllFilters: () => void;
 }
 
 export function FilterPanel({
   availableTags,
-  selectedTags,
-  toggleTagFilter,
-  
   availableModels,
-  selectedModels,
-  toggleModelFilter,
-  
   availableLoras,
-  selectedLoras,
-  toggleLoraFilter,
-  
   availableFolders,
+
+  selectedTags,
+  selectedModels,
+  selectedLoras,
+
+  toggleTagFilter,
+  toggleModelFilter,
+  toggleLoraFilter,
   onFolderSelect,
-  
+
   clearAllFilters
 }: FilterPanelProps) {
   const hasActiveFilters = selectedTags.length > 0 || selectedModels.length > 0 || selectedLoras.length > 0;
-  
+
   return (
     <Card className="p-4">
       <CardHeader className="p-0 pb-4">
@@ -52,7 +50,7 @@ export function FilterPanel({
           Filter Options
         </CardTitle>
       </CardHeader>
-      
+
       {/* Tags Filter */}
       <div className="space-y-3">
         <div>
@@ -79,7 +77,7 @@ export function FilterPanel({
             <p className="text-sm text-muted-foreground py-2">No tags available</p>
           )}
         </div>
-        
+
         {/* Model Filter */}
         <div>
           <h3 className="font-medium text-sm flex items-center mb-2">
@@ -105,7 +103,7 @@ export function FilterPanel({
             <p className="text-sm text-muted-foreground py-2">No models available</p>
           )}
         </div>
-        
+
         {/* LoRA Filter */}
         <div>
           <h3 className="font-medium text-sm flex items-center mb-2">
@@ -131,7 +129,7 @@ export function FilterPanel({
             <p className="text-sm text-muted-foreground py-2">No LoRAs available</p>
           )}
         </div>
-        
+
         {/* Folder Filter */}
         <div>
           <h3 className="font-medium text-sm flex items-center mb-2">
@@ -141,7 +139,7 @@ export function FilterPanel({
           <ScrollArea className="h-32">
             <div className="space-y-1">
               {availableFolders.map((folder) => (
-                <div 
+                <div
                   key={folder}
                   className="text-sm py-1.5 px-2 rounded hover:bg-accent cursor-pointer flex items-center"
                   onClick={() => onFolderSelect(folder)}
@@ -153,13 +151,13 @@ export function FilterPanel({
             </div>
           </ScrollArea>
         </div>
-        
+
         {/* Filter Actions */}
         {hasActiveFilters && (
           <div className="pt-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="w-full"
               onClick={clearAllFilters}
             >

@@ -1,10 +1,10 @@
 [
   {
     "id": "229fbb64-8651-4ca9-95dc-57c46bfc787f",
-    "isOpen": true,
+    "isOpen": false,
     "name": "New Prompt5",
     "text": "A delicate rose sculpted entirely from translucent glass and shimmering crystal, with light refracting through its petals like a prism. Set against a soft black velvet background to enhance the glow and elegance. Hyperrealistic style, high detail, ethereal lighting.",
-    "negativePrompt": "",
+    "negativePrompt": "ffaaaaffaaa",
     "seed": -1,
     "steps": 20,
     "sampler": "Euler a",
