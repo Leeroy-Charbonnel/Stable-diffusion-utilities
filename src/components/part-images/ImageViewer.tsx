@@ -2,18 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Image as ImageIcon, RefreshCw, FolderOpen, Trash2 } from 'lucide-react';
+import { Search, Image as ImageIcon, RefreshCw, FolderOpen, Trash2, CheckSquare, FolderClosed } from 'lucide-react';
 import { useApi } from '@/contexts/ApiContext';
 import { ImageMetadata } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 //Import our component files
 import { FilterPanel } from './FilterPanel';
 import { ImageCard } from './ImageCard';
 import { ImageDetailsDialog } from './ImageDetailsDialog';
+import { generateUUID } from '@/lib/utils';
 
 export function ImageViewer() {
-  const { fileSystemApi } = useApi();
+  const { fileSystemApi, promptsApi } = useApi();
 
   const [generatedImages, setGeneratedImages] = useState<ImageMetadata[]>([]);
   const [filteredImages, setFilteredImages] = useState<ImageMetadata[]>([]);
@@ -31,7 +33,6 @@ export function ImageViewer() {
   const [selectedFolders, setSelectedFolders] = useState<string[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [showFilters, setShowFilters] = useState(true);
 
   //Image details dialog state
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -41,6 +42,11 @@ export function ImageViewer() {
   //Delete confirmation dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [imageToDelete, setImageToDelete] = useState<ImageMetadata | null>(null);
+  const [isMultiDelete, setIsMultiDelete] = useState(false);
+
+  //Move to folder dialog state
+  const [moveFolderDialogOpen, setMoveFolderDialogOpen] = useState(false);
+  const [targetFolder, setTargetFolder] = useState<string>('default');
 
   //Function to load images from server
   async function loadImagesFromServer() {
@@ -98,6 +104,15 @@ export function ImageViewer() {
     setSelectedImages(prev => prev.includes(imageId) ? prev.filter(id => id !== imageId) : [...prev, imageId]);
   };
 
+  //Select all images
+  const selectAllImages = () => {
+    if (selectedImages.length === filteredImages.length) {
+      setSelectedImages([]);
+    } else {
+      setSelectedImages(filteredImages.map(img => img.id));
+    }
+  };
+
   //Extract all unique tags, models, and loras from images
   useEffect(() => {
     const tags = new Set<string>();
@@ -137,11 +152,15 @@ export function ImageViewer() {
     }
     //Filter by selected models
     if (selectedModels.length > 0) {
-      filtered = filtered.filter((img) =>img.model && selectedModels.includes(img.model));
+      filtered = filtered.filter((img) => img.model && selectedModels.includes(img.model));
+    }
+    //Filter by selected loras
+    if (selectedLoras.length > 0) {
+      filtered = filtered.filter((img) => img.loras && img.loras.some((lora) => selectedLoras.includes(lora.name)));
     }
     //Filter by selected folders
     if (selectedFolders.length > 0) {
-      filtered = filtered.filter((img) =>selectedFolders.includes(img.folder || 'default'));
+      filtered = filtered.filter((img) => selectedFolders.includes(img.folder || 'default'));
     }
     //Sort by creation date, newest first
     filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -197,22 +216,55 @@ export function ImageViewer() {
     }
   };
 
+  const handleMoveSelectedToFolder = async () => {
+    if (selectedImages.length === 0 || !targetFolder) return;
+
+    setIsLoading(true);
+    try {
+      const movePromises = selectedImages.map(imageId =>
+        fileSystemApi.moveImageToFolder(imageId, targetFolder)
+      );
+
+      await Promise.all(movePromises);
+      await loadImagesFromServer();
+      setMoveFolderDialogOpen(false);
+    } catch (error) {
+      console.error('Error moving images to folder:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleDeleteClick = (image: ImageMetadata) => {
     setImageToDelete(image);
+    setIsMultiDelete(false);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedImages.length === 0) return;
+    setIsMultiDelete(true);
     setDeleteDialogOpen(true);
   };
 
   const confirmDelete = async () => {
-    if (!imageToDelete) return;
-
     setIsLoading(true);
     try {
-      const success = await fileSystemApi.deleteImage(imageToDelete.id);
-      if (success) {
-        await loadImagesFromServer();
+      if (isMultiDelete) {
+        //Delete multiple images
+        const deletePromises = selectedImages.map(imageId =>
+          fileSystemApi.deleteImage(imageId)
+        );
+        await Promise.all(deletePromises);
+        setSelectedImages([]);
+      } else if (imageToDelete) {
+        //Delete a single image
+        await fileSystemApi.deleteImage(imageToDelete.id);
       }
+
+      await loadImagesFromServer();
     } catch (error) {
-      console.error('Error deleting image:', error);
+      console.error('Error deleting image(s):', error);
     } finally {
       setIsLoading(false);
       setDeleteDialogOpen(false);
@@ -223,6 +275,47 @@ export function ImageViewer() {
   const handleReRunClick = (image: ImageMetadata) => {
     //TODO: Implement re-run functionality
     console.log('Re-run image:', image);
+  };
+
+  const handleCreatePrompt = async () => {
+    if (!selectedImage) return;
+
+    try {
+      //Get existing prompts
+      const existingPrompts = await promptsApi.getAllPrompts();
+
+      //Create a new prompt from the image
+      const newPrompt = {
+        id: generateUUID(),
+        isOpen: false,
+        name: selectedImage.prompt.substring(0, 20) + "...",
+        text: selectedImage.prompt,
+        negativePrompt: selectedImage.negativePrompt || "",
+        seed: selectedImage.seed,
+        steps: selectedImage.steps,
+        sampler: selectedImage.sampler,
+        model: selectedImage.model,
+        width: selectedImage.width,
+        height: selectedImage.height,
+        runCount: 1,
+        tags: [...selectedImage.tags],
+        loras: selectedImage.loras || [],
+        currentRun: 0,
+        status: "idle",
+      };
+
+      //Add the new prompt to the list
+      const updatedPrompts = [...existingPrompts, newPrompt];
+      await promptsApi.saveAllPrompts(updatedPrompts);
+
+      //Close the dialog
+      setDetailsDialogOpen(false);
+
+      //Show confirmation or switch to prompts tab
+      alert("Prompt created successfully!");
+    } catch (error) {
+      console.error('Error creating prompt:', error);
+    }
   };
 
   const handleContextMenu = (e: React.MouseEvent, imageId: string) => {
@@ -296,10 +389,37 @@ export function ImageViewer() {
           </div>
 
           {selectedImages.length > 0 && (
-            <Button onClick={() => { }} variant="destructive" size="sm" className="flex items-center">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Selected ({selectedImages.length})
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={selectAllImages}
+                variant="outline"
+                size="sm"
+                className="flex items-center"
+              >
+                <CheckSquare className="mr-2 h-4 w-4" />
+                {selectedImages.length === filteredImages.length ? 'Deselect All' : 'Select All'}
+              </Button>
+
+              <Button
+                onClick={() => setMoveFolderDialogOpen(true)}
+                variant="outline"
+                size="sm"
+                className="flex items-center"
+              >
+                <FolderClosed className="mr-2 h-4 w-4" />
+                Move ({selectedImages.length})
+              </Button>
+
+              <Button
+                onClick={handleDeleteSelected}
+                variant="destructive"
+                size="sm"
+                className="flex items-center"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete ({selectedImages.length})
+              </Button>
+            </div>
           )}
         </div>
 
@@ -323,6 +443,7 @@ export function ImageViewer() {
                 toggleSelection={toggleImageSelection}
                 onImageClick={handleImageClick}
                 onMoveToFolder={handleMoveToFolder}
+                onCreatePrompt={handleCreatePrompt}
                 onDeleteClick={handleDeleteClick}
                 onReRunClick={handleReRunClick}
                 availableFolders={availableFolders}
@@ -334,7 +455,7 @@ export function ImageViewer() {
       </div>
 
       {/* Filters Panel (right side) */}
-      <div className={`w-full md:w-64 space-y-6 ${showFilters ? 'block' : 'hidden md:block'}`}>
+      <div className={`w-full md:w-64 space-y-6 block`}>
         <FilterPanel
           availableTags={availableTags}
           selectedTags={selectedTags}
@@ -361,13 +482,33 @@ export function ImageViewer() {
         onOpenChange={setDetailsDialogOpen}
         selectedImage={selectedImage}
         imageData={imageData}
-        onCreatePrompt={() => {
-          setDetailsDialogOpen(false);
-        }}
+        onCreatePrompt={handleCreatePrompt}
         onReRunImage={handleReRunClick}
         onDownload={handleDetailsDownload}
-        onAddTag={async () => { }}
-        onRemoveTag={async () => { }}
+        onAddTag={async (tag) => {
+          if (!selectedImage) return;
+
+          const updatedImage = {
+            ...selectedImage,
+            tags: [...selectedImage.tags, tag]
+          };
+
+          setSelectedImage(updatedImage);
+          await loadImagesFromServer();
+          return Promise.resolve();
+        }}
+        onRemoveTag={async (tag) => {
+          if (!selectedImage) return;
+
+          const updatedImage = {
+            ...selectedImage,
+            tags: selectedImage.tags.filter(t => t !== tag)
+          };
+
+          setSelectedImage(updatedImage);
+          await loadImagesFromServer();
+          return Promise.resolve();
+        }}
         getImageFolder={getImageFolder}
       />
 
@@ -377,13 +518,49 @@ export function ImageViewer() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the image. This action cannot be undone.
+              {isMultiDelete
+                ? `This will permanently delete ${selectedImages.length} selected images. This action cannot be undone.`
+                : "This will permanently delete the image. This action cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Move to Folder Dialog */}
+      <AlertDialog open={moveFolderDialogOpen} onOpenChange={setMoveFolderDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Move Images to Folder</AlertDialogTitle>
+            <AlertDialogDescription>
+              Select a destination folder for the {selectedImages.length} selected images.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="py-4">
+            <Select value={targetFolder} onValueChange={setTargetFolder}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a folder" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableFolders.map(folder => (
+                  <SelectItem key={folder} value={folder}>
+                    {folder}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleMoveSelectedToFolder}>
+              Move Images
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

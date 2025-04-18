@@ -117,7 +117,7 @@ export function PromptsManager() {
       tags: [],
       loras: [],
       currentRun: 0,
-      stauts: 'idle',
+      status: 'idle',
     };
 
     const updatedPrompts = [...prompts, newPrompt];

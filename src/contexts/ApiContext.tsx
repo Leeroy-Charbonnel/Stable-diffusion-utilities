@@ -72,14 +72,7 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       };
 
       if (prompt.loras && prompt.loras.length > 0) {
-        params.alwayson_scripts = {
-          lora: {
-            args: prompt.loras.map(lora => ({
-              model: lora.name,
-              weight: lora.weight
-            }))
-          }
-        };
+        params.prompt = params.prompt + " " + prompt.loras.map(lora => `<lora:${lora.name}:${lora.weight}>`).join(", ");
       }
 
       const result = await apiService.generateImage(params);

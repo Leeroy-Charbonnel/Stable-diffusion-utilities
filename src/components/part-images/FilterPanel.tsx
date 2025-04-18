@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Folder, Sliders, Tag, Settings } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 interface FilterPanelProps {
   availableTags: string[];
@@ -53,14 +54,14 @@ export function FilterPanel({
       </CardHeader>
 
       {/* Tags Filter */}
-      <div className="space-y-3">
+      <div className="flex flex-col gap-5">
         <div>
           <h3 className="font-medium text-sm flex items-center mb-2">
             <Tag className="h-4 w-4 mr-2" />
             Filter by Tags
           </h3>
           {availableTags.length > 0 ? (
-            <ScrollArea className="h-48">
+            <ScrollArea className="">
               <div className="flex flex-wrap gap-1.5">
                 {availableTags.map((tag) => (
                   <Badge
@@ -79,6 +80,8 @@ export function FilterPanel({
           )}
         </div>
 
+        <Separator />
+
         {/* Model Filter */}
         <div>
           <h3 className="font-medium text-sm flex items-center mb-2">
@@ -86,7 +89,7 @@ export function FilterPanel({
             Filter by Model
           </h3>
           {availableModels.length > 0 ? (
-            <ScrollArea className="h-32">
+            <ScrollArea className="">
               <div className="flex flex-wrap gap-1.5">
                 {availableModels.map((model) => (
                   <Badge
@@ -104,6 +107,7 @@ export function FilterPanel({
             <p className="text-sm text-muted-foreground py-2">No models available</p>
           )}
         </div>
+        <Separator />
 
         {/* LoRA Filter */}
         <div>
@@ -112,7 +116,7 @@ export function FilterPanel({
             Filter by LoRA
           </h3>
           {availableLoras.length > 0 ? (
-            <ScrollArea className="h-32">
+            <ScrollArea className="">
               <div className="flex flex-wrap gap-1.5">
                 {availableLoras.map((lora) => (
                   <Badge
@@ -130,6 +134,7 @@ export function FilterPanel({
             <p className="text-sm text-muted-foreground py-2">No LoRAs available</p>
           )}
         </div>
+        <Separator />
 
         {/* Folder Filter */}
         <div>
@@ -137,7 +142,7 @@ export function FilterPanel({
             <Folder className="h-4 w-4 mr-2" />
             Filter by Folder
           </h3>
-          <ScrollArea className="h-32">
+          <ScrollArea className="">
             <div className="flex flex-wrap gap-1.5">
               {availableFolders.map((folder) => (
                 <Badge

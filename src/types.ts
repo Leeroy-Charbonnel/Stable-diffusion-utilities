@@ -23,7 +23,7 @@ export interface Prompt {
 
   runCount: number;
   currentRun: number;
-  stauts: string;
+  status: string;
 }
 
 export interface ImageMetadata {
