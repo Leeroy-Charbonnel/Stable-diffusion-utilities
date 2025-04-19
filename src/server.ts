@@ -149,6 +149,11 @@ const server = Bun.serve({
           const base64Data = imageBase64.replace(/^data:image\/png;base64,/, '');
           await Bun.write(filePath, Buffer.from(base64Data, 'base64'));
 
+          //Set default name if not provided
+          if (!metadata.name) {
+            metadata.name = `Image ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
+          }
+
           //Update metadata
           const allMetadata = await readMetadata();
           const newImageMetadata: ImageMetadata = {
@@ -236,6 +241,42 @@ const server = Bun.serve({
           await saveMetadata(metadata);
 
           return Response.json({ success: true }, { headers: corsHeaders });
+        } catch (error) {
+          return Response.json({ success: false, error: String(error) },
+            { status: 500, headers: corsHeaders });
+        }
+      }
+    },
+
+    //Update image metadata
+    "/api/images/:id/update": {
+      POST: async (req: BunRequest) => {
+        try {
+          const imageId = req.params?.id;
+          if (!imageId) {
+            return Response.json({ success: false, error: 'Image ID not provided' },
+              { status: 400, headers: corsHeaders });
+          }
+
+          const updates = await req.json() as Partial<ImageMetadata>;
+          const metadata = await readMetadata();
+          const imageIndex = metadata.findIndex(img => img.id === imageId);
+
+          if (imageIndex === -1) {
+            return Response.json({ success: false, error: 'Image not found in metadata' },
+              { status: 404, headers: corsHeaders });
+          }
+
+          //Update metadata fields
+          metadata[imageIndex] = {
+            ...metadata[imageIndex],
+            ...updates
+          };
+
+          //Save updated metadata
+          await saveMetadata(metadata);
+
+          return Response.json({ success: true, data: metadata[imageIndex] }, { headers: corsHeaders });
         } catch (error) {
           return Response.json({ success: false, error: String(error) },
             { status: 500, headers: corsHeaders });

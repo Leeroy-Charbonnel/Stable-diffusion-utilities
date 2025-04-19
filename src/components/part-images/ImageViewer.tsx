@@ -154,12 +154,13 @@ export function ImageViewer() {
   useEffect(() => {
     let filtered = [...generatedImages];
 
-    //Search by prompt or tags
+    //Search by prompt, tags, or name
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (img) =>
           img.prompt.toLowerCase().includes(query) ||
+          (img.name && img.name.toLowerCase().includes(query)) ||
           img.tags.some((tag) => tag.toLowerCase().includes(query))
       );
     }
@@ -293,7 +294,31 @@ export function ImageViewer() {
     }
   };
 
+  const handleUpdateImageName = async (imageId: string, name: string): Promise<void> => {
+    if (!name.trim()) return;
 
+    setIsLoading(true);
+    try {
+      // Update image metadata
+      const success = await fileSystemApi.updateImageMetadata(imageId, { name });
+
+      if (success) {
+        // Update local state if the selected image is the one being updated
+        if (selectedImage && selectedImage.id === imageId) {
+          setSelectedImage({ ...selectedImage, name });
+        }
+
+        // Refresh image list
+        await loadImagesFromServer();
+      } else {
+        console.error('Failed to update image name');
+      }
+    } catch (error) {
+      console.error('Error updating image name:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleCreatePrompt = async (image: ImageMetadata) => {
     try {
@@ -304,7 +329,7 @@ export function ImageViewer() {
       const newPrompt = {
         id: generateUUID(),
         isOpen: false,
-        name: image.prompt.substring(0, 20) + "...",
+        name: image.name || image.prompt.substring(0, 20) + "...",
         text: image.prompt,
         negativePrompt: image.negativePrompt || "",
         seed: image.seed,
@@ -338,8 +363,6 @@ export function ImageViewer() {
     return image.folder || 'default';
   };
 
-  // Fixed function for downloading images in ImageViewer.tsx
-
   const handleDetailsDownload = () => {
     if (!selectedImage || !imageUrl) return;
 
@@ -365,7 +388,7 @@ export function ImageViewer() {
   //If there are no images
   if (generatedImages.length === 0) {
     return (
-      <div>
+      <div className="w-full max-w-[1600px] mx-auto">
         <div className="flex items-center justify-between mb-4">
           <div className="flex gap-2">
             <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
@@ -393,7 +416,7 @@ export function ImageViewer() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-4">
+    <div className="flex flex-col md:flex-row gap-4 w-full max-w-[1600px] mx-auto">
       <div className="flex-1">
         <div className="flex items-center justify-between mb-4">
           <div className="flex gap-2">
@@ -457,7 +480,7 @@ export function ImageViewer() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredImages.map((image) => (
               <ImageCard
                 key={image.id}
@@ -491,6 +514,7 @@ export function ImageViewer() {
           toggleLoraFilter={toggleLoraFilter}
 
           availableFolders={availableFolders}
+          selectedFolders={selectedFolders}
           onFolderSelect={toggleFolderFilter}
 
           clearAllFilters={clearAllFilters}
@@ -515,23 +539,34 @@ export function ImageViewer() {
               };
 
               setSelectedImage(updatedImage);
+              await fileSystemApi.updateImageMetadata(selectedImage.id, {
+                tags: [...selectedImage.tags, tag]
+              });
               await loadImagesFromServer();
               return Promise.resolve();
             }}
             onRemoveTag={async (tag) => {
               if (!selectedImage) return;
 
+              const updatedTags = selectedImage.tags.filter(t => t !== tag);
               const updatedImage = {
                 ...selectedImage,
-                tags: selectedImage.tags.filter(t => t !== tag)
+                tags: updatedTags
               };
 
               setSelectedImage(updatedImage);
+              await fileSystemApi.updateImageMetadata(selectedImage.id, {
+                tags: updatedTags
+              });
               await loadImagesFromServer();
               return Promise.resolve();
             }}
             getImageFolder={getImageFolder}
             onNavigate={handleImageNavigation}
+            onDeleteClick={handleDeleteClick}
+            onMoveToFolder={handleMoveToFolder}
+            availableFolders={availableFolders}
+            onUpdateName={handleUpdateImageName}
           />
         )
       }

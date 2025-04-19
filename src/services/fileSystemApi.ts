@@ -21,6 +21,7 @@ export const saveGeneratedImage = async (
       folder: '',
       promptId: promptData.id,
       prompt: promptData.text,
+      name: promptData.name || `Image ${new Date().toLocaleDateString()}`, // Add default name based on prompt name
       negativePrompt: promptData.negativePrompt,
       seed: promptData.seed,
       steps: promptData.steps,
@@ -75,6 +76,29 @@ export const getAllImageMetadata = async (): Promise<ImageMetadata[]> => {
   } catch (error) {
     console.error('Error getting images:', error);
     return [];
+  }
+};
+
+export const updateImageMetadata = async (
+  imageId: string,
+  updates: Partial<ImageMetadata>
+): Promise<boolean> => {
+  try {
+    const response = await fetch(`${FILE_API_BASE_URL}/images/${imageId}/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.success;
+  } catch (error) {
+    console.error('Error updating image metadata:', error);
+    return false;
   }
 };
 

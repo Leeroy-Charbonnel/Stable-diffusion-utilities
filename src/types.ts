@@ -32,6 +32,7 @@ export interface ImageMetadata {
   folder: string;
   promptId: string;
   prompt: string;
+  name: string; // Added name field
   negativePrompt?: string;
   seed: number;
   steps: number;
