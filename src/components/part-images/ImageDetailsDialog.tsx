@@ -17,8 +17,6 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Image as ImageIcon, XIcon, Download, TerminalSquare, Folder, Hash, Settings2, ChevronLeft, ChevronRight, Trash2, FolderClosed, Tag, Plus, Edit, Check } from 'lucide-react';
 import { ImageMetadata } from '@/types';
-import { usePrompt } from '@/contexts/PromptContext';
-import { toast } from 'sonner';
 
 
 interface ImageDetailsDialogProps {
@@ -57,16 +55,14 @@ export function ImageDetailsDialog({
   const [newTag, setNewTag] = useState('');
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [targetFolder, setTargetFolder] = useState<string>(getImageFolder(image));
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const { addPrompt } = usePrompt();
 
-  // Name editing state
+  //Name editing state
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(image.name || '');
 
   useEffect(() => {
-    // Reset name value when image changes
+    //Reset name value when image changes
     if (image) {
       setNameValue(image.name || '');
     }
@@ -124,7 +120,6 @@ export function ImageDetailsDialog({
 
   const handleDeleteImage = () => {
     onDeleteClick(image);
-    setDeleteDialogOpen(false);
     onOpenChange(false);
   };
 
@@ -142,37 +137,6 @@ export function ImageDetailsDialog({
     } else if (e.key === 'Escape') {
       setIsEditingName(false);
       setNameValue(image.name || '');
-    }
-  };
-
-  const handleCreatePrompt = async () => {
-    try {
-      const newPrompt = {
-        id: image.promptId || crypto.randomUUID(),
-        isOpen: false,
-        name: image.name || image.prompt.substring(0, 20) + "...",
-        text: image.prompt,
-        negativePrompt: image.negativePrompt || "",
-        seed: image.seed,
-        steps: image.steps,
-        sampler: image.sampler,
-        model: image.model,
-        width: image.width,
-        height: image.height,
-        runCount: 1,
-        tags: [...image.tags],
-        loras: image.loras || [],
-        currentRun: 0,
-        status: "idle",
-      };
-
-      await addPrompt(newPrompt);
-
-    } catch (error) {
-      console.error('Error creating prompt:', error);
-      toast("Error creating prompt", {
-        description: error instanceof Error ? error.message : String(error)
-      });
     }
   };
 
@@ -305,7 +269,7 @@ export function ImageDetailsDialog({
                       <FolderClosed className="h-4 w-4 mr-2" />
                       Move to Folder
                     </Button>
-                    <Button variant="destructive" size="sm" className="flex-1" onClick={() => setDeleteDialogOpen(true)}>
+                    <Button variant="destructive" size="sm" className="flex-1" onClick={handleDeleteImage}>
                       <Trash2 className="h-4 w-4 mr-2" />
                       Delete Image
                     </Button>
@@ -398,7 +362,7 @@ export function ImageDetailsDialog({
                             {image.loras.map(lora => (
                               <div key={lora.name} className="flex justify-between items-center bg-black/30 px-2 py-1 rounded text-xs">
                                 <span className="truncate mr-1">{lora.name}</span>
-                                <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                <span className="text-xs bg-primary/10 text-primary-foreground px-1.5 py-0.5 rounded-full whitespace-nowrap">
                                   {lora.weight.toFixed(2)}
                                 </span>
                               </div>
@@ -461,7 +425,7 @@ export function ImageDetailsDialog({
               <div className="p-3 border-t border-white/10 bg-black/50 backdrop-blur-md">
                 <Button
                   variant="outline"
-                  onClick={handleCreatePrompt}
+                  onClick={() => onCreatePrompt(image)}
                   className="flex items-center w-full"
                   size="sm"
                 >
@@ -512,24 +476,6 @@ export function ImageDetailsDialog({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleMoveToFolder}>
               Move Image
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Image</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this image? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteImage} className="bg-destructive text-destructive-foreground">
-              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -44,21 +44,10 @@ export function AiSettings() {
       //Filter to get only GPT chat models and sort by newest/most capable first
       const chatModels = data.data
         .filter((model: any) =>
-          model.id.includes('gpt') &&
-          (model.id.includes('turbo') || model.id.includes('gpt-4'))
+          model.id.includes('gpt') && !model.id.includes('preview') && model.id.includes('turbo')
         )
         .map((model: any) => model.id as AiModel)
-        .sort((a: string, b: string) => {
-          //Sort gpt-4 models first, then by version number
-          const aIsGpt4 = a.includes('gpt-4');
-          const bIsGpt4 = b.includes('gpt-4');
 
-          if (aIsGpt4 && !bIsGpt4) return -1;
-          if (!aIsGpt4 && bIsGpt4) return 1;
-
-          //Within same model family, sort by version (newer first)
-          return b.localeCompare(a);
-        });
 
       if (chatModels.length > 0) {
         setAvailableModels(chatModels);

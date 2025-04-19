@@ -1,7 +1,7 @@
 [
   {
     "id": "198d7c24-6603-41c1-a881-380a037d4bb4",
-    "isOpen": false,
+    "isOpen": true,
     "name": "Imagine a serene mountain...",
     "text": "Imagine a serene mountain landscape at dusk, with a crystal-clear lake reflecting the colorful sky. The scene includes a lone cabin nestled among tall pine trees, emitting a warm glow from its windows. The sky is painted in hues of orange, pink, and purple, casting a tranquil atmosphere over the entire setting.",
     "negativePrompt": "Avoid any urban elements or modern technology in the scene.",

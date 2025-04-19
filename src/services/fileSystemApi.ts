@@ -6,6 +6,12 @@ export function getImageUrl(imageId: string | ImageMetadata): string {
   return `${FILE_API_BASE_URL}/images/${imageId}`;
 }
 
+//Helper function to dispatch image saved event
+const dispatchImageSavedEvent = () => {
+  const event = new CustomEvent('image-saved');
+  window.dispatchEvent(event);
+};
+
 export const saveGeneratedImage = async (
   imageId: string,
   imageBase64: string,
@@ -51,6 +57,9 @@ export const saveGeneratedImage = async (
       throw new Error(result.error || 'Failed to save image');
     }
 
+    //Trigger image saved event
+    dispatchImageSavedEvent();
+
     return result.data as ImageMetadata;
   } catch (error) {
     console.error('Error saving generated image:', error);
@@ -95,6 +104,12 @@ export const updateImageMetadata = async (
     }
 
     const result = await response.json();
+
+    //Trigger image saved event for metadata updates
+    if (result.success) {
+      dispatchImageSavedEvent();
+    }
+
     return result.success;
   } catch (error) {
     console.error('Error updating image metadata:', error);
@@ -113,6 +128,12 @@ export const deleteImage = async (imageId: string): Promise<boolean> => {
     }
 
     const result = await response.json();
+
+    //Trigger image saved event for deletions
+    if (result.success) {
+      dispatchImageSavedEvent();
+    }
+
     return result.success;
   } catch (error) {
     console.error('Error deleting image:', error);
@@ -133,6 +154,12 @@ export const moveImageToFolder = async (imageId: string, folder: string): Promis
     }
 
     const result = await response.json();
+
+    //Trigger image saved event for moves
+    if (result.success) {
+      dispatchImageSavedEvent();
+    }
+
     return result.success;
   } catch (error) {
     console.error('Error moving image:', error);

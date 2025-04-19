@@ -188,26 +188,15 @@ export function AiChatConversation() {
     const isUser = message.role === 'user';
     const isSystem = message.role === 'system';
 
-    if (isSystem) return null; //Don't show system messages
+    if (isSystem) return null;
 
     return (
       <div
         key={message.id}
-        className={`flex mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}
-      >
+        className={`flex mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
         <div className={`max-w-[80%] ${isUser ? 'text-right' : 'text-left'}`}>
-          <div
-            className={`rounded-lg p-3 ${isUser
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-card border border-border'
-              }`}
-          >
-            <div className="text-sm whitespace-pre-wrap break-words">
-              {message.content}
-            </div>
-          </div>
-          <div className="text-xs text-muted-foreground mt-1 mx-1">
-            {new Date(message.timestamp).toLocaleTimeString()}
+          <div className={`rounded-lg p-3 ${isUser ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`} >
+            <div className="text-sm whitespace-pre-wrap break-words">{message.content}</div>
           </div>
         </div>
       </div>
