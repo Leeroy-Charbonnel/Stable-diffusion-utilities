@@ -21,12 +21,6 @@ function App() {
     localStorage.setItem('sd-utilities-activeTab', activeTab);
   }, [activeTab]);
 
-  const tabComponents = {
-    prompts: <PromptsManager />,
-    images: <ImageViewer />,
-    ai: <AiChat />
-  };
-
   return (
     <ApiProvider>
       <AiProvider>
@@ -35,7 +29,9 @@ function App() {
 
           <div className="flex-1 overflow-auto">
             <div className="max-w-4xl mx-auto p-6">
-              {tabComponents[activeTab]}
+              <div style={{ display: activeTab === 'prompts' ? 'block' : 'none' }}><PromptsManager /></div>
+              <div style={{ display: activeTab === 'images' ? 'block' : 'none' }}><ImageViewer /></div>
+              <div style={{ display: activeTab === 'ai' ? 'block' : 'none' }}><AiChat /></div>
             </div>
           </div>
         </div>

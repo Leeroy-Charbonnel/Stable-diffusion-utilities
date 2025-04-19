@@ -4,14 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Link, PlusCircle, RefreshCw, CheckCircle, Wand2 } from 'lucide-react';
+import { AlertCircle, PlusCircle, RefreshCw, CheckCircle, Wand2 } from 'lucide-react';
 import { useAi } from '@/contexts/AiContext';
 import { useApi } from '@/contexts/ApiContext';
-import { Prompt, LoraConfig } from '@/types';
+import { Prompt, ChatMessage } from '@/types';
 import { PromptForm } from '../part-prompt/PromptForm';
 import { generateUUID } from '@/lib/utils';
 import { generateChatCompletion } from '@/services/openAiApi';
-import { CIVITAI_EXTRACTION_SYSTEM_PROMPT } from '@/lib/aiConstants';
+import { CIVITAI_EXTRACTION_SYSTEM_PROMPT } from '@/lib/constantsAI';
+import { DEFAULT_AI_API_KEY } from '@/lib/constantsKeys';
 
 export function AiCivitaiExtractor() {
   const { isProcessing: isAiProcessing, settings } = useAi();
@@ -95,23 +96,19 @@ export function AiCivitaiExtractor() {
 
   //Extract parameters using AI
   const extractParametersWithAI = async (inputText: string) => {
-    if (!settings.apiKey) {
-      throw new Error('OpenAI API key is required. Please set it in the AI Settings tab.');
-    }
-
     //Create messages for AI
     const messages = [
       { id: '1', role: 'system', content: CIVITAI_EXTRACTION_SYSTEM_PROMPT, timestamp: new Date().toISOString() },
       { id: '2', role: 'user', content: inputText, timestamp: new Date().toISOString() }
-    ];
+    ] as ChatMessage[];
 
     //Get response from AI
     const response = await generateChatCompletion(
-      settings.apiKey,
+      DEFAULT_AI_API_KEY,
       settings.model,
       messages,
-      0.1, //Lower temperature for more deterministic results
-      2000 //Higher token limit to ensure full response
+      0.1,
+      2000
     );
 
     if (!response) {
@@ -256,7 +253,7 @@ export function AiCivitaiExtractor() {
             <div className="flex gap-2">
               <Button
                 onClick={handleExtractFromText}
-                disabled={!inputText.trim() || isAiExtracting || isAiProcessing || !settings.apiKey}
+                disabled={!inputText.trim() || isAiExtracting || isAiProcessing}
                 className="ml-auto"
               >
                 {isAiExtracting ? (
@@ -285,16 +282,6 @@ export function AiCivitaiExtractor() {
               <AlertTitle>Error</AlertTitle>
               <AlertDescription>
                 {extractionError || 'Failed to extract parameters from the provided text. Please check the format and try again.'}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {!settings.apiKey && (
-            <Alert variant="warning" className="bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>API Key Required</AlertTitle>
-              <AlertDescription>
-                You need to set an OpenAI API key in the AI Settings tab to use this feature.
               </AlertDescription>
             </Alert>
           )}

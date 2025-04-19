@@ -13,6 +13,7 @@ dist-ssr
 *.local
 
 src/output/*
+src/lib/constantsKeys.ts
 
 # Editor directories and files
 .vscode/*

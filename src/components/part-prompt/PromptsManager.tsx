@@ -400,7 +400,9 @@ export function PromptsManager() {
               Start Execution
             </Button>
           )}
-          <Button onClick={handleAddPrompt} disabled={isLoadingPrompts}>
+          <Button
+            onClick={handleAddPrompt}
+            disabled={isLoadingPrompts || status === 'single-execution' || status === 'global-execution'}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Prompt
           </Button>

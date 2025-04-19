@@ -24,7 +24,8 @@ import { useApi } from '@/contexts/ApiContext';
 import { generateUUID } from '@/lib/utils';
 import { PromptForm } from '../part-prompt/PromptForm';
 import { generateChatCompletion } from '@/services/openAiApi';
-import { CHAT_SYSTEM_PROMPT, EXTRACTION_PROMPT } from '@/lib/aiConstants';
+import { CHAT_SYSTEM_PROMPT, EXTRACTION_PROMPT } from '@/lib/constantsAI';
+import { DEFAULT_AI_API_KEY } from '@/lib/constantsKeys';
 
 export function AiChatConversation() {
   const { messages, isProcessing, error, settings, sendMessage, clearMessages } = useAi();
@@ -167,7 +168,7 @@ export function AiChatConversation() {
     }
 
     //If no valid JSON found or parsing failed, ask the AI to extract it
-    if (settings.apiKey && message.includes('prompt')) {
+    if (message.includes('prompt')) {
       setIsExtractingPrompt(true);
       setExtractionError(null);
 
@@ -180,7 +181,7 @@ export function AiChatConversation() {
 
         //Get response from AI
         const response = await generateChatCompletion(
-          settings.apiKey,
+          DEFAULT_AI_API_KEY,
           settings.model,
           extractionMessages,
           0.1, //Lower temperature for more deterministic results

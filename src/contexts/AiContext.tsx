@@ -2,16 +2,15 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { ChatMessage, AiSettings, AiModel } from '@/types';
 import { generateChatCompletion } from '@/services/openAiApi';
 import { generateUUID } from '@/lib/utils';
+import { DEFAULT_AI_API_KEY } from '@/lib/constantsKeys';
 
-//Default AI settings
 const DEFAULT_AI_SETTINGS: AiSettings = {
-  apiKey: '',
+  apiKey: DEFAULT_AI_API_KEY,
   model: 'gpt-3.5-turbo',
   temperature: 0.7,
   maxTokens: 1000,
 };
 
-//Types for the context
 interface AiContextType {
   messages: ChatMessage[];
   settings: AiSettings;
@@ -47,11 +46,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       const storedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
       if (storedSettings) {
         const parsedSettings = JSON.parse(storedSettings) as AiSettings;
-        //Ensure all required fields are present
-        setSettings({
-          ...DEFAULT_AI_SETTINGS,
-          ...parsedSettings,
-        });
+        setSettings({ ...DEFAULT_AI_SETTINGS, ...parsedSettings });
       }
 
       const storedMessages = localStorage.getItem(STORAGE_KEY_MESSAGES);
@@ -82,21 +77,13 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   }, [messages]);
 
   //Setting updaters
-  const setApiKey = (key: string) => {
-    setSettings((prev) => ({ ...prev, apiKey: key }));
-  };
+  const setApiKey = (key: string) => { setSettings((prev) => ({ ...prev, apiKey: key })); };
 
-  const setModel = (model: AiModel) => {
-    setSettings((prev) => ({ ...prev, model }));
-  };
+  const setModel = (model: AiModel) => { setSettings((prev) => ({ ...prev, model })); };
 
-  const setTemperature = (temperature: number) => {
-    setSettings((prev) => ({ ...prev, temperature }));
-  };
+  const setTemperature = (temperature: number) => { setSettings((prev) => ({ ...prev, temperature })); };
 
-  const setMaxTokens = (maxTokens: number) => {
-    setSettings((prev) => ({ ...prev, maxTokens }));
-  };
+  const setMaxTokens = (maxTokens: number) => { setSettings((prev) => ({ ...prev, maxTokens })); };
 
   //Send a message and get a response
   const sendMessage = async (content: string, role: 'user' | 'assistant' | 'system' = 'user') => {
@@ -105,17 +92,10 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setError(null);
 
     //For user messages, set isProcessing to true
-    if (role === 'user') {
-      setIsProcessing(true);
-    }
+    if (role === 'user') { setIsProcessing(true); }
 
     //Create a new message
-    const newMessage: ChatMessage = {
-      id: generateUUID(),
-      role,
-      content,
-      timestamp: new Date().toISOString(),
-    };
+    const newMessage: ChatMessage = { id: generateUUID(), role, content, timestamp: new Date().toISOString(), };
 
     //Add the message to the list
     setMessages((prevMessages) => [...prevMessages, newMessage]);
@@ -123,16 +103,12 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     //If it's a user message, get a response from the AI
     if (role === 'user') {
       try {
-        if (!settings.apiKey) {
-          throw new Error('API key is required. Please set it in the settings tab.');
-        }
-
         //Get all messages to send to the API
         const updatedMessages = [...messages, newMessage];
 
         //Get response from OpenAI
         const response = await generateChatCompletion(
-          settings.apiKey,
+          DEFAULT_AI_API_KEY,
           settings.model,
           updatedMessages,
           settings.temperature,
@@ -161,12 +137,10 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     }
   };
 
-  //Clear all messages
   const clearMessages = () => {
     setMessages([]);
   };
 
-  //Context value
   const value: AiContextType = {
     messages,
     settings,
@@ -183,7 +157,6 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   return <AiContext.Provider value={value}>{children}</AiContext.Provider>;
 };
 
-//Custom hook to use the AI context
 export const useAi = (): AiContextType => {
   const context = useContext(AiContext);
   if (context === undefined) {

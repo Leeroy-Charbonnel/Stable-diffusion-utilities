@@ -1,49 +1,35 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
-import { Settings, RefreshCw, AlertCircle } from 'lucide-react';
+import { Settings, RefreshCw } from 'lucide-react';
 import { useAi } from '@/contexts/AiContext';
 import { AiModel } from '@/types';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { DEFAULT_AI_API_KEY } from '@/lib/constantsKeys';
 
 export function AiSettings() {
   const {
     settings,
-    setApiKey,
     setModel,
     setTemperature,
     setMaxTokens,
   } = useAi();
 
-  const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
   const [availableModels, setAvailableModels] = useState<AiModel[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (settings.apiKey) {
-      fetchAvailableModels();
-    } else {
-      //Set default models when no API key is available
-      setAvailableModels(['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']);
-    }
-  }, [settings.apiKey]);
+    fetchAvailableModels();
+  }, []);
 
   const fetchAvailableModels = async () => {
-    if (!settings.apiKey) return;
-
     setIsLoadingModels(true);
-    setError(null);
 
     try {
       const response = await fetch('https://api.openai.com/v1/models', {
         headers: {
-          'Authorization': `Bearer ${settings.apiKey}`,
+          'Authorization': `Bearer ${DEFAULT_AI_API_KEY}`,
           'Content-Type': 'application/json'
         }
       });
@@ -84,11 +70,9 @@ export function AiSettings() {
       } else {
         //Fallback to defaults if no chat models found
         setAvailableModels(['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']);
-        setError('No compatible chat models found in your account');
       }
     } catch (error) {
       console.error('Error fetching models:', error);
-      setError(error instanceof Error ? error.message : 'Failed to fetch models');
       setAvailableModels(['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']);
     } finally {
       setIsLoadingModels(false);
@@ -105,48 +89,6 @@ export function AiSettings() {
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="apiKey">OpenAI API Key</Label>
-          <div className="flex gap-2">
-            <Input
-              id="apiKey"
-              type={isApiKeyVisible ? 'text' : 'password'}
-              value={settings.apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-..."
-            />
-            <Button
-              variant="outline"
-              onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}
-            >
-              {isApiKeyVisible ? 'Hide' : 'Show'}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={fetchAvailableModels}
-              disabled={!settings.apiKey || isLoadingModels}
-            >
-              {isLoadingModels ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                'Refresh Models'
-              )}
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Your API key is stored locally and never sent to our servers.
-          </p>
-        </div>
-
-        {error && (
-          <Alert variant="destructive" className="mt-2">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        <Separator />
-
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="model">AI Model</Label>

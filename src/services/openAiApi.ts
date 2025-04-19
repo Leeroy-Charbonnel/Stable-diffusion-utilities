@@ -1,6 +1,6 @@
 // src/services/openAiApi.ts
 import { AiModel, ChatMessage } from '@/types';
-import { OPENAI_API_URL } from '@/lib/aiConstants';
+import { OPENAI_API_URL } from '@/lib/constantsAI';
 
 //OpenAI API request interface
 interface OpenAIRequest {
