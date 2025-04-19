@@ -1,113 +1,193 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Slider } from '@/components/ui/slider';
-import { Settings } from 'lucide-react';
-import { useAi } from '@/contexts/AiContext';
-import { AiModel } from '@/types';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { ChatMessage, AiSettings, AiModel } from '@/types';
+import { generateChatCompletion } from '@/services/openAiApi';
+import { generateUUID } from '@/lib/utils';
 
-export function AiSettings() {
-  const {
+//Default AI settings
+const DEFAULT_AI_SETTINGS: AiSettings = {
+  apiKey: '',
+  model: 'gpt-3.5-turbo',
+  temperature: 0.7,
+  maxTokens: 1000,
+};
+
+//Types for the context
+interface AiContextType {
+  messages: ChatMessage[];
+  settings: AiSettings;
+  isProcessing: boolean;
+  error: string | null;
+
+  //Methods
+  sendMessage: (content: string, role?: 'user' | 'assistant' | 'system') => Promise<void>;
+  clearMessages: () => void;
+  setApiKey: (key: string) => void;
+  setModel: (model: AiModel) => void;
+  setTemperature: (temp: number) => void;
+  setMaxTokens: (tokens: number) => void;
+}
+
+//Create the context
+const AiContext = createContext<AiContextType | undefined>(undefined);
+
+//Storage keys
+const STORAGE_KEY_SETTINGS = 'sd-utilities-ai-settings';
+const STORAGE_KEY_MESSAGES = 'sd-utilities-ai-messages';
+
+export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  //State
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [settings, setSettings] = useState<AiSettings>(DEFAULT_AI_SETTINGS);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  //Load settings from local storage
+  useEffect(() => {
+    try {
+      const storedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
+      if (storedSettings) {
+        const parsedSettings = JSON.parse(storedSettings) as AiSettings;
+        //Ensure all required fields are present
+        setSettings({
+          ...DEFAULT_AI_SETTINGS,
+          ...parsedSettings,
+        });
+      }
+
+      const storedMessages = localStorage.getItem(STORAGE_KEY_MESSAGES);
+      if (storedMessages) {
+        setMessages(JSON.parse(storedMessages));
+      }
+    } catch (error) {
+      console.error('Error loading AI settings from localStorage:', error);
+    }
+  }, []);
+
+  //Save settings to local storage when changed
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+    } catch (error) {
+      console.error('Error saving AI settings to localStorage:', error);
+    }
+  }, [settings]);
+
+  //Save messages to local storage when changed
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_MESSAGES, JSON.stringify(messages));
+    } catch (error) {
+      console.error('Error saving AI messages to localStorage:', error);
+    }
+  }, [messages]);
+
+  //Setting updaters
+  const setApiKey = (key: string) => {
+    setSettings((prev) => ({ ...prev, apiKey: key }));
+  };
+
+  const setModel = (model: AiModel) => {
+    setSettings((prev) => ({ ...prev, model }));
+  };
+
+  const setTemperature = (temperature: number) => {
+    setSettings((prev) => ({ ...prev, temperature }));
+  };
+
+  const setMaxTokens = (maxTokens: number) => {
+    setSettings((prev) => ({ ...prev, maxTokens }));
+  };
+
+  //Send a message and get a response
+  const sendMessage = async (content: string, role: 'user' | 'assistant' | 'system' = 'user') => {
+    if (!content.trim()) return;
+
+    setError(null);
+
+    //For user messages, set isProcessing to true
+    if (role === 'user') {
+      setIsProcessing(true);
+    }
+
+    //Create a new message
+    const newMessage: ChatMessage = {
+      id: generateUUID(),
+      role,
+      content,
+      timestamp: new Date().toISOString(),
+    };
+
+    //Add the message to the list
+    setMessages((prevMessages) => [...prevMessages, newMessage]);
+
+    //If it's a user message, get a response from the AI
+    if (role === 'user') {
+      try {
+        if (!settings.apiKey) {
+          throw new Error('API key is required. Please set it in the settings tab.');
+        }
+
+        //Get all messages to send to the API
+        const updatedMessages = [...messages, newMessage];
+
+        //Get response from OpenAI
+        const response = await generateChatCompletion(
+          settings.apiKey,
+          settings.model,
+          updatedMessages,
+          settings.temperature,
+          settings.maxTokens
+        );
+
+        if (!response) {
+          throw new Error('Failed to get a response from the AI.');
+        }
+
+        //Add the assistant's response
+        const assistantMessage: ChatMessage = {
+          id: generateUUID(),
+          role: 'assistant',
+          content: response,
+          timestamp: new Date().toISOString(),
+        };
+
+        setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+      } catch (err) {
+        console.error('Error getting AI response:', err);
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+  };
+
+  //Clear all messages
+  const clearMessages = () => {
+    setMessages([]);
+  };
+
+  //Context value
+  const value: AiContextType = {
+    messages,
     settings,
+    isProcessing,
+    error,
+    sendMessage,
+    clearMessages,
     setApiKey,
     setModel,
     setTemperature,
     setMaxTokens,
-  } = useAi();
+  };
 
-  const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
+  return <AiContext.Provider value={value}>{children}</AiContext.Provider>;
+};
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center">
-          <Settings className="h-5 w-5 mr-2" />
-          AI Settings
-        </CardTitle>
-      </CardHeader>
-
-      <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="apiKey">OpenAI API Key</Label>
-          <div className="flex gap-2">
-            <Input
-              id="apiKey"
-              type={isApiKeyVisible ? 'text' : 'password'}
-              value={settings.apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-..."
-            />
-            <Button
-              variant="outline"
-              onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}
-            >
-              {isApiKeyVisible ? 'Hide' : 'Show'}
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Your API key is stored locally and never sent to our servers.
-          </p>
-        </div>
-
-        <Separator />
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="model">AI Model</Label>
-            <Select
-              value={settings.model}
-              onValueChange={(value) => setModel(value as AiModel)}
-            >
-              <SelectTrigger id="model">
-                <SelectValue placeholder="Select a model" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                <SelectItem value="gpt-4">GPT-4</SelectItem>
-                <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <Label htmlFor="temperature">Temperature: {settings.temperature.toFixed(1)}</Label>
-            </div>
-            <Slider
-              id="temperature"
-              min={0}
-              max={1}
-              step={0.1}
-              value={[settings.temperature]}
-              onValueChange={(values) => setTemperature(values[0])}
-            />
-            <p className="text-xs text-muted-foreground">
-              Lower values make responses more deterministic, higher values make them more creative.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <Label htmlFor="maxTokens">Max Tokens: {settings.maxTokens}</Label>
-            </div>
-            <Slider
-              id="maxTokens"
-              min={100}
-              max={4000}
-              step={100}
-              value={[settings.maxTokens]}
-              onValueChange={(values) => setMaxTokens(values[0])}
-            />
-            <p className="text-xs text-muted-foreground">
-              Maximum number of tokens the AI can generate in a response.
-            </p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+//Custom hook to use the AI context
+export const useAi = (): AiContextType => {
+  const context = useContext(AiContext);
+  if (context === undefined) {
+    throw new Error('useAi must be used within an AiProvider');
+  }
+  return context;
+};

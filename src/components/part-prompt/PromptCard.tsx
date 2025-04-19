@@ -86,7 +86,7 @@ export function PromptCard({
       <Accordion
         type="single"
         collapsible
-        defaultValue={isAccordionOpen ? prompt.id : undefined}
+        defaultValue={(isAccordionOpen && ! isExecuting) ? prompt.id : undefined}
         className="w-full"
         onValueChange={handleOpenAccordion}
       >

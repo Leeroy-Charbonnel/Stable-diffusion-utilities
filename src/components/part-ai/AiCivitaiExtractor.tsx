@@ -1,115 +1,208 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Link, PlusCircle, RefreshCw, CheckCircle } from 'lucide-react';
+import { AlertCircle, Link, PlusCircle, RefreshCw, CheckCircle, Wand2 } from 'lucide-react';
 import { useAi } from '@/contexts/AiContext';
+import { useApi } from '@/contexts/ApiContext';
 import { Prompt, LoraConfig } from '@/types';
+import { PromptForm } from '../part-prompt/PromptForm';
+import { generateUUID } from '@/lib/utils';
+import { generateChatCompletion } from '@/services/openAiApi';
+
+//System prompt for extraction
+const EXTRACTION_SYSTEM_PROMPT = `You are an AI assistant specialized in extracting Stable Diffusion generation parameters from text.
+When given text that contains Stable Diffusion parameters, extract the following information and return it in a JSON format:
+- prompt: The main prompt text
+- negativePrompt: The negative prompt text
+- seed: The random seed value (numeric)
+- steps: The number of steps (numeric)
+- sampler: The sampler name (e.g., "Euler a", "DPM++ 2M Karras")
+- width: Image width in pixels (numeric)
+- height: Image height in pixels (numeric)
+- model: The model/checkpoint name
+- loras: An array of LoRA models used, each with "name" and "weight" properties
+- tags: An array of tags extracted from the prompt (e.g., style identifiers like "masterpiece", "photorealistic")
+
+Return ONLY valid JSON with no additional text, comments, or explanations.
+If a parameter cannot be found, use appropriate default values or empty arrays.`;
 
 export function AiCivitaiExtractor() {
-  const {
-    isProcessing,
-    error
-  } = useAi();
+  const { isProcessing: isAiProcessing, settings } = useAi();
+  const { promptsApi, stableDiffusionApi } = useApi();
 
   const [inputText, setInputText] = useState('');
   const [extractionStatus, setExtractionStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [extractedPrompt, setExtractedPrompt] = useState<Prompt | null>(null);
   const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [isAiExtracting, setIsAiExtracting] = useState(false);
 
-  const parseStableDiffusionParams = (text: string) => {
-    //Extract prompt and negative prompt
-    const promptMatch = text.match(/(.*?)(?=Negative prompt:|Resources used|$)/s);
-    const negativePromptMatch = text.match(/Negative prompt:(.*?)(?=Steps:|Resources used|$)/s);
+  //API data for the prompt form
+  const [availableSamplers, setAvailableSamplers] = useState<string[]>([]);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [availableLoras, setAvailableLoras] = useState<any[]>([]);
+  const [isLoadingApiData, setIsLoadingApiData] = useState(false);
 
-    //Extract parameters
-    const seedMatch = text.match(/Seed: (\d+)/);
-    const stepsMatch = text.match(/Steps: (\d+)/);
-    const samplerMatch = text.match(/Sampler: ([^,]+)/);
-    const sizeMatch = text.match(/Size: (\d+)x(\d+)/);
-    const cfgMatch = text.match(/CFG scale: ([0-9.]+)/);
+  //Load API data for the prompt form
+  useEffect(() => {
+    const loadApiData = async () => {
+      setIsLoadingApiData(true);
+      try {
+        const [samplers, models, loras] = await Promise.all([
+          stableDiffusionApi.getSamplers(),
+          stableDiffusionApi.getModels(),
+          stableDiffusionApi.getLoras()
+        ]);
 
-    //Extract model/checkpoint and loras
-    let model = '';
-    const loras: LoraConfig[] = [];
-
-    //Parse Civitai format resources (newer format)
-    if (text.includes('Resources used') || text.includes('Checkpoint')) {
-      //First try to find the main model/checkpoint
-      const checkpointSection = text.match(/([^\n]+)\s+Checkpoint\s+([^\n]+)/);
-      if (checkpointSection) {
-        model = checkpointSection[1].trim();
+        setAvailableSamplers(samplers);
+        setAvailableModels(models);
+        setAvailableLoras(loras);
+      } catch (error) {
+        console.error('Failed to load API data:', error);
+      } finally {
+        setIsLoadingApiData(false);
       }
+    };
 
-      //Extract all LoRAs using regex pattern
-      const loraPattern = /\* ([^*\n]+?)\s+LoRA\s+([0-9.]+)\s+([^\n]+)/g;
-      const loraMatches = Array.from(text.matchAll(loraPattern));
+    loadApiData();
+  }, []);
 
-      loraMatches.forEach(match => {
-        loras.push({
-          name: match[1].trim(),
-          weight: parseFloat(match[2])
-        });
-      });
-    } else {
-      //Try standard format
-      const modelMatch = text.match(/Model: ([^,\n]+)/);
-      if (modelMatch) {
-        model = modelMatch[1].trim();
+  //Find best match for model name in available models
+  const findBestModelMatch = (modelName: string): string => {
+    if (!modelName || availableModels.length === 0) return availableModels[0] || '';
+
+    //Try exact match first
+    if (availableModels.includes(modelName)) return modelName;
+
+    //Try partial match (case insensitive)
+    const lowerModelName = modelName.toLowerCase();
+    for (const availableModel of availableModels) {
+      if (availableModel.toLowerCase().includes(lowerModelName) ||
+        lowerModelName.includes(availableModel.toLowerCase())) {
+        return availableModel;
       }
-
-      //Extract loras from standard format
-      const loraMatches = Array.from(text.matchAll(/<lora:([^:]+):([0-9.]+)>/g));
-      loraMatches.forEach(match => {
-        loras.push({
-          name: match[1],
-          weight: parseFloat(match[2])
-        });
-      });
     }
 
-    return {
-      prompt: promptMatch ? promptMatch[1].trim() : '',
-      negativePrompt: negativePromptMatch ? negativePromptMatch[1].trim() : '',
-      seed: seedMatch ? parseInt(seedMatch[1]) : -1,
-      steps: stepsMatch ? parseInt(stepsMatch[1]) : 20,
-      sampler: samplerMatch ? samplerMatch[1].trim() : 'Euler a',
-      width: sizeMatch ? parseInt(sizeMatch[1]) : 512,
-      height: sizeMatch ? parseInt(sizeMatch[2]) : 512,
-      cfg: cfgMatch ? parseFloat(cfgMatch[1]) : 7,
-      model: model,
-      loras
-    };
+    //Default to first available model
+    return availableModels[0] || '';
+  };
+
+  //Find best match for sampler name in available samplers
+  const findBestSamplerMatch = (samplerName: string): string => {
+    if (!samplerName || availableSamplers.length === 0) return 'Euler a';
+
+    //Try exact match first
+    if (availableSamplers.includes(samplerName)) return samplerName;
+
+    //Try partial match (case insensitive)
+    const lowerSamplerName = samplerName.toLowerCase();
+    for (const availableSampler of availableSamplers) {
+      if (availableSampler.toLowerCase().includes(lowerSamplerName) ||
+        lowerSamplerName.includes(availableSampler.toLowerCase())) {
+        return availableSampler;
+      }
+    }
+
+    //Default to Euler a or first available sampler
+    return availableSamplers.includes('Euler a') ? 'Euler a' : availableSamplers[0] || 'Euler a';
+  };
+
+  //Extract parameters using AI
+  const extractParametersWithAI = async (inputText: string) => {
+    if (!settings.apiKey) {
+      throw new Error('OpenAI API key is required. Please set it in the AI Settings tab.');
+    }
+
+    //Create messages for AI
+    const messages = [
+      { id: '1', role: 'system', content: EXTRACTION_SYSTEM_PROMPT, timestamp: new Date().toISOString() },
+      { id: '2', role: 'user', content: inputText, timestamp: new Date().toISOString() }
+    ];
+
+    //Get response from AI
+    const response = await generateChatCompletion(
+      settings.apiKey,
+      settings.model,
+      messages,
+      0.1, //Lower temperature for more deterministic results
+      2000 //Higher token limit to ensure full response
+    );
+
+    if (!response) {
+      throw new Error('Failed to get a response from the AI.');
+    }
+
+    try {
+      //Parse JSON response
+      let jsonResponse = response;
+
+      //Sometimes the AI returns markdown code blocks, so we need to extract the JSON
+      const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (jsonMatch && jsonMatch[1]) {
+        jsonResponse = jsonMatch[1];
+      }
+
+      const extractedData = JSON.parse(jsonResponse);
+
+      //Ensure we have all required properties
+      return {
+        prompt: extractedData.prompt || '',
+        negativePrompt: extractedData.negativePrompt || '',
+        seed: typeof extractedData.seed === 'number' ? extractedData.seed : -1,
+        steps: typeof extractedData.steps === 'number' ? extractedData.steps : 20,
+        sampler: extractedData.sampler || 'Euler a',
+        width: typeof extractedData.width === 'number' ? extractedData.width : 512,
+        height: typeof extractedData.height === 'number' ? extractedData.height : 512,
+        model: extractedData.model || '',
+        loras: Array.isArray(extractedData.loras) ? extractedData.loras : [],
+        tags: Array.isArray(extractedData.tags) ? extractedData.tags : []
+      };
+    } catch (error) {
+      console.error('Error parsing AI response:', error, 'Response:', response);
+      throw new Error('Failed to parse the AI response. Please try again.');
+    }
   };
 
   const handleExtractFromText = async () => {
-    if (!inputText.trim() || isProcessing) return;
+    if (!inputText.trim() || isAiExtracting) return;
 
     setExtractionStatus('processing');
     setExtractionError(null);
+    setIsAiExtracting(true);
 
     try {
-      //Parse the input text
-      const params = parseStableDiffusionParams(inputText);
+      //Extract parameters using AI
+      const extractedData = await extractParametersWithAI(inputText);
+
+      //Find best matches for sampler and model in available options
+      const matchedSampler = findBestSamplerMatch(extractedData.sampler);
+      const matchedModel = findBestModelMatch(extractedData.model);
+
+      //Create a name from the prompt
+      let name = 'Extracted Prompt';
+      if (extractedData.prompt) {
+        const wordsToUse = extractedData.prompt.split(/\s+/).slice(0, 4).join(' ');
+        name = wordsToUse + (extractedData.prompt.split(/\s+/).length > 4 ? '...' : '');
+      }
 
       //Create a new prompt from the extracted data
       const newPrompt: Prompt = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         isOpen: true,
-        name: `Extracted Prompt ${new Date().toLocaleTimeString()}`,
-        text: params.prompt,
-        negativePrompt: params.negativePrompt,
-        seed: params.seed,
-        steps: params.steps,
-        sampler: params.sampler,
-        model: params.model,
-        width: params.width,
-        height: params.height,
+        name: name,
+        text: extractedData.prompt,
+        negativePrompt: extractedData.negativePrompt,
+        seed: extractedData.seed,
+        steps: extractedData.steps,
+        sampler: matchedSampler,
+        model: matchedModel,
+        width: extractedData.width,
+        height: extractedData.height,
         runCount: 1,
-        tags: [],
-        loras: params.loras,
+        tags: extractedData.tags,
+        loras: extractedData.loras,
         currentRun: 0,
         status: 'idle',
       };
@@ -120,6 +213,31 @@ export function AiCivitaiExtractor() {
       console.error('Error extracting from text:', err);
       setExtractionStatus('error');
       setExtractionError(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setIsAiExtracting(false);
+    }
+  };
+
+  const handleSavePrompt = async () => {
+    if (!extractedPrompt) return;
+
+    try {
+      //Get existing prompts
+      const existingPrompts = await promptsApi.getAllPrompts();
+
+      //Add the extracted prompt to the list
+      const updatedPrompts = [...existingPrompts, extractedPrompt];
+      const success = await promptsApi.saveAllPrompts(updatedPrompts);
+
+      if (success) {
+        alert("Prompt created successfully! You can find it in the Prompts tab.");
+        resetExtraction();
+      } else {
+        alert("Failed to create prompt. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error creating prompt:", error);
+      alert("Failed to create prompt. Please try again.");
     }
   };
 
@@ -131,180 +249,112 @@ export function AiCivitaiExtractor() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center">
-          <Link className="h-5 w-5 mr-2" />
-          Extract Prompt from Generation Info
-        </CardTitle>
-      </CardHeader>
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_400px]">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center">
+            <Wand2 className="h-5 w-5 mr-2" />
+            AI-Powered Prompt Extraction
+          </CardTitle>
+        </CardHeader>
 
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="promptText">Generation Parameters</Label>
-          <Textarea
-            id="promptText"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder="Paste generation parameters here..."
-            className="h-48 font-mono text-sm"
-            disabled={isProcessing || extractionStatus === 'processing'}
-          />
-          <div className="flex gap-2">
-            <Button
-              onClick={handleExtractFromText}
-              disabled={!inputText.trim() || isProcessing || extractionStatus === 'processing'}
-              className="ml-auto"
-            >
-              {extractionStatus === 'processing' ? (
-                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <PlusCircle className="h-4 w-4 mr-2" />
-              )}
-              Extract Parameters
-            </Button>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="promptText">Stable Diffusion Parameters</Label>
+            <Textarea
+              id="promptText"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder="Paste generation parameters from Stable Diffusion or Civitai here..."
+              className="h-48 font-mono text-sm"
+              disabled={isAiExtracting || isAiProcessing}
+            />
+            <div className="flex gap-2">
+              <Button
+                onClick={handleExtractFromText}
+                disabled={!inputText.trim() || isAiExtracting || isAiProcessing || !settings.apiKey}
+                className="ml-auto"
+              >
+                {isAiExtracting ? (
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Wand2 className="h-4 w-4 mr-2" />
+                )}
+                Extract with AI
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              The AI will analyze the text and extract prompt parameters automatically. Make sure you've configured your OpenAI API key in the Settings tab.
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Paste the complete generation info from Stable Diffusion to extract parameters automatically.
-          </p>
-        </div>
 
-        {extractionStatus === 'processing' && (
-          <div className="py-4 text-center">
-            <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-            <p>Extracting parameters...</p>
-          </div>
-        )}
+          {isAiExtracting && (
+            <div className="py-4 text-center">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
+              <p>AI is analyzing and extracting parameters...</p>
+            </div>
+          )}
 
-        {(extractionStatus === 'error' || error) && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-              {extractionError || error || 'Failed to extract parameters from the provided text. Please check the format and try again.'}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {extractionStatus === 'success' && extractedPrompt && (
-          <div className="space-y-4">
-            <Alert className="bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-              <CheckCircle className="h-4 w-4" />
-              <AlertTitle>Success</AlertTitle>
+          {(extractionStatus === 'error' || extractionError) && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
               <AlertDescription>
-                Successfully extracted prompt parameters.
+                {extractionError || 'Failed to extract parameters from the provided text. Please check the format and try again.'}
               </AlertDescription>
             </Alert>
+          )}
 
-            <div className="space-y-3 border p-4 rounded-md">
-              <div>
-                <Label className="text-xs">Prompt</Label>
-                <div className="bg-muted p-2 rounded text-sm">
-                  {extractedPrompt.text}
-                </div>
-              </div>
+          {!settings.apiKey && (
+            <Alert variant="warning" className="bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>API Key Required</AlertTitle>
+              <AlertDescription>
+                You need to set an OpenAI API key in the AI Settings tab to use this feature.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
 
-              {extractedPrompt.negativePrompt && (
-                <div>
-                  <Label className="text-xs">Negative Prompt</Label>
-                  <div className="bg-muted p-2 rounded text-sm">
-                    {extractedPrompt.negativePrompt}
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-4 gap-2">
-                <div>
-                  <Label className="text-xs">Model</Label>
-                  <div className="bg-muted p-2 rounded text-sm truncate">
-                    {extractedPrompt.model || 'Not specified'}
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs">Sampler</Label>
-                  <div className="bg-muted p-2 rounded text-sm">
-                    {extractedPrompt.sampler}
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs">Seed</Label>
-                  <div className="bg-muted p-2 rounded text-sm">
-                    {extractedPrompt.seed}
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs">Steps</Label>
-                  <div className="bg-muted p-2 rounded text-sm">
-                    {extractedPrompt.steps}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs">Width</Label>
-                  <div className="bg-muted p-2 rounded text-sm">
-                    {extractedPrompt.width}
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs">Height</Label>
-                  <div className="bg-muted p-2 rounded text-sm">
-                    {extractedPrompt.height}
-                  </div>
-                </div>
-              </div>
-
-              {extractedPrompt.loras && extractedPrompt.loras.length > 0 && (
-                <div>
-                  <Label className="text-xs">LoRAs</Label>
-                  <div className="space-y-1 mt-1">
-                    {extractedPrompt.loras.map((lora, index) => (
-                      <div key={index} className="bg-muted p-2 rounded text-sm flex justify-between">
-                        <span>{lora.name}</span>
-                        <span className="font-mono">{lora.weight.toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={resetExtraction}>
-                  Reset
-                </Button>
-                <Button onClick={async () => {
-                  try {
-                    //Get existing prompts
-                    const promptsApi = await import('@/services/promptsApi');
-                    const existingPrompts = await promptsApi.getAllPrompts();
-
-                    //Add the extracted prompt to the list
-                    if (extractedPrompt) {
-                      const updatedPrompts = [...existingPrompts, extractedPrompt];
-                      const success = await promptsApi.saveAllPrompts(updatedPrompts);
-
-                      if (success) {
-                        setExtractionStatus('idle');
-                        setExtractedPrompt(null);
-                        setInputText('');
-                        alert("Prompt created successfully! You can find it in the Prompts tab.");
-                      } else {
-                        alert("Failed to create prompt. Please try again.");
-                      }
-                    }
-                  } catch (error) {
-                    console.error("Error creating prompt:", error);
-                    alert("Failed to create prompt. Please try again.");
-                  }
-                }}>
-                  Create Prompt
-                </Button>
-              </div>
+      {extractionStatus === 'success' && extractedPrompt && (
+        <Card className="p-4 overflow-auto">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Extracted Prompt</h3>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={resetExtraction}>
+                Reset
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSavePrompt}
+                disabled={isLoadingApiData}
+              >
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Save to Prompts
+              </Button>
             </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          <Alert className="mb-4 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+            <CheckCircle className="h-4 w-4" />
+            <AlertTitle>Success</AlertTitle>
+            <AlertDescription>
+              AI successfully extracted prompt parameters.
+            </AlertDescription>
+          </Alert>
+
+          <div className="mt-4 border p-4 rounded-md overflow-auto">
+            <PromptForm
+              prompt={extractedPrompt}
+              onPromptUpdate={setExtractedPrompt}
+              availableSamplers={availableSamplers}
+              availableModels={availableModels}
+              availableLoras={availableLoras}
+            />
+          </div>
+        </Card>
+      )}
+    </div>
   );
 }

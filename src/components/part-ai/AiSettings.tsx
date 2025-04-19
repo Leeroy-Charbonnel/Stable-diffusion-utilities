@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
-import { Settings, RefreshCw } from 'lucide-react';
+import { Settings, RefreshCw, AlertCircle } from 'lucide-react';
 import { useAi } from '@/contexts/AiContext';
 import { AiModel } from '@/types';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export function AiSettings() {
   const {
@@ -20,15 +21,25 @@ export function AiSettings() {
   } = useAi();
 
   const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
-  const [availableModels, setAvailableModels] = useState<AiModel[]>(['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']);
+  const [availableModels, setAvailableModels] = useState<AiModel[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchAvailableModels();
-  }, []);
+    if (settings.apiKey) {
+      fetchAvailableModels();
+    } else {
+      //Set default models when no API key is available
+      setAvailableModels(['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']);
+    }
+  }, [settings.apiKey]);
 
   const fetchAvailableModels = async () => {
+    if (!settings.apiKey) return;
+
     setIsLoadingModels(true);
+    setError(null);
+
     try {
       const response = await fetch('https://api.openai.com/v1/models', {
         headers: {
@@ -38,33 +49,46 @@ export function AiSettings() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch models');
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || `API returned ${response.status}`);
       }
 
       const data = await response.json();
 
-      // Filter and map to our AiModel type
-      const openAiModels = data.data
-        .filter((model: any) => model.id.startsWith('gpt-'))
+      //Filter to get only GPT chat models and sort by newest/most capable first
+      const chatModels = data.data
+        .filter((model: any) =>
+          model.id.includes('gpt') &&
+          (model.id.includes('turbo') || model.id.includes('gpt-4'))
+        )
         .map((model: any) => model.id as AiModel)
-        .filter((modelId: AiModel) =>
-          ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo', 'gpt-4o'].includes(modelId)
-        );
+        .sort((a: string, b: string) => {
+          //Sort gpt-4 models first, then by version number
+          const aIsGpt4 = a.includes('gpt-4');
+          const bIsGpt4 = b.includes('gpt-4');
 
-      // Ensure we have at least the default models
-      const models = openAiModels.length > 0
-        ? openAiModels
-        : ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo'];
+          if (aIsGpt4 && !bIsGpt4) return -1;
+          if (!aIsGpt4 && bIsGpt4) return 1;
 
-      setAvailableModels(models);
+          //Within same model family, sort by version (newer first)
+          return b.localeCompare(a);
+        });
 
-      // If current model is not in the list, set to the first available model
-      if (!models.includes(settings.model)) {
-        setModel(models[0]);
+      if (chatModels.length > 0) {
+        setAvailableModels(chatModels);
+
+        //If current model is not in available models, select the first one
+        if (!chatModels.includes(settings.model)) {
+          setModel(chatModels[0]);
+        }
+      } else {
+        //Fallback to defaults if no chat models found
+        setAvailableModels(['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']);
+        setError('No compatible chat models found in your account');
       }
     } catch (error) {
       console.error('Error fetching models:', error);
-      // Fallback to default models if fetch fails
+      setError(error instanceof Error ? error.message : 'Failed to fetch models');
       setAvailableModels(['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']);
     } finally {
       setIsLoadingModels(false);
@@ -103,7 +127,7 @@ export function AiSettings() {
               disabled={!settings.apiKey || isLoadingModels}
             >
               {isLoadingModels ? (
-                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                <RefreshCw className="h-4 w-4 animate-spin" />
               ) : (
                 'Refresh Models'
               )}
@@ -113,6 +137,13 @@ export function AiSettings() {
             Your API key is stored locally and never sent to our servers.
           </p>
         </div>
+
+        {error && (
+          <Alert variant="destructive" className="mt-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
         <Separator />
 
