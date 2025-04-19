@@ -11,12 +11,14 @@ import { Prompt } from '@/types';
 export function AiCivitaiExtractor() {
   const {
     isProcessing,
-    extractFromCivitai
+    extractFromCivitai,
+    error
   } = useAi();
 
   const [civitaiUrl, setCivitaiUrl] = useState('');
   const [extractionStatus, setExtractionStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [extractedPrompt, setExtractedPrompt] = useState<Prompt | null>(null);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
 
   const handleExtractFromCivitai = async () => {
     if (!civitaiUrl.trim() || isProcessing) return;
@@ -28,6 +30,7 @@ export function AiCivitaiExtractor() {
     }
 
     setExtractionStatus('processing');
+    setExtractionError(null);
 
     try {
       //Show notification that this might take a minute
@@ -76,10 +79,12 @@ export function AiCivitaiExtractor() {
         setExtractionStatus('success');
       } else {
         setExtractionStatus('error');
+        setExtractionError('Failed to extract data from Civitai. Make sure you provided a valid image URL and have set your OpenAI API key.');
       }
     } catch (err) {
       console.error('Error extracting from Civitai:', err);
       setExtractionStatus('error');
+      setExtractionError(`Error: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -87,6 +92,7 @@ export function AiCivitaiExtractor() {
     setCivitaiUrl('');
     setExtractedPrompt(null);
     setExtractionStatus('idle');
+    setExtractionError(null);
   };
 
   return (
@@ -133,12 +139,12 @@ export function AiCivitaiExtractor() {
           </div>
         )}
 
-        {extractionStatus === 'error' && (
+        {(extractionStatus === 'error' || error) && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>
-              Failed to extract data from the provided URL. Please check the URL and try again.
+              {extractionError || error || 'Failed to extract data from the provided URL. Please check the URL and try again.'}
             </AlertDescription>
           </Alert>
         )}

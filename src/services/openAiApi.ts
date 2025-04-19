@@ -1,5 +1,6 @@
 // src/services/openAiApi.ts
 import { AiModel, ChatMessage, CivitaiData } from '@/types';
+import { FILE_API_BASE_URL } from '@/lib/constants';
 
 //OpenAI API URLs
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
@@ -55,12 +56,24 @@ export const extractCivitaiData = async (
   url: string
 ): Promise<CivitaiData | null> => {
   try {
-    //Fetch the HTML content from the URL
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch Civitai page: ${response.status}`);
+    //Use our proxy endpoint instead of direct fetch
+    const proxyResponse = await fetch(`${FILE_API_BASE_URL}/proxy-civitai`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    
+    if (!proxyResponse.ok) {
+      const errorData = await proxyResponse.json();
+      throw new Error(`Proxy error: ${errorData.error || proxyResponse.statusText}`);
     }
-    const htmlContent = await response.text();
+    
+    const responseData = await proxyResponse.json();
+    if (!responseData.success) {
+      throw new Error(`Failed to fetch Civitai page: ${responseData.error}`);
+    }
+    
+    const htmlContent = responseData.data;
 
     //Extract the relevant information using OpenAI
     const extractedData = await chatWithOpenAI(

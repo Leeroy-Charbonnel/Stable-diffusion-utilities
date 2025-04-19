@@ -384,6 +384,45 @@ const server = Bun.serve({
       }
     },
 
+    //Proxy for Civitai
+    "/api/proxy-civitai": {
+      POST: async (req: BunRequest) => {
+        console.log("Scraping Civitai");
+        try {
+          const { url } = await req.json() as { url: string };
+          
+          if (!url || !url.includes('civitai.com')) {
+            return Response.json(
+              { success: false, error: 'Invalid Civitai URL' },
+              { status: 400, headers: corsHeaders }
+            );
+          }
+
+          //Fetch the content from Civitai (CORS restrictions don't apply on the server)
+          const response = await fetch(url);
+          if (!response.ok) {
+            return Response.json(
+              { success: false, error: `Failed to fetch from Civitai: ${response.status}` },
+              { status: response.status, headers: corsHeaders }
+            );
+          }
+
+          const content = await response.text();
+          console.log(content);
+          
+          return Response.json(
+            { success: true, data: content },
+            { headers: corsHeaders }
+          );
+        } catch (error) {
+          return Response.json(
+            { success: false, error: String(error) },
+            { status: 500, headers: corsHeaders }
+          );
+        }
+      }
+    },
+
     //Fallback for API routes
     "/api/*": (req: BunRequest) => {
       if (req.method === "OPTIONS") {
