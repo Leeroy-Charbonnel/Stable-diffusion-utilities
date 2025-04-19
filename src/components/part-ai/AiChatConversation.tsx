@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, BrainCog, Send, RefreshCw, Trash2, Image, User, Bot, ListChecks, CheckCircle, PlusCircle } from 'lucide-react';
+import { AlertCircle, BrainCog, Send, RefreshCw, Trash2, Image, ListChecks, CheckCircle, PlusCircle } from 'lucide-react';
 import { useAi } from '@/contexts/AiContext';
 import { ChatMessage, Prompt } from '@/types';
 import { useApi } from '@/contexts/ApiContext';
@@ -15,7 +15,7 @@ import { PromptForm } from '../part-prompt/PromptForm';
 import { CHAT_SYSTEM_PROMPT, EXTRACTION_PROMPT } from '@/lib/constantsAI';
 
 export function AiChatConversation() {
-  const { messages, isProcessing, error, settings, sendMessage, clearMessages } = useAi();
+  const { messages, isProcessing, error, settings, sendMessage, clearMessages, updateMessageContent } = useAi();
 
   const { promptsApi, availableSamplers, availableModels, availableLoras, isLoadingApiData } = useApi();
 
@@ -38,8 +38,8 @@ export function AiChatConversation() {
 
     //Check the last assistant message for JSON data
     if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
-      const lastMessage = messages[messages.length - 1].content;
-      extractPromptFromMessage(lastMessage);
+      const lastMessage = messages[messages.length - 1];
+      extractPromptFromMessage(lastMessage.content, lastMessage.id);
     }
   }, [messages]);
 
@@ -71,7 +71,7 @@ export function AiChatConversation() {
       const systemPrompt = prepareSystemPrompt(EXTRACTION_PROMPT);
       sendMessage(systemPrompt, 'system');
     } else {
-      const systemPrompt = CHAT_SYSTEM_PROMPT;
+      const systemPrompt = prepareSystemPrompt(CHAT_SYSTEM_PROMPT);
       sendMessage(systemPrompt, 'system');
     }
   }, [mode, availableModels, availableSamplers, availableLoras]);
@@ -99,24 +99,34 @@ export function AiChatConversation() {
   };
 
   //Extract prompt data from AI message
-  const extractPromptFromMessage = async (message: string) => {
-    //Try to find JSON in the message first
-    const jsonMatch = message.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  const extractPromptFromMessage = async (message: string, messageId: string) => {
+    try {
+      //Try to parse the entire message as JSON
+      const parsedResponse = JSON.parse(message);
 
-    if (jsonMatch && jsonMatch[1]) {
-      try {
-        //Parse the JSON directly from the message
-        const extractedData = JSON.parse(jsonMatch[1]);
-        createPromptFromData(extractedData);
+      //Check if it has our expected structure
+      if (parsedResponse && parsedResponse.message && parsedResponse.data) {
+        //Update the displayed message to only show the message part
+        updateMessageContent(messageId, parsedResponse.message);
+
+        //Create prompt from the data
+        createPromptFromData(parsedResponse.data);
         return;
-      } catch (error) {
-        console.error('Error parsing JSON from message:', error);
-        //If direct parsing fails, continue to use AI extraction
       }
+    } catch (error) {
+      //Fallback to previous JSON block extraction
+      const jsonMatch = message.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (jsonMatch && jsonMatch[1]) {
+        try {
+          const extractedData = JSON.parse(jsonMatch[1]);
+          createPromptFromData(extractedData);
+          return;
+        } catch (extractError) {
+          console.error('Error parsing JSON from message:', extractError);
+        }
+      }
+      console.error('Response not in expected format:', error);
     }
-
-    //If no valid JSON found or parsing failed, we could use AI to extract it
-    //This is optional and only needed if the JSON extraction above fails
   };
 
   //Create a prompt from extracted data
@@ -192,30 +202,21 @@ export function AiChatConversation() {
     return (
       <div
         key={message.id}
-        className={`flex mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}
+        className={`flex mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}
       >
-        <div className="flex items-start max-w-[80%]">
+        <div className={`max-w-[80%] ${isUser ? 'text-right' : 'text-left'}`}>
           <div
-            className={`rounded-full h-8 w-8 flex items-center justify-center mr-2 ${isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+            className={`rounded-lg p-3 ${isUser
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-card border border-border'
               }`}
           >
-            {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+            <div className="text-sm whitespace-pre-wrap break-words">
+              {message.content}
+            </div>
           </div>
-
-          <div className="flex flex-col">
-            <div
-              className={`rounded-lg p-4 ${isUser
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-card border border-border'
-                }`}
-            >
-              <div className="text-sm whitespace-pre-wrap break-words">
-                {message.content}
-              </div>
-            </div>
-            <div className="text-xs text-muted-foreground mt-1 ml-2">
-              {new Date(message.timestamp).toLocaleTimeString()}
-            </div>
+          <div className="text-xs text-muted-foreground mt-1 mx-1">
+            {new Date(message.timestamp).toLocaleTimeString()}
           </div>
         </div>
       </div>
@@ -236,7 +237,6 @@ export function AiChatConversation() {
               setMode(checked ? 'extraction' : 'generation');
               setShowPromptForm(false);
               setGeneratedPrompt(null);
-              // Keep the input message when switching modes
             }}
           />
         </div>
@@ -269,7 +269,7 @@ export function AiChatConversation() {
                 </div>
               </div>
             ) : (
-              <ScrollArea className="flex-1 px-4 py-4">
+              <ScrollArea className="flex-1 px-4 py-2">
                 <div className="space-y-1">
                   {messages.map(renderMessage)}
                   <div ref={messagesEndRef} />
@@ -278,7 +278,7 @@ export function AiChatConversation() {
             )}
 
             {/* Input Area */}
-            <div className="p-4 border-t">
+            <div className="p-3 border-t">
               <div className="flex gap-2">
                 <Textarea
                   ref={inputRef}
@@ -289,13 +289,13 @@ export function AiChatConversation() {
                     ? "Ask for prompt ideas or help with Stable Diffusion..."
                     : "Paste Stable Diffusion parameters here..."
                   }
-                  className="min-h-[70px] resize-none"
+                  className="min-h-[50px] resize-none"
                   disabled={isProcessing}
                 />
                 <Button
                   onClick={handleSendMessage}
                   disabled={!inputMessage.trim() || isProcessing}
-                  className="h-auto"
+                  className="h-10 w-10 p-0"
                 >
                   {isProcessing ?
                     <RefreshCw className="h-4 w-4 animate-spin" /> :
@@ -305,7 +305,7 @@ export function AiChatConversation() {
               </div>
 
               {/* Action Buttons */}
-              <div className="mt-3 flex justify-between items-center">
+              <div className="mt-2 flex justify-between items-center">
                 <div className="flex items-center text-xs text-muted-foreground">
                   <BrainCog className="h-3 w-3 mr-1" />
                   {isProcessing ? 'Processing...' : `Model: ${settings.model}`}

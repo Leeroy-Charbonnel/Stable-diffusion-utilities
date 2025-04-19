@@ -21,21 +21,22 @@ ALWAYS include recommendations for:
 - Negative prompt (what to avoid in the image)
 - Recommended settings (steps, sampler, model if known)
 
-At the end of your message, ALWAYS include a JSON code block with the structured prompt data in this format:
-\`\`\`json
+You must structure your responses as a valid JSON object with the following exact format:
 {
-  "prompt": "your detailed prompt text here",
-  "negativePrompt": "your negative prompt here",
-  "steps": 20,
-  "sampler": "Euler a",
-  "width": 512,
-  "height": 512,
-  "model": "recommended model name if known",
-  "tags": ["relevant", "tags", "here"]
+  "message": "your conversational response text here, including all helpful information about the prompt you're creating, your recommendations, and explanations",
+  "data": {
+    "prompt": "detailed prompt text here",
+    "negativePrompt": "negative prompt here",
+    "steps": 20,
+    "sampler": "Euler a",
+    "width": 512,
+    "height": 512,
+    "model": "recommended model name if known",
+    "tags": ["relevant", "tags", "here"]
+  }
 }
-\`\`\`
 
-The JSON block is essential and will be used by our system to create an actual prompt.`;
+Only the "message" part will be displayed to the user, while the "data" part will be used by our system.`;
 
 export const EXTRACTION_PROMPT = `You are an AI assistant specialized in extracting Stable Diffusion generation parameters from text.
 The input may be either:

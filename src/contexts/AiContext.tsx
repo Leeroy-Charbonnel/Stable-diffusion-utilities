@@ -20,7 +20,7 @@ interface AiContextType {
   //Methods
   sendMessage: (content: string, role?: 'user' | 'assistant' | 'system') => Promise<void>;
   clearMessages: () => void;
-  setApiKey: (key: string) => void;
+  updateMessageContent: (messageId: string, newContent: string) => void;
   setModel: (model: AiModel) => void;
   setTemperature: (temp: number) => void;
   setMaxTokens: (tokens: number) => void;
@@ -77,13 +77,18 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   }, [messages]);
 
   //Setting updaters
-  const setApiKey = (key: string) => { setSettings((prev) => ({ ...prev, apiKey: key })); };
-
   const setModel = (model: AiModel) => { setSettings((prev) => ({ ...prev, model })); };
-
   const setTemperature = (temperature: number) => { setSettings((prev) => ({ ...prev, temperature })); };
-
   const setMaxTokens = (maxTokens: number) => { setSettings((prev) => ({ ...prev, maxTokens })); };
+
+  //Update message content
+  const updateMessageContent = (messageId: string, newContent: string) => {
+    setMessages(prevMessages =>
+      prevMessages.map(msg =>
+        msg.id === messageId ? { ...msg, content: newContent } : msg
+      )
+    );
+  };
 
   //Send a message and get a response
   const sendMessage = async (content: string, role: 'user' | 'assistant' | 'system' = 'user') => {
@@ -148,7 +153,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     error,
     sendMessage,
     clearMessages,
-    setApiKey,
+    updateMessageContent,
     setModel,
     setTemperature,
     setMaxTokens,
