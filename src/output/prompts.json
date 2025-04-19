@@ -1,65 +1,18 @@
 [
   {
-    "id": "8c44455c-ace7-4723-bef1-95ea4be39a79",
+    "id": "6f4e3d83-fa8b-4d08-88eb-dd738b68a9c0",
     "isOpen": false,
-    "name": "A delicate rose scul...",
-    "text": "A delicate rose sculpted entirely from translucent glass and shimmering crystal, with light refracting through its petals like a prism. Set against a soft black velvet background to enhance the glow and elegance. Hyperrealistic style, high detail, ethereal lighting.",
-    "negativePrompt": "ffaaaaffaaa",
+    "name": "New Prompt",
+    "text": "",
+    "negativePrompt": "",
     "seed": -1,
     "steps": 20,
     "sampler": "Euler a",
-    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
     "width": 512,
     "height": 512,
     "runCount": 1,
-    "tags": [
-      "flower",
-      "rose",
-      "crystal",
-      "glass"
-    ],
-    "loras": [
-      {
-        "name": "Sepia",
-        "weight": 1
-      },
-      {
-        "name": "bichu-v0612",
-        "weight": 1
-      }
-    ],
-    "currentRun": 0,
-    "status": "idle"
-  },
-  {
-    "id": "cacc5cfe-2b50-48a7-83b7-77b2c2c10b63",
-    "isOpen": false,
-    "name": "A delicate rose scul...",
-    "text": "A delicate rose sculpted entirely from translucent glass and shimmering crystal, with light refracting through its petals like a prism. Set against a soft black velvet background to enhance the glow and elegance. Hyperrealistic style, high detail, ethereal lighting.",
-    "negativePrompt": "ffaaaaffaaa",
-    "seed": -1,
-    "steps": 20,
-    "sampler": "Euler a",
-    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
-    "width": 512,
-    "height": 512,
-    "runCount": 1,
-    "tags": [
-      "flower",
-      "rose",
-      "crystal",
-      "glass"
-    ],
-    "loras": [
-      {
-        "name": "Sepia",
-        "weight": 1
-      },
-      {
-        "name": "bichu-v0612",
-        "weight": 1
-      }
-    ],
+    "tags": [],
+    "loras": [],
     "currentRun": 0,
     "status": "idle"
   }

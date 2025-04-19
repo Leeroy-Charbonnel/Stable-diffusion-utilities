@@ -1,19 +1,15 @@
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ListChecks, Image, CheckCircle, AlertCircle } from 'lucide-react';
-import { useApi } from '@/contexts/ApiContext';
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ListChecks, Image, CheckCircle, AlertCircle, BrainCog, } from "lucide-react";
+import { useApi } from "@/contexts/ApiContext";
 
 interface SidebarProps {
-    activeTab: 'prompts' | 'images';
-    setActiveTab: (tab: 'prompts' | 'images') => void;
+    activeTab: "prompts" | "ai" | "images";
+    setActiveTab: (tab: "prompts" | "ai" | "images") => void;
 }
 
 export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
-    const {
-        isConnected,
-        error: apiError,
-    } = useApi();
-
+    const { isConnected, error: apiError } = useApi();
 
     return (
         <div className="w-64 border-r border-border h-screen flex flex-col">
@@ -23,25 +19,19 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
             </div>
 
             <nav className="flex flex-col p-2 gap-1">
-                <Button
-                    variant={activeTab === 'prompts' ? 'default' : 'ghost'}
-                    className="justify-start"
-                    onClick={() => setActiveTab('prompts')}
-                    data-tab="prompts"
-                >
-                    <ListChecks className="mr-2 h-4 w-4" />
-                    Prompts
+                <Button variant={activeTab === "prompts" ? "default" : "ghost"} className="justify-start" onClick={() => setActiveTab("prompts")} data-tab="prompts" >
+                    <ListChecks className="mr-2 h-4 w-4" /> Prompts
                 </Button>
 
-                <Button
-                    variant={activeTab === 'images' ? 'default' : 'ghost'}
-                    className="justify-start"
-                    onClick={() => setActiveTab('images')}
-                    data-tab="images"
-                >
-                    <Image className="mr-2 h-4 w-4" />
-                    Images
+
+                <Button variant={activeTab === "ai" ? "default" : "ghost"} className="justify-start" onClick={() => setActiveTab("ai")} data-tab="ai">
+                    <BrainCog className="mr-2 h-4 w-4" />AI
                 </Button>
+
+                <Button variant={activeTab === "images" ? "default" : "ghost"} className="justify-start" onClick={() => setActiveTab("images")} data-tab="images" >
+                    <Image className="mr-2 h-4 w-4" />Images
+                </Button>
+
             </nav>
 
             <div className="mt-auto p-2">
@@ -59,11 +49,12 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Not Connected</AlertTitle>
                         <AlertDescription>
-                            {apiError || "Not connected to the Stable Diffusion API. Check your connection settings."}
+                            {apiError ||
+                                "Not connected to the Stable Diffusion API. Check your connection settings."}
                         </AlertDescription>
                     </Alert>
                 )}
             </div>
-        </div>
+        </div >
     );
 }

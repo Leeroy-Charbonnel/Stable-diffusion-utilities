@@ -30,7 +30,6 @@ export function PromptForm({
   const [formData, setFormData] = useState<Prompt>(prompt!);
   const [tagInput, setTagInput] = useState('');
 
-  //Set initial form data when prompt prop changes
   useEffect(() => {
     if (prompt) {
       setFormData(prompt);
