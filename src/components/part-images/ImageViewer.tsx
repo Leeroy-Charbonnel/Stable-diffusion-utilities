@@ -36,8 +36,9 @@ export function ImageViewer() {
 
   //Image details dialog state
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(-1);
   const [selectedImage, setSelectedImage] = useState<ImageMetadata | null>(null);
-  const [imageData, setImageData] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   //Delete confirmation dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -111,6 +112,23 @@ export function ImageViewer() {
     } else {
       setSelectedImages(filteredImages.map(img => img.id));
     }
+  };
+
+  //Navigate between images
+  const handleImageNavigation = (direction: 'prev' | 'next') => {
+    if (selectedImageIndex === -1 || filteredImages.length <= 1) return;
+
+    let newIndex: number;
+    if (direction === 'prev') {
+      newIndex = selectedImageIndex > 0 ? selectedImageIndex - 1 : filteredImages.length - 1;
+    } else {
+      newIndex = selectedImageIndex < filteredImages.length - 1 ? selectedImageIndex + 1 : 0;
+    }
+
+    const image = filteredImages[newIndex];
+    setSelectedImageIndex(newIndex);
+    setSelectedImage(image);
+    setImageUrl(fileSystemApi.getImageUrl(image.id));
   };
 
   //Extract all unique tags, models, and loras from images
@@ -197,8 +215,10 @@ export function ImageViewer() {
   };
 
   const handleImageClick = (image: ImageMetadata) => {
+    const index = filteredImages.findIndex(img => img.id === image.id);
+    setSelectedImageIndex(index);
     setSelectedImage(image);
-    setImageData(fileSystemApi.getImageUrl(image));
+    setImageUrl(fileSystemApi.getImageUrl(image.id));
     setDetailsDialogOpen(true);
   };
 
@@ -318,21 +338,16 @@ export function ImageViewer() {
     }
   };
 
-  const handleContextMenu = (e: React.MouseEvent, imageId: string) => {
-    e.preventDefault();
-    //Optional: implement custom context menu
-  };
-
   const getImageFolder = (image: ImageMetadata) => {
     return image.folder || 'default';
   };
 
   const handleDetailsDownload = () => {
-    if (!selectedImage || !imageData) return;
+    if (!selectedImage || !imageUrl) return;
 
     //Create a download link
     const a = document.createElement('a');
-    a.href = imageData;
+    a.href = imageUrl;
     a.download = `${selectedImage.id}.png`;
     document.body.appendChild(a);
     a.click();
@@ -447,7 +462,6 @@ export function ImageViewer() {
                 onDeleteClick={handleDeleteClick}
                 onReRunClick={handleReRunClick}
                 availableFolders={availableFolders}
-                onContextMenu={handleContextMenu}
               />
             ))}
           </div>
@@ -476,41 +490,48 @@ export function ImageViewer() {
         />
       </div>
 
-      {/* Image Details Dialog */}
-      <ImageDetailsDialog
-        open={detailsDialogOpen}
-        onOpenChange={setDetailsDialogOpen}
-        selectedImage={selectedImage}
-        imageData={imageData}
-        onCreatePrompt={handleCreatePrompt}
-        onReRunImage={handleReRunClick}
-        onDownload={handleDetailsDownload}
-        onAddTag={async (tag) => {
-          if (!selectedImage) return;
+      {
+        selectedImage && (
+          <ImageDetailsDialog
+            open={detailsDialogOpen}
+            onOpenChange={setDetailsDialogOpen}
+            image={selectedImage}
+            imageUrl={imageUrl}
+            onCreatePrompt={handleCreatePrompt}
+            onReRunImage={handleReRunClick}
+            onDownload={handleDetailsDownload}
+            onAddTag={async (tag) => {
+              if (!selectedImage) return;
 
-          const updatedImage = {
-            ...selectedImage,
-            tags: [...selectedImage.tags, tag]
-          };
+              const updatedImage = {
+                ...selectedImage,
+                tags: [...selectedImage.tags, tag]
+              };
 
-          setSelectedImage(updatedImage);
-          await loadImagesFromServer();
-          return Promise.resolve();
-        }}
-        onRemoveTag={async (tag) => {
-          if (!selectedImage) return;
+              setSelectedImage(updatedImage);
+              await loadImagesFromServer();
+              return Promise.resolve();
+            }}
+            onRemoveTag={async (tag) => {
+              if (!selectedImage) return;
 
-          const updatedImage = {
-            ...selectedImage,
-            tags: selectedImage.tags.filter(t => t !== tag)
-          };
+              const updatedImage = {
+                ...selectedImage,
+                tags: selectedImage.tags.filter(t => t !== tag)
+              };
 
-          setSelectedImage(updatedImage);
-          await loadImagesFromServer();
-          return Promise.resolve();
-        }}
-        getImageFolder={getImageFolder}
-      />
+              setSelectedImage(updatedImage);
+              await loadImagesFromServer();
+              return Promise.resolve();
+            }}
+            getImageFolder={getImageFolder}
+            onNavigate={handleImageNavigation}
+          />
+
+        )
+
+      }
+
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

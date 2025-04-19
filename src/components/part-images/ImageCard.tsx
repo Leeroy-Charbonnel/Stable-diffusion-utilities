@@ -18,7 +18,6 @@ interface ImageCardProps {
   onDeleteClick: (image: ImageMetadata) => void;
   onReRunClick: (image: ImageMetadata) => void;
   availableFolders: string[];
-  onContextMenu: (e: React.MouseEvent, imageId: string) => void;
 }
 
 export function ImageCard({
@@ -30,19 +29,15 @@ export function ImageCard({
   onCreatePrompt,
   onDeleteClick,
   availableFolders,
-  onContextMenu,
 }: ImageCardProps) {
   const imageFolder = image.folder;
   const imageUrl = getImageUrl(image.id);
-
-  //Format the creation date nicely
   const formattedDate = new Date(image.createdAt).toLocaleDateString();
 
   return (
     <Card
       key={image.id}
       className={`overflow-hidden group relative ${isSelected ? 'ring-2 ring-primary' : 'hover:ring-1 hover:ring-accent-foreground/20'}`}
-      onContextMenu={(e) => onContextMenu(e, image.id)}
     >
       {/* Selection Checkbox */}
       <div className="absolute top-2 left-2 z-10">
