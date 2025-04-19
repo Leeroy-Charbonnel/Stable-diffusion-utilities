@@ -4,70 +4,37 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import {
-  AlertCircle,
-  BrainCog,
-  Send,
-  RefreshCw,
-  Trash2,
-  Image,
-  User,
-  Bot,
-  ListChecks,
-  Wand2,
-  CheckCircle,
-  PlusCircle
-} from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { AlertCircle, BrainCog, Send, RefreshCw, Trash2, Image, User, Bot, ListChecks, CheckCircle, PlusCircle } from 'lucide-react';
 import { useAi } from '@/contexts/AiContext';
 import { ChatMessage, Prompt } from '@/types';
 import { useApi } from '@/contexts/ApiContext';
 import { generateUUID } from '@/lib/utils';
 import { PromptForm } from '../part-prompt/PromptForm';
-import { generateChatCompletion } from '@/services/openAiApi';
 import { CHAT_SYSTEM_PROMPT, EXTRACTION_PROMPT } from '@/lib/constantsAI';
-import { DEFAULT_AI_API_KEY } from '@/lib/constantsKeys';
 
 export function AiChatConversation() {
   const { messages, isProcessing, error, settings, sendMessage, clearMessages } = useAi();
-  const { promptsApi, stableDiffusionApi } = useApi();
+
+  const {
+    promptsApi,
+    availableSamplers,
+    availableModels,
+    availableLoras,
+    isLoadingApiData
+  } = useApi();
 
   const [inputMessage, setInputMessage] = useState('');
+  const [mode, setMode] = useState<'generation' | 'extraction'>('generation');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   //Prompt creation state
   const [showPromptForm, setShowPromptForm] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState<Prompt | null>(null);
-  const [availableSamplers, setAvailableSamplers] = useState<string[]>([]);
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
-  const [availableLoras, setAvailableLoras] = useState<any[]>([]);
-  const [isLoadingApiData, setIsLoadingApiData] = useState(false);
   const [isExtractingPrompt, setIsExtractingPrompt] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
-
-  //Load API data for the prompt form
-  useEffect(() => {
-    const loadApiData = async () => {
-      setIsLoadingApiData(true);
-      try {
-        const [samplers, models, loras] = await Promise.all([
-          stableDiffusionApi.getSamplers(),
-          stableDiffusionApi.getModels(),
-          stableDiffusionApi.getLoras()
-        ]);
-
-        setAvailableSamplers(samplers);
-        setAvailableModels(models);
-        setAvailableLoras(loras);
-      } catch (error) {
-        console.error('Failed to load API data:', error);
-      } finally {
-        setIsLoadingApiData(false);
-      }
-    };
-
-    loadApiData();
-  }, []);
 
   //Scroll to bottom when messages update
   useEffect(() => {
@@ -88,6 +55,17 @@ export function AiChatConversation() {
       inputRef.current.focus();
     }
   }, [isProcessing]);
+
+  //Reset chat with appropriate system message when mode changes
+  useEffect(() => {
+    clearMessages();
+
+    if (mode === 'extraction') {
+      sendMessage(EXTRACTION_PROMPT, 'system');
+    } else {
+      sendMessage(CHAT_SYSTEM_PROMPT, 'system');
+    }
+  }, [mode]);
 
   //Initialize chat with system message if empty
   useEffect(() => {
@@ -150,6 +128,19 @@ export function AiChatConversation() {
     return availableSamplers.includes('Euler a') ? 'Euler a' : availableSamplers[0] || 'Euler a';
   };
 
+  //Validate and filter loras to only include available ones
+  const validateLoras = (lorasList: any[]): any[] => {
+    if (!lorasList || !Array.isArray(lorasList) || lorasList.length === 0) return [];
+
+    return lorasList.filter(lora => {
+      //Check if lora exists in available loras
+      return availableLoras.some(availableLora =>
+        availableLora.name === lora.name ||
+        availableLora.name.toLowerCase() === lora.name.toLowerCase()
+      );
+    });
+  };
+
   //Extract prompt data from AI message
   const extractPromptFromMessage = async (message: string) => {
     //Try to find JSON in the message first
@@ -167,53 +158,8 @@ export function AiChatConversation() {
       }
     }
 
-    //If no valid JSON found or parsing failed, ask the AI to extract it
-    if (message.includes('prompt')) {
-      setIsExtractingPrompt(true);
-      setExtractionError(null);
-
-      try {
-        //Create messages for AI extraction
-        const extractionMessages = [
-          { id: '1', role: 'system', content: EXTRACTION_PROMPT, timestamp: new Date().toISOString() },
-          { id: '2', role: 'user', content: message, timestamp: new Date().toISOString() }
-        ];
-
-        //Get response from AI
-        const response = await generateChatCompletion(
-          DEFAULT_AI_API_KEY,
-          settings.model,
-          extractionMessages,
-          0.1, //Lower temperature for more deterministic results
-          1000 //Sufficient token limit for JSON output
-        );
-
-        if (!response) {
-          throw new Error('Failed to extract prompt data from message.');
-        }
-
-        try {
-          //Extract JSON from response
-          let jsonData = response;
-          const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-          if (jsonMatch && jsonMatch[1]) {
-            jsonData = jsonMatch[1];
-          }
-
-          //Parse the JSON
-          const extractedData = JSON.parse(jsonData);
-          createPromptFromData(extractedData);
-        } catch (parseError) {
-          console.error('Error parsing AI extraction response:', parseError);
-          setExtractionError('Failed to parse the extracted prompt data.');
-        }
-      } catch (error) {
-        console.error('Error during AI extraction:', error);
-        setExtractionError(error instanceof Error ? error.message : String(error));
-      } finally {
-        setIsExtractingPrompt(false);
-      }
-    }
+    //If no valid JSON found or parsing failed, we could use AI to extract it
+    //This is optional and only needed if the JSON extraction above fails
   };
 
   //Create a prompt from extracted data
@@ -223,6 +169,9 @@ export function AiChatConversation() {
     //Find best matches for sampler and model
     const matchedSampler = findBestSamplerMatch(data.sampler || 'Euler a');
     const matchedModel = findBestModelMatch(data.model || '');
+
+    //Validate loras exist in available loras
+    const validatedLoras = validateLoras(data.loras || []);
 
     //Create a name from the prompt
     let name = 'Generated Prompt';
@@ -246,7 +195,7 @@ export function AiChatConversation() {
       height: typeof data.height === 'number' ? data.height : 512,
       runCount: 1,
       tags: Array.isArray(data.tags) ? data.tags : [],
-      loras: Array.isArray(data.loras) ? data.loras : [],
+      loras: validatedLoras,
       currentRun: 0,
       status: 'idle',
     };
@@ -279,18 +228,6 @@ export function AiChatConversation() {
       console.error("Error saving prompt:", error);
       alert("Failed to save prompt: " + (error instanceof Error ? error.message : String(error)));
     }
-  };
-
-  //Extract prompt manually using button
-  const handleExtractFromLastMessage = async () => {
-    if (messages.length === 0 || isExtractingPrompt) return;
-
-    //Get the last assistant message
-    const assistantMessages = messages.filter(m => m.role === 'assistant');
-    if (assistantMessages.length === 0) return;
-
-    const lastMessage = assistantMessages[assistantMessages.length - 1].content;
-    await extractPromptFromMessage(lastMessage);
   };
 
   //Render individual message
@@ -335,21 +272,33 @@ export function AiChatConversation() {
 
   return (
     <div className="space-y-4">
-      {/* Error Alert */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2">
+          <Label htmlFor="mode-switch" className="mr-2">
+            Mode: {mode === 'generation' ? 'Generation' : 'Extraction'}
+          </Label>
+          <Switch
+            id="mode-switch"
+            checked={mode === 'extraction'}
+            onCheckedChange={(checked) => {
+              setMode(checked ? 'extraction' : 'generation');
+              setShowPromptForm(false);
+              setGeneratedPrompt(null);
+              setInputMessage('');
+            }}
+          />
+        </div>
+      </div>
 
-      {/* Main Chat Card */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_400px]">
         <Card className="h-[600px] flex flex-col">
           <CardHeader className="py-3 px-4">
             <CardTitle className="text-lg flex items-center">
               <BrainCog className="h-5 w-5 mr-2" />
-              Chat with {settings.model}
+              {mode === 'generation'
+                ? `Chat with ${settings.model}`
+                : 'Extract from Stable Diffusion Parameters'
+              }
             </CardTitle>
           </CardHeader>
 
@@ -361,7 +310,9 @@ export function AiChatConversation() {
                   <BrainCog className="mx-auto h-12 w-12 opacity-50 mb-2" />
                   <p>No messages yet. Start the conversation!</p>
                   <p className="text-sm mt-2 max-w-sm">
-                    Ask me to create a Stable Diffusion prompt for you, or for tips on crafting effective prompts.
+                    {mode === 'generation'
+                      ? "Ask for a Stable Diffusion prompt or for tips on crafting effective prompts."
+                      : "Paste Stable Diffusion parameters to extract them into a usable prompt."}
                   </p>
                 </div>
               </div>
@@ -382,7 +333,10 @@ export function AiChatConversation() {
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask for prompt ideas or help with Stable Diffusion..."
+                  placeholder={mode === 'generation'
+                    ? "Ask for prompt ideas or help with Stable Diffusion..."
+                    : "Paste Stable Diffusion parameters here..."
+                  }
                   className="min-h-[70px] resize-none"
                   disabled={isProcessing}
                 />
@@ -402,35 +356,24 @@ export function AiChatConversation() {
               <div className="mt-3 flex justify-between items-center">
                 <div className="flex items-center text-xs text-muted-foreground">
                   <BrainCog className="h-3 w-3 mr-1" />
-                  {isProcessing ? 'Thinking...' : `Model: ${settings.model}`}
+                  {isProcessing ? 'Processing...' : `Model: ${settings.model}`}
                 </div>
 
                 <div className="flex gap-2">
-                  {messages.filter(m => m.role === 'assistant').length > 0 && (
+                  {mode === 'generation' && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleExtractFromLastMessage}
+                      onClick={() => {
+                        setInputMessage("Create a detailed Stable Diffusion prompt for ");
+                        inputRef.current?.focus();
+                      }}
                       className="text-xs"
-                      disabled={isExtractingPrompt}
                     >
-                      <Wand2 className={`h-3 w-3 mr-1 ${isExtractingPrompt ? 'animate-spin' : ''}`} />
-                      Extract Prompt
+                      <Image className="h-3 w-3 mr-1" />
+                      New Prompt
                     </Button>
                   )}
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setInputMessage("Create a detailed Stable Diffusion prompt for ");
-                      inputRef.current?.focus();
-                    }}
-                    className="text-xs"
-                  >
-                    <Image className="h-3 w-3 mr-1" />
-                    New Prompt
-                  </Button>
 
                   {messages.filter(m => m.role !== 'system').length > 0 && (
                     <Button
@@ -440,7 +383,11 @@ export function AiChatConversation() {
                         if (confirm('Are you sure you want to clear the chat?')) {
                           clearMessages();
                           //Reinitialize with system message
-                          sendMessage(CHAT_SYSTEM_PROMPT, 'system');
+                          if (mode === 'extraction') {
+                            sendMessage(EXTRACTION_PROMPT, 'system');
+                          } else {
+                            sendMessage(CHAT_SYSTEM_PROMPT, 'system');
+                          }
                         }
                       }}
                       className="text-xs"
@@ -526,25 +473,37 @@ export function AiChatConversation() {
                 <Image className="h-12 w-12 mb-4 opacity-30" />
                 <p className="mb-2">No prompt generated yet</p>
                 <p className="text-sm max-w-xs">
-                  Ask the AI to create a prompt for you, then click "Extract Prompt" to edit and save it.
+                  {mode === 'generation'
+                    ? "Ask the AI to create a prompt for you."
+                    : "Paste Stable Diffusion parameters to create a prompt."}
                 </p>
 
-                <Button
-                  variant="outline"
-                  className="mt-6"
-                  onClick={() => {
-                    setInputMessage("Create a detailed Stable Diffusion prompt for a fantasy landscape with dragons, mountains, and a castle");
-                    inputRef.current?.focus();
-                  }}
-                >
-                  <Image className="h-4 w-4 mr-2" />
-                  Request Sample Prompt
-                </Button>
+                {mode === 'generation' && (
+                  <Button
+                    variant="outline"
+                    className="mt-6"
+                    onClick={() => {
+                      setInputMessage("Create a detailed Stable Diffusion prompt for a fantasy landscape with dragons");
+                      inputRef.current?.focus();
+                    }}
+                  >
+                    <Image className="h-4 w-4 mr-2" />
+                    Request Sample Prompt
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
         )}
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 }

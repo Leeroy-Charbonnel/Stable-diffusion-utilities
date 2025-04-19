@@ -1,5 +1,3 @@
-// In src/components/part-prompt/PromptsManager.tsx
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -14,12 +12,7 @@ import { DEBOUNCE_DELAY, MAX_DEBOUNCE_TIME } from '@/lib/constants';
 
 
 export function PromptsManager() {
-  const {
-    stableDiffusionApi,
-    promptsApi,
-    isConnected,
-    generateImage
-  } = useApi();
+  const { promptsApi, isConnected, generateImage, availableSamplers, availableModels, availableLoras, isLoadingApiData } = useApi();
 
   const [status, setStatus] = useState<ExecutionStatus>('idle');
 
@@ -42,12 +35,6 @@ export function PromptsManager() {
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const maxDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pendingUpdatesRef = useRef<{ promptId: string, prompt: Prompt } | null>(null);
-
-  //Stable diffusion api data
-  const [samplers, setSamplers] = useState<string[]>([]);
-  const [models, setModels] = useState<string[]>([]);
-  const [loras, setLoras] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   //Debounced save function - applies when pending updates exist
   const applyPendingUpdates = useCallback(async () => {
@@ -77,32 +64,6 @@ export function PromptsManager() {
       setExecutionError(`Error saving prompts: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
-
-  //Get stable diffusion api data
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        if (isConnected) {
-          const [samplersData, modelsData, lorasData] = await Promise.all([
-            stableDiffusionApi.getSamplers(),
-            stableDiffusionApi.getModels(),
-            stableDiffusionApi.getLoras()
-          ]);
-
-          setSamplers(samplersData);
-          setModels(modelsData);
-          setLoras(lorasData);
-        }
-      } catch (error) {
-        console.error("Error fetching API data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [isConnected]);
 
   //Load prompts from server
   useEffect(() => {
@@ -143,8 +104,8 @@ export function PromptsManager() {
       negativePrompt: '',
       seed: -1,
       steps: 20,
-      sampler: 'Euler a',
-      model: models[0],
+      sampler: availableSamplers.length > 0 ? availableSamplers[0] : 'Euler a',
+      model: availableModels.length > 0 ? availableModels[0] : '',
       width: 512,
       height: 512,
       runCount: 1,
@@ -395,7 +356,7 @@ export function PromptsManager() {
           ) : (
             <Button
               onClick={handleExecuteAll}
-              disabled={status == 'single-execution' || !isConnected || prompts.length === 0 || isLoadingPrompts}>
+              disabled={status === 'single-execution' || !isConnected || prompts.length === 0 || isLoadingPrompts}>
               <Play className="mr-2 h-4 w-4" />
               Start Execution
             </Button>
@@ -409,12 +370,10 @@ export function PromptsManager() {
         </div>
       </div>
 
-
-
-      {(isLoading || isLoadingPrompts) && (
+      {(isLoadingApiData || isLoadingPrompts) && (
         <Card className="p-4 mb-4">
           <div className="text-center text-muted-foreground">
-            {isLoading ? 'Loading data from API...' : 'Loading prompts...'}
+            {isLoadingApiData ? 'Loading data from API...' : 'Loading prompts...'}
           </div>
         </Card>
       )}
@@ -463,14 +422,14 @@ export function PromptsManager() {
             isExecuting={status === 'global-execution' || status === 'single-execution'}
             isCurrentlyExecuting={executingPromptId === prompt.id}
             isApiConnected={isConnected}
-            availableSamplers={samplers}
-            availableModels={models}
-            availableLoras={loras}
+            availableSamplers={availableSamplers}
+            availableModels={availableModels}
+            availableLoras={availableLoras}
           />
         ))}
       </div>
 
-      {prompts.length === 0 && !isLoading && !isLoadingPrompts && (
+      {prompts.length === 0 && !isLoadingApiData && !isLoadingPrompts && (
         <Card className="p-6 text-center text-muted-foreground">
           <p>No prompts added yet. Click "Add Prompt" to get started.</p>
         </Card>

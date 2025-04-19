@@ -17,6 +17,12 @@ interface ApiContextType {
   isLoading: boolean;
   error: string | null;
 
+  //Available options from SD API - loaded only once
+  availableSamplers: string[];
+  availableModels: string[];
+  availableLoras: any[];
+  isLoadingApiData: boolean;
+
   //API methods
   checkConnection: () => Promise<boolean>;
   generateImage: (prompt: Prompt) => Promise<ImageMetadata | null>;
@@ -28,6 +34,12 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  
+  //Shared API data - loaded once
+  const [availableSamplers, setAvailableSamplers] = useState<string[]>([]);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [availableLoras, setAvailableLoras] = useState<any[]>([]);
+  const [isLoadingApiData, setIsLoadingApiData] = useState<boolean>(false);
 
   //Check connection to Stable Diffusion API
   const checkConnection = async (): Promise<boolean> => {
@@ -97,9 +109,34 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  //Load images on initial mount
+  //Load initial data on mount - THIS ONLY HAPPENS ONCE
   useEffect(() => {
-    checkConnection();
+    const initializeApi = async () => {
+      const connected = await checkConnection();
+      
+      if (connected) {
+        //Load all API data in one go
+        setIsLoadingApiData(true);
+        try {
+          const [samplers, models, loras] = await Promise.all([
+            apiService.getSamplers(),
+            apiService.getModels(),
+            apiService.getLoras()
+          ]);
+  
+          setAvailableSamplers(samplers);
+          setAvailableModels(models);
+          setAvailableLoras(loras);
+        } catch (error) {
+          console.error('Failed to load API data:', error);
+          setError("Failed to load API data: " + (error instanceof Error ? error.message : String(error)));
+        } finally {
+          setIsLoadingApiData(false);
+        }
+      }
+    };
+    
+    initializeApi();
   }, []);
 
   const value = {
@@ -109,8 +146,12 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isConnected,
     isLoading,
     error,
+    availableSamplers,
+    availableModels,
+    availableLoras,
+    isLoadingApiData,
     checkConnection,
-    generateImage,
+    generateImage
   };
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;
