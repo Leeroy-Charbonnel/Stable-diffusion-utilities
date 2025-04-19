@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { ImageMetadata } from '@/types';
 import { getImageUrl } from '@/services/fileSystemApi';
+import { usePrompt } from '@/contexts/PromptContext';
+import { toast } from 'sonner';
 
 interface ImageCardProps {
   image: ImageMetadata;
@@ -35,12 +37,46 @@ export function ImageCard({
   onDeleteClick,
   availableFolders,
 }: ImageCardProps) {
+  const { addPrompt } = usePrompt();
+
   //Assume square images but respect actual dimensions if not square
   const imageFolder = image.folder;
   const imageUrl = getImageUrl(image.id);
   const formattedDate = new Date(image.createdAt).toLocaleDateString();
   const truncatedPrompt = image.prompt.substring(0, 90);
   const numberOfTagsToShow = 3;
+
+  const handleCreatePrompt = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    try {
+      const newPrompt = {
+        id: image.promptId || crypto.randomUUID(),
+        isOpen: false,
+        name: image.name || image.prompt.substring(0, 20) + "...",
+        text: image.prompt,
+        negativePrompt: image.negativePrompt || "",
+        seed: image.seed,
+        steps: image.steps,
+        sampler: image.sampler,
+        model: image.model,
+        width: image.width,
+        height: image.height,
+        runCount: 1,
+        tags: [...image.tags],
+        loras: image.loras || [],
+        currentRun: 0,
+        status: "idle",
+      };
+
+      await addPrompt(newPrompt);
+    } catch (error) {
+      console.error('Error creating prompt:', error);
+      toast("Error creating prompt", {
+        description: error instanceof Error ? error.message : String(error)
+      });
+    }
+  };
 
   return (
     <Card
@@ -60,7 +96,7 @@ export function ImageCard({
             variant="secondary"
             size="icon"
             className="h-8 w-8 p-0 bg-background/90 backdrop-blur-sm rounded-full shadow-md"
-            onClick={(e) => { e.stopPropagation(); onCreatePrompt && onCreatePrompt(image); }}
+            onClick={handleCreatePrompt}
             title="Copy prompt"
           >
             <Copy className="h-4 w-4" />

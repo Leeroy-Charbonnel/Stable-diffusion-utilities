@@ -8,16 +8,15 @@ import { useApi } from '@/contexts/ApiContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { generateUUID } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
-import { DEBOUNCE_DELAY, MAX_DEBOUNCE_TIME } from '@/lib/constants';
+import { usePrompt } from '@/contexts/PromptContext';
+import { toast } from 'sonner';
 
 
 export function PromptsManager() {
-  const { promptsApi, isConnected, generateImage, availableSamplers, availableModels, availableLoras, isLoadingApiData } = useApi();
+  const { isConnected, generateImage, availableSamplers, availableModels, availableLoras, isLoadingApiData } = useApi();
+  const { prompts, loadPrompts, addPrompt, updatePrompt, deletePrompt, reorderPrompt, isLoading: isPromptLoading } = usePrompt();
 
   const [status, setStatus] = useState<ExecutionStatus>('idle');
-
-  const [prompts, setPrompts] = useState<Prompt[]>([]);
-  const [isLoadingPrompts, setIsLoadingPrompts] = useState(false);
 
   const [executingPromptId, setExecutingPromptId] = useState<string | null>(null);
   const [executedPromptIds, setExecutedPromptIds] = useState<Set<string>>(new Set());
@@ -31,69 +30,137 @@ export function PromptsManager() {
   const cancelExecutionRef = useRef(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
-  //Debounce refs
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const maxDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const pendingUpdatesRef = useRef<{ promptId: string, prompt: Prompt } | null>(null);
+  //Load prompts again if they might have been updated elsewhere
+  useEffect(() => {
+    loadPrompts();
+  }, []);
 
-  //Debounced save function - applies when pending updates exist
-  const applyPendingUpdates = useCallback(async () => {
-    if (pendingUpdatesRef.current) {
-      try {
-        const { prompt } = pendingUpdatesRef.current;
-        const updatedPrompts = prompts.map((p) => (p.id === prompt.id ? prompt : p));
-        setPrompts(updatedPrompts);
-        await savePromptsToServer(updatedPrompts);
-      } catch (error) {
-        console.error('Error applying pending updates:', error);
-      } finally {
-        pendingUpdatesRef.current = null;
-      }
-    }
-  }, [prompts]);
-
-  const savePromptsToServer = async (promptsToSave: Prompt[]) => {
-    try {
-      const success = await promptsApi.saveAllPrompts(promptsToSave);
-      if (!success) {
-        console.error('Failed to save prompts to server');
-        setExecutionError('Failed to save prompts to server');
-      }
-    } catch (error) {
-      console.error('Error saving prompts:', error);
-      setExecutionError(`Error saving prompts: ${error instanceof Error ? error.message : String(error)}`);
-    }
+  //Handle interruption of execution
+  const handleInterruptExecution = () => {
+    setIsCancelling(true);
+    cancelExecutionRef.current = true;
   };
 
-  //Load prompts from server
-  useEffect(() => {
-    const loadPromptsFromServer = async () => {
-      setIsLoadingPrompts(true);
+  //Handle execution of a single prompt
+  const handleExecutePrompt = async (promptToExecute: Prompt) => {
+    setStatus('single-execution');
+    setSuccessCount(0);
+    setFailureCount(0);
+    setCurrentPromptIndex(0);
+    setPromptsToRunCount(promptToExecute.runCount);
+
+    //Reset cancellation flag
+    cancelExecutionRef.current = false;
+    setIsCancelling(false);
+
+    try {
+      await executePrompt(promptToExecute);
+      setStatus('completed');
+    } catch (err) {
+      console.error('Error during prompt execution:', err);
+      setExecutionError(`Error during execution: ${err instanceof Error ? err.message : String(err)}`);
+      setStatus('failed');
+      toast("Execution failed ", {
+        description: err instanceof Error ? err.message : String(err)
+      });
+    }
+
+    resetExecution();
+  };
+
+  //Handle execution of all prompts
+  const handleExecuteAll = async () => {
+    setStatus('global-execution');
+    setSuccessCount(0);
+    setFailureCount(0);
+    setCurrentPromptIndex(0);
+    setExecutedPromptIds(new Set());
+
+    //Calculate total runs across all prompts
+    const totalRuns = prompts.map(p => p.runCount).reduce((a, b) => a + b, 0);
+    setPromptsToRunCount(totalRuns);
+
+    //Reset cancellation flag
+    cancelExecutionRef.current = false;
+    setIsCancelling(false);
+
+    try {
+      for (let i = 0; i < prompts.length; i++) {
+        if (cancelExecutionRef.current) {
+          break;
+        }
+
+        const prompt = prompts[i];
+        setExecutedPromptIds(prev => new Set([...prev, prompt.id]));
+        await executePrompt(prompt);
+      }
+    } catch (err) {
+      console.error('Error during batch execution:', err);
+      setExecutionError(`Error during execution: ${err instanceof Error ? err.message : String(err)}`);
+      setStatus('failed');
+      toast("Execution failed ", {
+        description: err instanceof Error ? err.message : String(err)
+      });
+    }
+
+    if (status !== 'failed') {
+      setStatus('completed');
+    }
+
+    resetExecution();
+  };
+
+  const resetExecution = () => {
+    //Reset all prompts to idle state
+    prompts.forEach(async (p) => {
+      if (p.currentRun > 0) {
+        await updatePrompt({
+          ...p,
+          currentRun: 0,
+          status: 'idle'
+        });
+      }
+    });
+
+    //Clear execution state
+    setExecutingPromptId(null);
+    setExecutedPromptIds(new Set());
+    setIsCancelling(false);
+    cancelExecutionRef.current = false;
+  }
+
+  const executePrompt = async (prompt: Prompt): Promise<void> => {
+    setExecutingPromptId(prompt.id);
+
+    let currentPromptObj = { ...prompt, currentRun: 0 };
+    for (let i = 0; i < prompt.runCount; i++) {
+      //Check if execution has been cancelled
+      if (cancelExecutionRef.current) {
+        console.log(`Execution cancelled for prompt ${prompt.id}`);
+        break;
+      }
+
       try {
-        const loadedPrompts = await promptsApi.getAllPrompts();
-        setPrompts(loadedPrompts);
-      } catch (error) {
-        console.error('Failed to load prompts from server:', error);
-        setExecutionError(`Failed to load prompts: ${error instanceof Error ? error.message : String(error)}`);
-      } finally {
-        setIsLoadingPrompts(false);
-      }
-    };
+        const result = await generateImage(prompt);
 
-    loadPromptsFromServer();
-  }, []);
+        if (result) { setSuccessCount(prev => prev + 1); }
+        else { setFailureCount(prev => prev + 1); }
+        setCurrentPromptIndex(prev => prev + 1);
+      } catch (err) {
+        console.error(`Error running prompt ${prompt.id} (${currentPromptObj.currentRun}/${prompt.runCount}):`, err);
+        setFailureCount(prev => prev + 1);
+      }
 
-  //Clean up timers on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-      if (maxDebounceTimerRef.current) {
-        clearTimeout(maxDebounceTimerRef.current);
-      }
-    };
-  }, []);
+      //Update prompt current run count
+      currentPromptObj.currentRun = i + 1;
+      await updatePrompt({
+        ...currentPromptObj
+      });
+    }
+
+    setExecutingPromptId(null);
+    return;
+  };
 
   const handleAddPrompt = async () => {
     const newPrompt: Prompt = {
@@ -115,218 +182,7 @@ export function PromptsManager() {
       status: 'idle',
     };
 
-    const updatedPrompts = [...prompts, newPrompt];
-    setPrompts(updatedPrompts);
-    await savePromptsToServer(updatedPrompts);
-  };
-
-  const handleUpdatePrompt = async (updatedPrompt: Prompt) => {
-    //Cancel any existing timers
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-    }
-
-    //Store the update in the pending updates
-    pendingUpdatesRef.current = {
-      promptId: updatedPrompt.id,
-      prompt: updatedPrompt
-    };
-
-    //Update local state immediately for UI responsiveness
-    setPrompts(currentPrompts =>
-      currentPrompts.map(p => p.id === updatedPrompt.id ? updatedPrompt : p)
-    );
-
-    //Set up a new debounce timer
-    debounceTimerRef.current = setTimeout(() => {
-      applyPendingUpdates();
-      debounceTimerRef.current = null;
-
-      //Clear max timer if it exists
-      if (maxDebounceTimerRef.current) {
-        clearTimeout(maxDebounceTimerRef.current);
-        maxDebounceTimerRef.current = null;
-      }
-    }, DEBOUNCE_DELAY);
-
-    //Set up max debounce timer if not already set
-    if (!maxDebounceTimerRef.current) {
-      maxDebounceTimerRef.current = setTimeout(() => {
-        //If there are pending updates after max time, apply them
-        if (pendingUpdatesRef.current) {
-          applyPendingUpdates();
-        }
-
-        //Clear debounce timer if it exists
-        if (debounceTimerRef.current) {
-          clearTimeout(debounceTimerRef.current);
-          debounceTimerRef.current = null;
-        }
-
-        maxDebounceTimerRef.current = null;
-      }, MAX_DEBOUNCE_TIME);
-    }
-  };
-
-  const handleDeletePrompt = async (id: string) => {
-    const updatedPrompts = prompts.filter((p) => p.id !== id);
-    setPrompts(updatedPrompts);
-    await savePromptsToServer(updatedPrompts);
-  };
-
-  const handleMovePrompt = async (id: string, direction: 'up' | 'down') => {
-    const promptIndex = prompts.findIndex((p) => p.id === id);
-    if (
-      (direction === 'up' && promptIndex === 0) ||
-      (direction === 'down' && promptIndex === prompts.length - 1)
-    ) {
-      return;
-    }
-
-    const newPrompts = [...prompts];
-    const newIndex = direction === 'up' ? promptIndex - 1 : promptIndex + 1;
-    const promptToMove = newPrompts[promptIndex];
-    newPrompts.splice(promptIndex, 1);
-    newPrompts.splice(newIndex, 0, promptToMove);
-
-    setPrompts(newPrompts);
-    await savePromptsToServer(newPrompts);
-  };
-
-  //Handle interruption of execution
-  const handleInterruptExecution = () => {
-    setIsCancelling(true);
-    cancelExecutionRef.current = true;
-  };
-
-  //Handle execution of a single prompt
-  const handleExecutePrompt = async (promptToExecute: Prompt) => {
-    //Force pending updates to save before execution
-    if (pendingUpdatesRef.current) {
-      await applyPendingUpdates();
-    }
-
-    setStatus('single-execution');
-    setSuccessCount(0);
-    setFailureCount(0);
-    setCurrentPromptIndex(0);
-    setPromptsToRunCount(promptToExecute.runCount);
-
-    //Reset cancellation flag
-    cancelExecutionRef.current = false;
-    setIsCancelling(false);
-
-    try {
-      await executePrompt(promptToExecute);
-      setStatus('completed');
-    } catch (err) {
-      console.error('Error during prompt execution:', err);
-      setExecutionError(`Error during execution: ${err instanceof Error ? err.message : String(err)}`);
-      setStatus('failed');
-    }
-
-    resetExecution();
-  };
-
-  //Handle execution of all prompts
-  const handleExecuteAll = async () => {
-    //Force pending updates to save before execution
-    if (pendingUpdatesRef.current) {
-      await applyPendingUpdates();
-    }
-
-    setStatus('global-execution');
-    setSuccessCount(0);
-    setFailureCount(0);
-    setCurrentPromptIndex(0);
-    setExecutedPromptIds(new Set());
-
-    //Calculate total runs across all prompts
-    const totalRuns = prompts.map(p => p.runCount).reduce((a, b) => a + b, 0);
-    setPromptsToRunCount(totalRuns);
-
-    //Reset cancellation flag
-    cancelExecutionRef.current = false;
-    setIsCancelling(false);
-
-    try {
-      for (let i = 0; i < prompts.length; i++) {
-        if (cancelExecutionRef.current) {
-          console.log("Execution cancelled");
-          break;
-        }
-
-        const prompt = prompts[i];
-        setExecutedPromptIds(prev => new Set([...prev, prompt.id]));
-        await executePrompt(prompt);
-      }
-    } catch (err) {
-      console.error('Error during batch execution:', err);
-      setExecutionError(`Error during execution: ${err instanceof Error ? err.message : String(err)}`);
-      setStatus('failed');
-    }
-
-    if (status !== 'failed') {
-      setStatus('completed');
-    }
-
-    resetExecution();
-  };
-
-  const resetExecution = () => {
-    //Reset all prompts to idle state
-    const resetPrompts = prompts.map(p => ({
-      ...p,
-      currentRun: 0,
-      status: 'idle'
-    }));
-    setPrompts(resetPrompts);
-    savePromptsToServer(resetPrompts);
-
-    //Clear execution state
-    setExecutingPromptId(null);
-    setExecutedPromptIds(new Set());
-    setIsCancelling(false);
-    cancelExecutionRef.current = false;
-  }
-
-  const executePrompt = async (prompt: Prompt): Promise<void> => {
-    setExecutingPromptId(prompt.id);
-
-    prompt.currentRun = 0;
-    for (let i = 0; i < prompt.runCount; i++) {
-      //Check if execution has been cancelled
-      if (cancelExecutionRef.current) {
-        console.log(`Execution cancelled for prompt ${prompt.id}`);
-        break;
-      }
-
-      try {
-        const result = await generateImage(prompt);
-
-        if (result) { setSuccessCount(prev => prev + 1); }
-        else { setFailureCount(prev => prev + 1); }
-        setCurrentPromptIndex(prev => prev + 1);
-      } catch (err) {
-        console.error(`Error running prompt ${prompt.id} (${prompt.currentRun}/${prompt.runCount}):`, err);
-        setFailureCount(prev => prev + 1);
-      }
-
-      prompt.currentRun = i + 1;
-
-      //Update prompt state in the list
-      setPrompts(currentPrompts =>
-        currentPrompts.map(p =>
-          p.id === prompt.id ? { ...p, currentRun: i + 1 } : p
-        )
-      );
-    }
-
-    prompt.currentRun = prompt.runCount;
-
-    setExecutingPromptId(null);
-    return;
+    await addPrompt(newPrompt);
   };
 
   return (
@@ -356,46 +212,26 @@ export function PromptsManager() {
           ) : (
             <Button
               onClick={handleExecuteAll}
-              disabled={status === 'single-execution' || !isConnected || prompts.length === 0 || isLoadingPrompts}>
+              disabled={status === 'single-execution' || !isConnected || prompts.length === 0 || isPromptLoading}>
               <Play className="mr-2 h-4 w-4" />
               Start Execution
             </Button>
           )}
           <Button
             onClick={handleAddPrompt}
-            disabled={isLoadingPrompts || status === 'single-execution' || status === 'global-execution'}>
+            disabled={isPromptLoading || status === 'single-execution' || status === 'global-execution'}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Prompt
           </Button>
         </div>
       </div>
 
-      {(isLoadingApiData || isLoadingPrompts) && (
+      {(isLoadingApiData || isPromptLoading) && (
         <Card className="p-4 mb-4">
           <div className="text-center text-muted-foreground">
             {isLoadingApiData ? 'Loading data from API...' : 'Loading prompts...'}
           </div>
         </Card>
-      )}
-
-      {status === 'completed' && (
-        <Alert className="mb-4 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-          <CheckCircle className="h-4 w-4" />
-          <AlertTitle>Execution Completed</AlertTitle>
-          <AlertDescription>
-            Generated {successCount} images successfully. {failureCount} failed.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {status === 'failed' && executionError && (
-        <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Execution Failed</AlertTitle>
-          <AlertDescription>
-            {executionError}
-          </AlertDescription>
-        </Alert>
       )}
 
       {executionError && status !== 'failed' && (
@@ -413,11 +249,11 @@ export function PromptsManager() {
           <PromptCard
             key={prompt.id}
             prompt={prompt}
-            onDelete={() => handleDeletePrompt(prompt.id)}
-            onMove={handleMovePrompt}
+            onDelete={() => deletePrompt(prompt.id)}
+            onMove={reorderPrompt}
             onRunPrompt={handleExecutePrompt}
             onCancelExecution={handleInterruptExecution}
-            onPromptUpdate={handleUpdatePrompt}
+            onPromptUpdate={updatePrompt}
             isExecuted={executedPromptIds.has(prompt.id)}
             isExecuting={status === 'global-execution' || status === 'single-execution'}
             isCurrentlyExecuting={executingPromptId === prompt.id}
@@ -429,7 +265,7 @@ export function PromptsManager() {
         ))}
       </div>
 
-      {prompts.length === 0 && !isLoadingApiData && !isLoadingPrompts && (
+      {prompts.length === 0 && !isLoadingApiData && !isPromptLoading && (
         <Card className="p-6 text-center text-muted-foreground">
           <p>No prompts added yet. Click "Add Prompt" to get started.</p>
         </Card>

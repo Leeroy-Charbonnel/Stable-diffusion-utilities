@@ -12,10 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FilterPanel } from './FilterPanel';
 import { ImageCard } from './ImageCard';
 import { ImageDetailsDialog } from './ImageDetailsDialog';
-import { generateUUID } from '@/lib/utils';
+import { usePrompt } from '@/contexts/PromptContext';
+import { toast } from 'sonner';
 
 export function ImageViewer() {
-  const { fileSystemApi, promptsApi } = useApi();
+  const { fileSystemApi } = useApi();
+  const { addPrompt } = usePrompt();
 
   const [generatedImages, setGeneratedImages] = useState<ImageMetadata[]>([]);
   const [filteredImages, setFilteredImages] = useState<ImageMetadata[]>([]);
@@ -322,12 +324,9 @@ export function ImageViewer() {
 
   const handleCreatePrompt = async (image: ImageMetadata) => {
     try {
-      //Get existing prompts
-      const existingPrompts = await promptsApi.getAllPrompts();
-
       //Create a new prompt from the image
       const newPrompt = {
-        id: generateUUID(),
+        id: image.promptId || crypto.randomUUID(),
         isOpen: false,
         name: image.name || image.prompt.substring(0, 20) + "...",
         text: image.prompt,
@@ -345,17 +344,13 @@ export function ImageViewer() {
         status: "idle",
       };
 
-      //Add the new prompt to the list
-      const updatedPrompts = [...existingPrompts, newPrompt];
-      await promptsApi.saveAllPrompts(updatedPrompts);
+      await addPrompt(newPrompt);
 
-      //Close the dialog
-      setDetailsDialogOpen(false);
-
-      //Show confirmation or switch to prompts tab
-      alert("Prompt created successfully!");
     } catch (error) {
       console.error('Error creating prompt:', error);
+      toast("Error creating prompt", {
+        description: error instanceof Error ? error.message : String(error)
+      });
     }
   };
 

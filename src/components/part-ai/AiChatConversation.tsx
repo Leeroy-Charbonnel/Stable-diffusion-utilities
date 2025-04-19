@@ -8,15 +8,18 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { AlertCircle, BrainCog, Send, RefreshCw, Trash2, Image, ListChecks, CheckCircle, PlusCircle } from 'lucide-react';
 import { useAi } from '@/contexts/AiContext';
+import { usePrompt } from '@/contexts/PromptContext';
 import { ChatMessage, Prompt } from '@/types';
 import { useApi } from '@/contexts/ApiContext';
 import { generateUUID } from '@/lib/utils';
 import { PromptForm } from '../part-prompt/PromptForm';
 import { CHAT_SYSTEM_PROMPT, EXTRACTION_PROMPT } from '@/lib/constantsAI';
+import { toast } from 'sonner';
+
 
 export function AiChatConversation() {
   const { messages, isProcessing, error, settings, sendMessage, clearMessages, updateMessageContent } = useAi();
-
+  const { addPrompt } = usePrompt();
   const { promptsApi, availableSamplers, availableModels, availableLoras, isLoadingApiData } = useApi();
 
   const [inputMessage, setInputMessage] = useState('');
@@ -172,23 +175,11 @@ export function AiChatConversation() {
     if (!generatedPrompt) return;
 
     try {
-      //Get existing prompts
-      const existingPrompts = await promptsApi.getAllPrompts();
-
-      //Add the prompt to the list
-      const updatedPrompts = [...existingPrompts, generatedPrompt];
-      const success = await promptsApi.saveAllPrompts(updatedPrompts);
-
-      if (success) {
-        alert("Prompt saved successfully!");
-        setShowPromptForm(false);
-        setGeneratedPrompt(null);
-      } else {
-        alert("Failed to save prompt.");
-      }
+      await addPrompt(generatedPrompt);
     } catch (error) {
-      console.error("Error saving prompt:", error);
-      alert("Failed to save prompt: " + (error instanceof Error ? error.message : String(error)));
+      toast("Error saving prompt", {
+        description: error instanceof Error ? error.message : String(error)
+      });
     }
   };
 
@@ -247,10 +238,7 @@ export function AiChatConversation() {
           <CardHeader className="py-3 px-4">
             <CardTitle className="text-lg flex items-center">
               <BrainCog className="h-5 w-5 mr-2" />
-              {mode === 'generation'
-                ? `Chat with ${settings.model}`
-                : 'Extract from Stable Diffusion Parameters'
-              }
+              Chat with {settings.model}
             </CardTitle>
           </CardHeader>
 
@@ -262,9 +250,7 @@ export function AiChatConversation() {
                   <BrainCog className="mx-auto h-12 w-12 opacity-50 mb-2" />
                   <p>No messages yet. Start the conversation!</p>
                   <p className="text-sm mt-2 max-w-sm">
-                    {mode === 'generation'
-                      ? "Ask for a Stable Diffusion prompt or for tips on crafting effective prompts."
-                      : "Paste Stable Diffusion parameters to extract them into a usable prompt."}
+                    Ask for a Stable Diffusion prompt or for tips on crafting effective prompts.
                   </p>
                 </div>
               </div>
@@ -285,11 +271,8 @@ export function AiChatConversation() {
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={mode === 'generation'
-                    ? "Ask for prompt ideas or help with Stable Diffusion..."
-                    : "Paste Stable Diffusion parameters here..."
-                  }
-                  className="min-h-[50px] resize-none"
+                  placeholder="Ask for prompt ideas or help with Stable Diffusion..."
+                  className="min-h-[50px] resize-vertical"
                   disabled={isProcessing}
                 />
                 <Button
@@ -424,24 +407,8 @@ export function AiChatConversation() {
                 <Image className="h-12 w-12 mb-4 opacity-30" />
                 <p className="mb-2">No prompt generated yet</p>
                 <p className="text-sm max-w-xs">
-                  {mode === 'generation'
-                    ? "Ask the AI to create a prompt for you."
-                    : "Paste Stable Diffusion parameters to create a prompt."}
+                  Ask the AI to create a prompt for you.
                 </p>
-
-                {mode === 'generation' && (
-                  <Button
-                    variant="outline"
-                    className="mt-6"
-                    onClick={() => {
-                      setInputMessage("Create a detailed Stable Diffusion prompt for a fantasy landscape with dragons");
-                      inputRef.current?.focus();
-                    }}
-                  >
-                    <Image className="h-4 w-4 mr-2" />
-                    Request Sample Prompt
-                  </Button>
-                )}
               </div>
             </CardContent>
           </Card>

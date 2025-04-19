@@ -5,7 +5,9 @@ import { ImageViewer } from '@/components/part-images/ImageViewer';
 import { AiChat } from '@/components/part-ai/AiChat';
 import { ApiProvider } from '@/contexts/ApiContext';
 import { AiProvider } from '@/contexts/AiContext';
+import { PromptProvider } from '@/contexts/PromptContext';
 import { Sidebar } from '@/components/Sidebar';
+import { Toaster } from 'sonner';
 
 function App() {
   const [activeTab, setActiveTab] = useState<'prompts' | 'images' | 'ai'>(
@@ -23,19 +25,23 @@ function App() {
 
   return (
     <ApiProvider>
-      <AiProvider>
-        <div className="min-h-screen bg-background text-foreground dark flex">
-          <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <PromptProvider>
+        <AiProvider>
 
-          <div className="flex-1 overflow-auto">
-            <div className="max-w-4xl mx-auto p-6">
-              <div style={{ display: activeTab === 'prompts' ? 'block' : 'none' }}><PromptsManager /></div>
-              <div style={{ display: activeTab === 'images' ? 'block' : 'none' }}><ImageViewer /></div>
-              <div style={{ display: activeTab === 'ai' ? 'block' : 'none' }}><AiChat /></div>
+          <div className="min-h-screen bg-background text-foreground dark flex">
+            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+
+            <div className="flex-1 overflow-auto">
+              <div className="max-w-4xl mx-auto p-6">
+                <div style={{ display: activeTab === 'prompts' ? 'block' : 'none' }}><PromptsManager /></div>
+                <div style={{ display: activeTab === 'images' ? 'block' : 'none' }}><ImageViewer /></div>
+                <div style={{ display: activeTab === 'ai' ? 'block' : 'none' }}><AiChat /></div>
+              </div>
             </div>
           </div>
-        </div>
-      </AiProvider>
+          <Toaster />
+        </AiProvider>
+      </PromptProvider>
     </ApiProvider>
   );
 }

@@ -17,6 +17,8 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Image as ImageIcon, XIcon, Download, TerminalSquare, Folder, Hash, Settings2, ChevronLeft, ChevronRight, Trash2, FolderClosed, Tag, Plus, Edit, Check } from 'lucide-react';
 import { ImageMetadata } from '@/types';
+import { usePrompt } from '@/contexts/PromptContext';
+import { toast } from 'sonner';
 
 
 interface ImageDetailsDialogProps {
@@ -57,6 +59,7 @@ export function ImageDetailsDialog({
   const [targetFolder, setTargetFolder] = useState<string>(getImageFolder(image));
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const { addPrompt } = usePrompt();
 
   // Name editing state
   const [isEditingName, setIsEditingName] = useState(false);
@@ -139,6 +142,37 @@ export function ImageDetailsDialog({
     } else if (e.key === 'Escape') {
       setIsEditingName(false);
       setNameValue(image.name || '');
+    }
+  };
+
+  const handleCreatePrompt = async () => {
+    try {
+      const newPrompt = {
+        id: image.promptId || crypto.randomUUID(),
+        isOpen: false,
+        name: image.name || image.prompt.substring(0, 20) + "...",
+        text: image.prompt,
+        negativePrompt: image.negativePrompt || "",
+        seed: image.seed,
+        steps: image.steps,
+        sampler: image.sampler,
+        model: image.model,
+        width: image.width,
+        height: image.height,
+        runCount: 1,
+        tags: [...image.tags],
+        loras: image.loras || [],
+        currentRun: 0,
+        status: "idle",
+      };
+
+      await addPrompt(newPrompt);
+
+    } catch (error) {
+      console.error('Error creating prompt:', error);
+      toast("Error creating prompt", {
+        description: error instanceof Error ? error.message : String(error)
+      });
     }
   };
 
@@ -427,7 +461,7 @@ export function ImageDetailsDialog({
               <div className="p-3 border-t border-white/10 bg-black/50 backdrop-blur-md">
                 <Button
                   variant="outline"
-                  onClick={() => onCreatePrompt(image)}
+                  onClick={handleCreatePrompt}
                   className="flex items-center w-full"
                   size="sm"
                 >
