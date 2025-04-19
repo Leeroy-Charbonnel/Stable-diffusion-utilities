@@ -4,12 +4,9 @@ export interface LoraConfig {
 }
 
 export type ExecutionStatus = 'idle' | 'global-execution' | 'single-execution' | 'cancelling' | 'completed' | 'failed';
-// src/types.ts (add to existing file)
+export type AiModel = string;
 
-// Add OpenAI related types
-export type AiModel = 'gpt-3.5-turbo' | 'gpt-4' | 'gpt-4-turbo';
-
-export interface ChatMessage {
+export interface ChatMessage {  
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;

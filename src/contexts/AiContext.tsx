@@ -1,164 +1,113 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { AiModel, AiSettings, ChatMessage, CivitaiData } from '@/types';
-import { generateChatCompletion, extractCivitaiData } from '@/services/openAiApi';
-import { generateUUID } from '@/lib/utils';
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Slider } from '@/components/ui/slider';
+import { Settings } from 'lucide-react';
+import { useAi } from '@/contexts/AiContext';
+import { AiModel } from '@/types';
 
-interface AiContextType {
-  messages: ChatMessage[];
-  isProcessing: boolean;
-  error: string | null;
-  settings: AiSettings;
-
-  //Actions
-  setApiKey: (key: string) => void;
-  setModel: (model: AiModel) => void;
-  setTemperature: (temp: number) => void;
-  setMaxTokens: (tokens: number) => void;
-
-  //Chat operations
-  sendMessage: (content: string) => Promise<void>;
-  clearMessages: () => void;
-
-  //Civitai operations
-  extractFromCivitai: (url: string) => Promise<CivitaiData | null>;
-}
-
-const DEFAULT_SETTINGS: AiSettings = {
-  apiKey: '',
-  model: 'gpt-3.5-turbo',
-  temperature: 0.7,
-  maxTokens: 1000
-};
-
-const AiContext = createContext<AiContextType | undefined>(undefined);
-
-export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [settings, setSettings] = useState<AiSettings>(() => {
-    const storedSettings = localStorage.getItem('ai-settings');
-    return storedSettings ? JSON.parse(storedSettings) : DEFAULT_SETTINGS;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('ai-settings', JSON.stringify(settings));
-  }, [settings]);
-
-  const setApiKey = (key: string) => { setSettings(prev => ({ ...prev, apiKey: key })); };
-  const setModel = (model: AiModel) => { setSettings(prev => ({ ...prev, model })); };
-  const setTemperature = (temperature: number) => { setSettings(prev => ({ ...prev, temperature })); };
-  const setMaxTokens = (maxTokens: number) => { setSettings(prev => ({ ...prev, maxTokens })); };
-
-  //Chat operations
-  const sendMessage = async (content: string) => {
-    if (!content.trim()) return;
-    if (!settings.apiKey) {
-      setError('API key is required');
-      return;
-    }
-
-    try {
-      setIsProcessing(true);
-      setError(null);
-
-      //Add user message
-      const userMessage: ChatMessage = {
-        id: generateUUID(),
-        role: 'user',
-        content,
-        timestamp: new Date().toISOString()
-      };
-
-      setMessages(prev => [...prev, userMessage]);
-
-      //Generate response
-      const allMessages = [...messages, userMessage];
-      const response = await generateChatCompletion(
-        settings.apiKey,
-        settings.model,
-        allMessages,
-        settings.temperature,
-        settings.maxTokens
-      );
-
-      if (response) {
-        const assistantMessage: ChatMessage = {
-          id: generateUUID(),
-          role: 'assistant',
-          content: response,
-          timestamp: new Date().toISOString()
-        };
-
-        setMessages(prev => [...prev, assistantMessage]);
-      } else {
-        setError('Failed to generate response');
-      }
-    } catch (err) {
-      setError(`Error: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const clearMessages = () => {
-    setMessages([]);
-    setError(null);
-  };
-
-  //Civitai operations
-  const extractFromCivitai = async (url: string): Promise<CivitaiData | null> => {
-    if (!url.trim() || !url.includes('civitai.com')) {
-      setError('Please enter a valid Civitai URL');
-      return null;
-    }
-
-    if (!settings.apiKey) {
-      setError('API key is required');
-      return null;
-    }
-
-    try {
-      setIsProcessing(true);
-      setError(null);
-
-      const data = await extractCivitaiData(settings.apiKey, url);
-
-      if (!data) {
-        setError('Failed to extract data from Civitai');
-        return null;
-      }
-
-      return data;
-    } catch (err) {
-      setError(`Error: ${err instanceof Error ? err.message : String(err)}`);
-      return null;
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const value = {
-    messages,
-    isProcessing,
-    error,
+export function AiSettings() {
+  const {
     settings,
     setApiKey,
     setModel,
     setTemperature,
     setMaxTokens,
-    sendMessage,
-    clearMessages,
-    extractFromCivitai
-  };
+  } = useAi();
 
-  return <AiContext.Provider value={value}>{children}</AiContext.Provider>;
-};
+  const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
 
-export const useAi = (): AiContextType => {
-  const context = useContext(AiContext);
-  if (context === undefined) {
-    throw new Error('useAi must be used within an AiProvider');
-  }
-  return context;
-};
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center">
+          <Settings className="h-5 w-5 mr-2" />
+          AI Settings
+        </CardTitle>
+      </CardHeader>
+
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="apiKey">OpenAI API Key</Label>
+          <div className="flex gap-2">
+            <Input
+              id="apiKey"
+              type={isApiKeyVisible ? 'text' : 'password'}
+              value={settings.apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="sk-..."
+            />
+            <Button
+              variant="outline"
+              onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}
+            >
+              {isApiKeyVisible ? 'Hide' : 'Show'}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Your API key is stored locally and never sent to our servers.
+          </p>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="model">AI Model</Label>
+            <Select
+              value={settings.model}
+              onValueChange={(value) => setModel(value as AiModel)}
+            >
+              <SelectTrigger id="model">
+                <SelectValue placeholder="Select a model" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                <SelectItem value="gpt-4">GPT-4</SelectItem>
+                <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <Label htmlFor="temperature">Temperature: {settings.temperature.toFixed(1)}</Label>
+            </div>
+            <Slider
+              id="temperature"
+              min={0}
+              max={1}
+              step={0.1}
+              value={[settings.temperature]}
+              onValueChange={(values) => setTemperature(values[0])}
+            />
+            <p className="text-xs text-muted-foreground">
+              Lower values make responses more deterministic, higher values make them more creative.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <Label htmlFor="maxTokens">Max Tokens: {settings.maxTokens}</Label>
+            </div>
+            <Slider
+              id="maxTokens"
+              min={100}
+              max={4000}
+              step={100}
+              value={[settings.maxTokens]}
+              onValueChange={(values) => setMaxTokens(values[0])}
+            />
+            <p className="text-xs text-muted-foreground">
+              Maximum number of tokens the AI can generate in a response.
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

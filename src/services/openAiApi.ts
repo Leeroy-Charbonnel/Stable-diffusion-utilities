@@ -1,22 +1,8 @@
 // src/services/openAiApi.ts
-import { AiModel, ChatMessage, CivitaiData } from '@/types';
-import { FILE_API_BASE_URL } from '@/lib/constants';
+import { AiModel, ChatMessage } from '@/types';
 
 //OpenAI API URLs
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-const CIVITAI_SCRAPER_SYSTEM_PROMPT = `You are a helpful assistant specialized in extracting Stable Diffusion generation parameters from Civitai image pages. 
-Given a URL or HTML content from Civitai, extract the following information in JSON format:
-- prompt
-- negativePrompt
-- model
-- sampler
-- seed
-- steps
-- width
-- height
-- loras (as an array of objects with name and weight properties)
-
-Return ONLY the JSON with no explanations or additional text. If any field is not found, omit it from the JSON.`;
 
 //OpenAI API request interface
 interface OpenAIRequest {
@@ -49,62 +35,6 @@ interface OpenAIResponse {
     total_tokens: number;
   };
 }
-
-//Extract data from a Civitai URL
-export const extractCivitaiData = async (
-  apiKey: string,
-  url: string
-): Promise<CivitaiData | null> => {
-  try {
-    //Use our proxy endpoint instead of direct fetch
-    const proxyResponse = await fetch(`${FILE_API_BASE_URL}/proxy-civitai`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url })
-    });
-    
-    if (!proxyResponse.ok) {
-      const errorData = await proxyResponse.json();
-      throw new Error(`Proxy error: ${errorData.error || proxyResponse.statusText}`);
-    }
-    
-    const responseData = await proxyResponse.json();
-    if (!responseData.success) {
-      throw new Error(`Failed to fetch Civitai page: ${responseData.error}`);
-    }
-    
-    const htmlContent = responseData.data;
-
-    //Extract the relevant information using OpenAI
-    const extractedData = await chatWithOpenAI(
-      apiKey,
-      'gpt-3.5-turbo',
-      [
-        { role: 'system', content: CIVITAI_SCRAPER_SYSTEM_PROMPT },
-        { role: 'user', content: `Extract Stable Diffusion parameters from this Civitai page: ${htmlContent}` }
-      ],
-      0.3,
-      2000
-    );
-
-    if (!extractedData) {
-      throw new Error('Failed to extract data from Civitai page');
-    }
-
-    //Parse the JSON response
-    try {
-      const data = JSON.parse(extractedData);
-      return data as CivitaiData;
-    } catch (error) {
-      console.error('Error parsing JSON from OpenAI response:', error);
-      console.log('Raw response:', extractedData);
-      return null;
-    }
-  } catch (error) {
-    console.error('Error extracting data from Civitai:', error);
-    return null;
-  }
-};
 
 //Chat with OpenAI
 export const chatWithOpenAI = async (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
-import { Settings } from 'lucide-react';
+import { Settings, RefreshCw } from 'lucide-react';
 import { useAi } from '@/contexts/AiContext';
 import { AiModel } from '@/types';
 
@@ -20,6 +20,56 @@ export function AiSettings() {
   } = useAi();
 
   const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
+  const [availableModels, setAvailableModels] = useState<AiModel[]>(['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+
+  useEffect(() => {
+    fetchAvailableModels();
+  }, []);
+
+  const fetchAvailableModels = async () => {
+    setIsLoadingModels(true);
+    try {
+      const response = await fetch('https://api.openai.com/v1/models', {
+        headers: {
+          'Authorization': `Bearer ${settings.apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch models');
+      }
+
+      const data = await response.json();
+
+      // Filter and map to our AiModel type
+      const openAiModels = data.data
+        .filter((model: any) => model.id.startsWith('gpt-'))
+        .map((model: any) => model.id as AiModel)
+        .filter((modelId: AiModel) =>
+          ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo', 'gpt-4o'].includes(modelId)
+        );
+
+      // Ensure we have at least the default models
+      const models = openAiModels.length > 0
+        ? openAiModels
+        : ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo'];
+
+      setAvailableModels(models);
+
+      // If current model is not in the list, set to the first available model
+      if (!models.includes(settings.model)) {
+        setModel(models[0]);
+      }
+    } catch (error) {
+      console.error('Error fetching models:', error);
+      // Fallback to default models if fetch fails
+      setAvailableModels(['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']);
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
 
   return (
     <Card>
@@ -47,6 +97,17 @@ export function AiSettings() {
             >
               {isApiKeyVisible ? 'Hide' : 'Show'}
             </Button>
+            <Button
+              variant="outline"
+              onClick={fetchAvailableModels}
+              disabled={!settings.apiKey || isLoadingModels}
+            >
+              {isLoadingModels ? (
+                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                'Refresh Models'
+              )}
+            </Button>
           </div>
           <p className="text-xs text-muted-foreground">
             Your API key is stored locally and never sent to our servers.
@@ -62,15 +123,23 @@ export function AiSettings() {
               value={settings.model}
               onValueChange={(value) => setModel(value as AiModel)}
             >
-              <SelectTrigger id="model">
+              <SelectTrigger id="model" disabled={isLoadingModels}>
                 <SelectValue placeholder="Select a model" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                <SelectItem value="gpt-4">GPT-4</SelectItem>
-                <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
+                {availableModels.map((modelName) => (
+                  <SelectItem key={modelName} value={modelName}>
+                    {modelName}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            {isLoadingModels && (
+              <p className="text-xs text-muted-foreground flex items-center">
+                <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                Fetching available models...
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

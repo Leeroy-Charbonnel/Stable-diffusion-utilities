@@ -1,95 +1,130 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Link, PlusCircle, RefreshCw, CheckCircle } from 'lucide-react';
 import { useAi } from '@/contexts/AiContext';
-import { Prompt } from '@/types';
+import { Prompt, LoraConfig } from '@/types';
 
 export function AiCivitaiExtractor() {
   const {
     isProcessing,
-    extractFromCivitai,
     error
   } = useAi();
 
-  const [civitaiUrl, setCivitaiUrl] = useState('');
+  const [inputText, setInputText] = useState('');
   const [extractionStatus, setExtractionStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [extractedPrompt, setExtractedPrompt] = useState<Prompt | null>(null);
   const [extractionError, setExtractionError] = useState<string | null>(null);
 
-  const handleExtractFromCivitai = async () => {
-    if (!civitaiUrl.trim() || isProcessing) return;
+  const parseStableDiffusionParams = (text: string) => {
+    //Extract prompt and negative prompt
+    const promptMatch = text.match(/(.*?)(?=Negative prompt:|Resources used|$)/s);
+    const negativePromptMatch = text.match(/Negative prompt:(.*?)(?=Steps:|Resources used|$)/s);
 
-    //Validate URL format
-    if (!civitaiUrl.includes('civitai.com')) {
-      alert('Please enter a valid Civitai URL');
-      return;
+    //Extract parameters
+    const seedMatch = text.match(/Seed: (\d+)/);
+    const stepsMatch = text.match(/Steps: (\d+)/);
+    const samplerMatch = text.match(/Sampler: ([^,]+)/);
+    const sizeMatch = text.match(/Size: (\d+)x(\d+)/);
+    const cfgMatch = text.match(/CFG scale: ([0-9.]+)/);
+
+    //Extract model/checkpoint and loras
+    let model = '';
+    const loras: LoraConfig[] = [];
+
+    //Parse Civitai format resources (newer format)
+    if (text.includes('Resources used') || text.includes('Checkpoint')) {
+      //First try to find the main model/checkpoint
+      const checkpointSection = text.match(/([^\n]+)\s+Checkpoint\s+([^\n]+)/);
+      if (checkpointSection) {
+        model = checkpointSection[1].trim();
+      }
+
+      //Extract all LoRAs using regex pattern
+      const loraPattern = /\* ([^*\n]+?)\s+LoRA\s+([0-9.]+)\s+([^\n]+)/g;
+      const loraMatches = Array.from(text.matchAll(loraPattern));
+
+      loraMatches.forEach(match => {
+        loras.push({
+          name: match[1].trim(),
+          weight: parseFloat(match[2])
+        });
+      });
+    } else {
+      //Try standard format
+      const modelMatch = text.match(/Model: ([^,\n]+)/);
+      if (modelMatch) {
+        model = modelMatch[1].trim();
+      }
+
+      //Extract loras from standard format
+      const loraMatches = Array.from(text.matchAll(/<lora:([^:]+):([0-9.]+)>/g));
+      loraMatches.forEach(match => {
+        loras.push({
+          name: match[1],
+          weight: parseFloat(match[2])
+        });
+      });
     }
+
+    return {
+      prompt: promptMatch ? promptMatch[1].trim() : '',
+      negativePrompt: negativePromptMatch ? negativePromptMatch[1].trim() : '',
+      seed: seedMatch ? parseInt(seedMatch[1]) : -1,
+      steps: stepsMatch ? parseInt(stepsMatch[1]) : 20,
+      sampler: samplerMatch ? samplerMatch[1].trim() : 'Euler a',
+      width: sizeMatch ? parseInt(sizeMatch[1]) : 512,
+      height: sizeMatch ? parseInt(sizeMatch[2]) : 512,
+      cfg: cfgMatch ? parseFloat(cfgMatch[1]) : 7,
+      model: model,
+      loras
+    };
+  };
+
+  const handleExtractFromText = async () => {
+    if (!inputText.trim() || isProcessing) return;
 
     setExtractionStatus('processing');
     setExtractionError(null);
 
     try {
-      //Show notification that this might take a minute
-      const notification = document.createElement('div');
-      notification.className = 'fixed bottom-4 right-4 bg-background p-4 rounded-lg shadow-lg border z-50';
-      notification.innerHTML = `
-        <div class="flex items-center gap-2">
-          <div class="animate-spin rounded-full h-4 w-4 border-t-2 border-primary"></div>
-          <p>Extracting data from Civitai. This might take up to a minute...</p>
-        </div>
-      `;
-      document.body.appendChild(notification);
+      //Parse the input text
+      const params = parseStableDiffusionParams(inputText);
 
-      //Extract the data
-      const data = await extractFromCivitai(civitaiUrl);
+      //Create a new prompt from the extracted data
+      const newPrompt: Prompt = {
+        id: crypto.randomUUID(),
+        isOpen: true,
+        name: `Extracted Prompt ${new Date().toLocaleTimeString()}`,
+        text: params.prompt,
+        negativePrompt: params.negativePrompt,
+        seed: params.seed,
+        steps: params.steps,
+        sampler: params.sampler,
+        model: params.model,
+        width: params.width,
+        height: params.height,
+        runCount: 1,
+        tags: [],
+        loras: params.loras,
+        currentRun: 0,
+        status: 'idle',
+      };
 
-      //Remove the notification
-      document.body.removeChild(notification);
-
-      if (data) {
-        //Generate a name for the prompt based on the URL
-        const urlParts = civitaiUrl.split('/');
-        const imageId = urlParts[urlParts.length - 1];
-
-        //Create a new prompt from the extracted data
-        const newPrompt: Prompt = {
-          id: crypto.randomUUID(),
-          isOpen: true,
-          name: `Civitai Image ${imageId}`,
-          text: data.prompt || '',
-          negativePrompt: data.negativePrompt || '',
-          seed: data.seed || -1,
-          steps: data.steps || 20,
-          sampler: data.sampler || 'Euler a',
-          model: data.model || '',
-          width: data.width || 512,
-          height: data.height || 512,
-          runCount: 1,
-          tags: [],
-          loras: data.loras || [],
-          currentRun: 0,
-          status: 'idle',
-        };
-
-        setExtractedPrompt(newPrompt);
-        setExtractionStatus('success');
-      } else {
-        setExtractionStatus('error');
-        setExtractionError('Failed to extract data from Civitai. Make sure you provided a valid image URL and have set your OpenAI API key.');
-      }
+      setExtractedPrompt(newPrompt);
+      setExtractionStatus('success');
     } catch (err) {
-      console.error('Error extracting from Civitai:', err);
+      console.error('Error extracting from text:', err);
       setExtractionStatus('error');
       setExtractionError(`Error: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
   const resetExtraction = () => {
-    setCivitaiUrl('');
+    setInputText('');
     setExtractedPrompt(null);
     setExtractionStatus('idle');
     setExtractionError(null);
@@ -100,42 +135,44 @@ export function AiCivitaiExtractor() {
       <CardHeader>
         <CardTitle className="text-lg flex items-center">
           <Link className="h-5 w-5 mr-2" />
-          Extract Prompt from Civitai
+          Extract Prompt from Generation Info
         </CardTitle>
       </CardHeader>
 
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="civitaiUrl">Civitai Image URL</Label>
+          <Label htmlFor="promptText">Generation Parameters</Label>
+          <Textarea
+            id="promptText"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="Paste generation parameters here..."
+            className="h-48 font-mono text-sm"
+            disabled={isProcessing || extractionStatus === 'processing'}
+          />
           <div className="flex gap-2">
-            <Input
-              id="civitaiUrl"
-              value={civitaiUrl}
-              onChange={(e) => setCivitaiUrl(e.target.value)}
-              placeholder="https://civitai.com/images/..."
-              disabled={isProcessing || extractionStatus === 'processing'}
-            />
             <Button
-              onClick={handleExtractFromCivitai}
-              disabled={!civitaiUrl.trim() || isProcessing || extractionStatus === 'processing'}
+              onClick={handleExtractFromText}
+              disabled={!inputText.trim() || isProcessing || extractionStatus === 'processing'}
+              className="ml-auto"
             >
               {extractionStatus === 'processing' ? (
                 <RefreshCw className="h-4 w-4 animate-spin mr-2" />
               ) : (
                 <PlusCircle className="h-4 w-4 mr-2" />
               )}
-              Extract
+              Extract Parameters
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Paste a link to a Civitai image to extract its generation parameters.
+            Paste the complete generation info from Stable Diffusion to extract parameters automatically.
           </p>
         </div>
 
         {extractionStatus === 'processing' && (
           <div className="py-4 text-center">
             <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-            <p>Extracting data from Civitai...</p>
+            <p>Extracting parameters...</p>
           </div>
         )}
 
@@ -144,7 +181,7 @@ export function AiCivitaiExtractor() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>
-              {extractionError || error || 'Failed to extract data from the provided URL. Please check the URL and try again.'}
+              {extractionError || error || 'Failed to extract parameters from the provided text. Please check the format and try again.'}
             </AlertDescription>
           </Alert>
         )}
@@ -155,7 +192,7 @@ export function AiCivitaiExtractor() {
               <CheckCircle className="h-4 w-4" />
               <AlertTitle>Success</AlertTitle>
               <AlertDescription>
-                Successfully extracted prompt data from Civitai.
+                Successfully extracted prompt parameters.
               </AlertDescription>
             </Alert>
 
@@ -250,7 +287,7 @@ export function AiCivitaiExtractor() {
                       if (success) {
                         setExtractionStatus('idle');
                         setExtractedPrompt(null);
-                        setCivitaiUrl('');
+                        setInputText('');
                         alert("Prompt created successfully! You can find it in the Prompts tab.");
                       } else {
                         alert("Failed to create prompt. Please try again.");
