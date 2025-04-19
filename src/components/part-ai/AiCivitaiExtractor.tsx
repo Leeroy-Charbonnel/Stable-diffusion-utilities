@@ -11,23 +11,7 @@ import { Prompt, LoraConfig } from '@/types';
 import { PromptForm } from '../part-prompt/PromptForm';
 import { generateUUID } from '@/lib/utils';
 import { generateChatCompletion } from '@/services/openAiApi';
-
-//System prompt for extraction
-const EXTRACTION_SYSTEM_PROMPT = `You are an AI assistant specialized in extracting Stable Diffusion generation parameters from text.
-When given text that contains Stable Diffusion parameters, extract the following information and return it in a JSON format:
-- prompt: The main prompt text
-- negativePrompt: The negative prompt text
-- seed: The random seed value (numeric)
-- steps: The number of steps (numeric)
-- sampler: The sampler name (e.g., "Euler a", "DPM++ 2M Karras")
-- width: Image width in pixels (numeric)
-- height: Image height in pixels (numeric)
-- model: The model/checkpoint name
-- loras: An array of LoRA models used, each with "name" and "weight" properties
-- tags: An array of tags extracted from the prompt (e.g., style identifiers like "masterpiece", "photorealistic")
-
-Return ONLY valid JSON with no additional text, comments, or explanations.
-If a parameter cannot be found, use appropriate default values or empty arrays.`;
+import { CIVITAI_EXTRACTION_SYSTEM_PROMPT } from '@/lib/aiConstants';
 
 export function AiCivitaiExtractor() {
   const { isProcessing: isAiProcessing, settings } = useAi();
@@ -117,7 +101,7 @@ export function AiCivitaiExtractor() {
 
     //Create messages for AI
     const messages = [
-      { id: '1', role: 'system', content: EXTRACTION_SYSTEM_PROMPT, timestamp: new Date().toISOString() },
+      { id: '1', role: 'system', content: CIVITAI_EXTRACTION_SYSTEM_PROMPT, timestamp: new Date().toISOString() },
       { id: '2', role: 'user', content: inputText, timestamp: new Date().toISOString() }
     ];
 

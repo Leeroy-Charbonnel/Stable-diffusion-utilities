@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+// In src/components/part-prompt/PromptCard.tsx
+
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2, Check, X, Play, ChevronDown, ChevronUp, StopCircle } from 'lucide-react';
@@ -48,7 +50,18 @@ export function PromptCard({
 }: PromptCardProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(prompt.name);
-  const [isAccordionOpen, setIsAccordionOpen] = useState(prompt.isOpen);
+  const [accordionValue, setAccordionValue] = useState<string | undefined>(
+    prompt.isOpen && !isExecuting ? prompt.id : undefined
+  );
+
+  //Effect to close accordion when execution starts
+  useEffect(() => {
+    if (isExecuting) {
+      setAccordionValue(undefined);
+    } else if (prompt.isOpen) {
+      setAccordionValue(prompt.id);
+    }
+  }, [isExecuting, prompt.id, prompt.isOpen]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNameValue(e.target.value);
@@ -74,9 +87,10 @@ export function PromptCard({
     }
   };
 
-  const handleOpenAccordion = () => {
-    setIsAccordionOpen(!isAccordionOpen);
-    onPromptUpdate({ ...prompt, isOpen: !isAccordionOpen });
+  const handleOpenAccordion = (value: string) => {
+    const newIsOpen = value === prompt.id;
+    setAccordionValue(newIsOpen ? prompt.id : undefined);
+    onPromptUpdate({ ...prompt, isOpen: newIsOpen });
   };
 
   const currentProgress = (prompt.currentRun / prompt.runCount) * 100
@@ -86,7 +100,7 @@ export function PromptCard({
       <Accordion
         type="single"
         collapsible
-        defaultValue={(isAccordionOpen && ! isExecuting) ? prompt.id : undefined}
+        value={accordionValue}
         className="w-full"
         onValueChange={handleOpenAccordion}
       >
@@ -175,7 +189,7 @@ export function PromptCard({
             </div>
           </AccordionContent>
 
-          {!isAccordionOpen && prompt.tags && prompt.tags.length > 0 && (
+          {!accordionValue && prompt.tags && prompt.tags.length > 0 && (
             <div className={`px-3 ${isExecuting ? "pb-2" : "py-2"} border-b`}>
               <div className="flex flex-wrap gap-1">
                 {prompt.tags.map(tag => (

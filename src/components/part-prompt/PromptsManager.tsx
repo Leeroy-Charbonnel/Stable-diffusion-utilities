@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+// In src/components/part-prompt/PromptsManager.tsx
+
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PlusCircle, Play, CheckCircle, AlertCircle, StopCircle } from 'lucide-react';
@@ -8,6 +10,8 @@ import { useApi } from '@/contexts/ApiContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { generateUUID } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
+import { DEBOUNCE_DELAY, MAX_DEBOUNCE_TIME } from '@/lib/constants';
+
 
 export function PromptsManager() {
   const {
@@ -19,11 +23,8 @@ export function PromptsManager() {
 
   const [status, setStatus] = useState<ExecutionStatus>('idle');
 
-
-
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [isLoadingPrompts, setIsLoadingPrompts] = useState(false);
-
 
   const [executingPromptId, setExecutingPromptId] = useState<string | null>(null);
   const [executedPromptIds, setExecutedPromptIds] = useState<Set<string>>(new Set());
@@ -37,11 +38,32 @@ export function PromptsManager() {
   const cancelExecutionRef = useRef(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
+  //Debounce refs
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const maxDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingUpdatesRef = useRef<{ promptId: string, prompt: Prompt } | null>(null);
+
   //Stable diffusion api data
   const [samplers, setSamplers] = useState<string[]>([]);
   const [models, setModels] = useState<string[]>([]);
   const [loras, setLoras] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  //Debounced save function - applies when pending updates exist
+  const applyPendingUpdates = useCallback(async () => {
+    if (pendingUpdatesRef.current) {
+      try {
+        const { prompt } = pendingUpdatesRef.current;
+        const updatedPrompts = prompts.map((p) => (p.id === prompt.id ? prompt : p));
+        setPrompts(updatedPrompts);
+        await savePromptsToServer(updatedPrompts);
+      } catch (error) {
+        console.error('Error applying pending updates:', error);
+      } finally {
+        pendingUpdatesRef.current = null;
+      }
+    }
+  }, [prompts]);
 
   const savePromptsToServer = async (promptsToSave: Prompt[]) => {
     try {
@@ -80,7 +102,7 @@ export function PromptsManager() {
     };
 
     fetchData();
-  }, []);
+  }, [isConnected]);
 
   //Load prompts from server
   useEffect(() => {
@@ -98,6 +120,18 @@ export function PromptsManager() {
     };
 
     loadPromptsFromServer();
+  }, []);
+
+  //Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      if (maxDebounceTimerRef.current) {
+        clearTimeout(maxDebounceTimerRef.current);
+      }
+    };
   }, []);
 
   const handleAddPrompt = async () => {
@@ -126,9 +160,52 @@ export function PromptsManager() {
   };
 
   const handleUpdatePrompt = async (updatedPrompt: Prompt) => {
-    const updatedPrompts = prompts.map((p) => (p.id === updatedPrompt.id ? updatedPrompt : p));
-    setPrompts(updatedPrompts);
-    await savePromptsToServer(updatedPrompts);
+    //Cancel any existing timers
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
+    //Store the update in the pending updates
+    pendingUpdatesRef.current = {
+      promptId: updatedPrompt.id,
+      prompt: updatedPrompt
+    };
+
+    //Update local state immediately for UI responsiveness
+    setPrompts(currentPrompts =>
+      currentPrompts.map(p => p.id === updatedPrompt.id ? updatedPrompt : p)
+    );
+
+    //Set up a new debounce timer
+    debounceTimerRef.current = setTimeout(() => {
+      applyPendingUpdates();
+      debounceTimerRef.current = null;
+
+      //Clear max timer if it exists
+      if (maxDebounceTimerRef.current) {
+        clearTimeout(maxDebounceTimerRef.current);
+        maxDebounceTimerRef.current = null;
+      }
+    }, DEBOUNCE_DELAY);
+
+    //Set up max debounce timer if not already set
+    if (!maxDebounceTimerRef.current) {
+      maxDebounceTimerRef.current = setTimeout(() => {
+        //If there are pending updates after max time, apply them
+        if (pendingUpdatesRef.current) {
+          applyPendingUpdates();
+        }
+
+        //Clear debounce timer if it exists
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+          debounceTimerRef.current = null;
+        }
+
+        maxDebounceTimerRef.current = null;
+      }, MAX_DEBOUNCE_TIME);
+    }
   };
 
   const handleDeletePrompt = async (id: string) => {
@@ -164,6 +241,11 @@ export function PromptsManager() {
 
   //Handle execution of a single prompt
   const handleExecutePrompt = async (promptToExecute: Prompt) => {
+    //Force pending updates to save before execution
+    if (pendingUpdatesRef.current) {
+      await applyPendingUpdates();
+    }
+
     setStatus('single-execution');
     setSuccessCount(0);
     setFailureCount(0);
@@ -188,6 +270,11 @@ export function PromptsManager() {
 
   //Handle execution of all prompts
   const handleExecuteAll = async () => {
+    //Force pending updates to save before execution
+    if (pendingUpdatesRef.current) {
+      await applyPendingUpdates();
+    }
+
     setStatus('global-execution');
     setSuccessCount(0);
     setFailureCount(0);

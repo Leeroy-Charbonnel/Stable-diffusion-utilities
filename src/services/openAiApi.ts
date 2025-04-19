@@ -1,8 +1,6 @@
 // src/services/openAiApi.ts
 import { AiModel, ChatMessage } from '@/types';
-
-//OpenAI API URLs
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+import { OPENAI_API_URL } from '@/lib/aiConstants';
 
 //OpenAI API request interface
 interface OpenAIRequest {

@@ -24,56 +24,7 @@ import { useApi } from '@/contexts/ApiContext';
 import { generateUUID } from '@/lib/utils';
 import { PromptForm } from '../part-prompt/PromptForm';
 import { generateChatCompletion } from '@/services/openAiApi';
-
-//System prompt for the AI assistant
-const SYSTEM_PROMPT = `You are an AI assistant specialized in Stable Diffusion image generation. 
-Help users craft effective prompts for image generation.
-When asked to create a prompt, provide detailed, descriptive text that would work well with Stable Diffusion.
-
-For best results, prompts should be detailed and descriptive, including things like:
-- Subject description (person, object, scene, etc.)
-- Style (photorealistic, anime, oil painting, etc.)
-- Lighting, mood, colors
-- Camera details (angle, distance, lens type)
-- Specific artistic influences or references
-
-ALWAYS include recommendations for:
-- Negative prompt (what to avoid in the image)
-- Recommended settings (steps, sampler, model if known)
-
-At the end of your message, ALWAYS include a JSON code block with the structured prompt data in this format:
-\`\`\`json
-{
-  "prompt": "your detailed prompt text here",
-  "negativePrompt": "your negative prompt here",
-  "steps": 20,
-  "sampler": "Euler a",
-  "width": 512,
-  "height": 512,
-  "model": "recommended model name if known",
-  "tags": ["relevant", "tags", "here"]
-}
-\`\`\`
-
-The JSON block is essential and will be used by our system to create an actual prompt.`;
-
-//Extraction prompt for parsing previous messages
-const EXTRACTION_PROMPT = `Your task is to extract Stable Diffusion prompt data from the previous message.
-Parse the text and return ONLY a valid JSON object in the following format:
-
-{
-  "prompt": "the main prompt text",
-  "negativePrompt": "the negative prompt",
-  "steps": number of steps (default 20),
-  "sampler": "sampler name (default 'Euler a')",
-  "width": width in pixels (default 512),
-  "height": height in pixels (default 512),
-  "model": "model name if mentioned",
-  "tags": ["array", "of", "relevant", "tags"]
-}
-
-Return ONLY the JSON object with no additional text or explanation.
-If certain fields can't be determined, use reasonable defaults.`;
+import { CHAT_SYSTEM_PROMPT, EXTRACTION_PROMPT } from '@/lib/aiConstants';
 
 export function AiChatConversation() {
   const { messages, isProcessing, error, settings, sendMessage, clearMessages } = useAi();
@@ -140,7 +91,7 @@ export function AiChatConversation() {
   //Initialize chat with system message if empty
   useEffect(() => {
     if (messages.length === 0) {
-      sendMessage(SYSTEM_PROMPT, 'system');
+      sendMessage(CHAT_SYSTEM_PROMPT, 'system');
     }
   }, []);
 
@@ -364,8 +315,8 @@ export function AiChatConversation() {
           <div className="flex flex-col">
             <div
               className={`rounded-lg p-4 ${isUser
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-card border border-border'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-card border border-border'
                 }`}
             >
               <div className="text-sm whitespace-pre-wrap break-words">
@@ -488,7 +439,7 @@ export function AiChatConversation() {
                         if (confirm('Are you sure you want to clear the chat?')) {
                           clearMessages();
                           //Reinitialize with system message
-                          sendMessage(SYSTEM_PROMPT, 'system');
+                          sendMessage(CHAT_SYSTEM_PROMPT, 'system');
                         }
                       }}
                       className="text-xs"
