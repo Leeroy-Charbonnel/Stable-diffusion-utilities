@@ -17,13 +17,7 @@ import { CHAT_SYSTEM_PROMPT, EXTRACTION_PROMPT } from '@/lib/constantsAI';
 export function AiChatConversation() {
   const { messages, isProcessing, error, settings, sendMessage, clearMessages } = useAi();
 
-  const {
-    promptsApi,
-    availableSamplers,
-    availableModels,
-    availableLoras,
-    isLoadingApiData
-  } = useApi();
+  const { promptsApi, availableSamplers, availableModels, availableLoras, isLoadingApiData } = useApi();
 
   const [inputMessage, setInputMessage] = useState('');
   const [mode, setMode] = useState<'generation' | 'extraction'>('generation');
@@ -56,23 +50,39 @@ export function AiChatConversation() {
     }
   }, [isProcessing]);
 
+  //Function to prepare system prompt with available models, samplers, and loras
+  const prepareSystemPrompt = (basePrompt: string) => {
+    const modelsSection = `[${availableModels.map(m => `- ${m}`).join('\n')}]`;
+    const samplersSection = `[${availableSamplers.map(s => `- ${s}`).join('\n')}]`;
+    const lorasSection = `[${availableLoras.map(l => `- ${l.name}`).join('\n')}]`;
+
+    let preparedPrompt = basePrompt
+      .replace('%AVAILABLE_MODELS_PLACEHOLDER%', modelsSection)
+      .replace('%AVAILABLE_SAMPLERS_PLACEHOLDER%', samplersSection)
+      .replace('%AVAILABLE_LORAS_PLACEHOLDER%', lorasSection);
+
+    return preparedPrompt;
+  };
+
   //Reset chat with appropriate system message when mode changes
   useEffect(() => {
     clearMessages();
-
     if (mode === 'extraction') {
-      sendMessage(EXTRACTION_PROMPT, 'system');
+      const systemPrompt = prepareSystemPrompt(EXTRACTION_PROMPT);
+      sendMessage(systemPrompt, 'system');
     } else {
-      sendMessage(CHAT_SYSTEM_PROMPT, 'system');
+      const systemPrompt = CHAT_SYSTEM_PROMPT;
+      sendMessage(systemPrompt, 'system');
     }
-  }, [mode]);
+  }, [mode, availableModels, availableSamplers, availableLoras]);
 
   //Initialize chat with system message if empty
   useEffect(() => {
     if (messages.length === 0) {
-      sendMessage(CHAT_SYSTEM_PROMPT, 'system');
+      const systemPrompt = prepareSystemPrompt(CHAT_SYSTEM_PROMPT);
+      sendMessage(systemPrompt, 'system');
     }
-  }, []);
+  }, [availableModels, availableSamplers, availableLoras]);
 
   const handleSendMessage = async () => {
     if (inputMessage.trim() && !isProcessing) {
@@ -86,59 +96,6 @@ export function AiChatConversation() {
       e.preventDefault();
       handleSendMessage();
     }
-  };
-
-  //Find best match for model name in available models
-  const findBestModelMatch = (modelName: string): string => {
-    if (!modelName || availableModels.length === 0) return availableModels[0] || '';
-
-    //Try exact match first
-    if (availableModels.includes(modelName)) return modelName;
-
-    //Try partial match (case insensitive)
-    const lowerModelName = modelName.toLowerCase();
-    for (const availableModel of availableModels) {
-      if (availableModel.toLowerCase().includes(lowerModelName) ||
-        lowerModelName.includes(availableModel.toLowerCase())) {
-        return availableModel;
-      }
-    }
-
-    //Default to first available model
-    return availableModels[0] || '';
-  };
-
-  //Find best match for sampler name in available samplers
-  const findBestSamplerMatch = (samplerName: string): string => {
-    if (!samplerName || availableSamplers.length === 0) return 'Euler a';
-
-    //Try exact match first
-    if (availableSamplers.includes(samplerName)) return samplerName;
-
-    //Try partial match (case insensitive)
-    const lowerSamplerName = samplerName.toLowerCase();
-    for (const availableSampler of availableSamplers) {
-      if (availableSampler.toLowerCase().includes(lowerSamplerName) ||
-        lowerSamplerName.includes(availableSampler.toLowerCase())) {
-        return availableSampler;
-      }
-    }
-
-    //Default to Euler a or first available sampler
-    return availableSamplers.includes('Euler a') ? 'Euler a' : availableSamplers[0] || 'Euler a';
-  };
-
-  //Validate and filter loras to only include available ones
-  const validateLoras = (lorasList: any[]): any[] => {
-    if (!lorasList || !Array.isArray(lorasList) || lorasList.length === 0) return [];
-
-    return lorasList.filter(lora => {
-      //Check if lora exists in available loras
-      return availableLoras.some(availableLora =>
-        availableLora.name === lora.name ||
-        availableLora.name.toLowerCase() === lora.name.toLowerCase()
-      );
-    });
   };
 
   //Extract prompt data from AI message
@@ -166,36 +123,23 @@ export function AiChatConversation() {
   const createPromptFromData = (data: any) => {
     if (!data || !data.prompt) return;
 
-    //Find best matches for sampler and model
-    const matchedSampler = findBestSamplerMatch(data.sampler || 'Euler a');
-    const matchedModel = findBestModelMatch(data.model || '');
-
-    //Validate loras exist in available loras
-    const validatedLoras = validateLoras(data.loras || []);
-
-    //Create a name from the prompt
-    let name = 'Generated Prompt';
-    if (data.prompt) {
-      const wordsToUse = data.prompt.split(/\s+/).slice(0, 4).join(' ');
-      name = wordsToUse + (data.prompt.split(/\s+/).length > 4 ? '...' : '');
-    }
-
-    //Create the prompt object
+    //Create the prompt object with data provided by AI
+    //Since AI already knows available models, samplers, and loras, it should provide valid ones
     const newPrompt: Prompt = {
       id: generateUUID(),
       isOpen: true,
-      name: name,
+      name: data.name || createNameFromPrompt(data.prompt),
       text: data.prompt,
       negativePrompt: data.negativePrompt || '',
       seed: typeof data.seed === 'number' ? data.seed : -1,
       steps: typeof data.steps === 'number' ? data.steps : 20,
-      sampler: matchedSampler,
-      model: matchedModel,
+      sampler: data.sampler || (availableSamplers.length > 0 ? availableSamplers[0] : 'Euler a'),
+      model: data.model || (availableModels.length > 0 ? availableModels[0] : ''),
       width: typeof data.width === 'number' ? data.width : 512,
       height: typeof data.height === 'number' ? data.height : 512,
       runCount: 1,
       tags: Array.isArray(data.tags) ? data.tags : [],
-      loras: validatedLoras,
+      loras: Array.isArray(data.loras) ? data.loras : [],
       currentRun: 0,
       status: 'idle',
     };
@@ -203,6 +147,14 @@ export function AiChatConversation() {
     //Set the generated prompt and show the form
     setGeneratedPrompt(newPrompt);
     setShowPromptForm(true);
+  };
+
+  //Create a name from the prompt text
+  const createNameFromPrompt = (promptText: string): string => {
+    if (!promptText) return 'Generated Prompt';
+
+    const wordsToUse = promptText.split(/\s+/).slice(0, 4).join(' ');
+    return wordsToUse + (promptText.split(/\s+/).length > 4 ? '...' : '');
   };
 
   //Save prompt to the prompt list
@@ -284,7 +236,7 @@ export function AiChatConversation() {
               setMode(checked ? 'extraction' : 'generation');
               setShowPromptForm(false);
               setGeneratedPrompt(null);
-              setInputMessage('');
+              // Keep the input message when switching modes
             }}
           />
         </div>
@@ -383,11 +335,10 @@ export function AiChatConversation() {
                         if (confirm('Are you sure you want to clear the chat?')) {
                           clearMessages();
                           //Reinitialize with system message
-                          if (mode === 'extraction') {
-                            sendMessage(EXTRACTION_PROMPT, 'system');
-                          } else {
-                            sendMessage(CHAT_SYSTEM_PROMPT, 'system');
-                          }
+                          const systemPrompt = prepareSystemPrompt(
+                            mode === 'extraction' ? EXTRACTION_PROMPT : CHAT_SYSTEM_PROMPT
+                          );
+                          sendMessage(systemPrompt, 'system');
                         }
                       }}
                       className="text-xs"
