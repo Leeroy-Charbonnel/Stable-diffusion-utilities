@@ -241,11 +241,12 @@ export function ImageViewer() {
 
     setIsLoading(true);
     try {
-      const movePromises = selectedImages.map(imageId =>
-        fileSystemApi.moveImageToFolder(imageId, targetFolder)
-      );
+      for (const imageId of selectedImages) {
+        await fileSystemApi.moveImageToFolder(imageId, targetFolder);
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
 
-      await Promise.all(movePromises);
+      setSelectedImages([]);
       await loadImagesFromServer();
       setMoveFolderDialogOpen(false);
     } catch (error) {
@@ -292,14 +293,9 @@ export function ImageViewer() {
     }
   };
 
-  const handleReRunClick = (image: ImageMetadata) => {
-    //TODO: Implement re-run functionality
-    console.log('Re-run image:', image);
-  };
 
-  const handleCreatePrompt = async () => {
-    if (!selectedImage) return;
 
+  const handleCreatePrompt = async (image: ImageMetadata) => {
     try {
       //Get existing prompts
       const existingPrompts = await promptsApi.getAllPrompts();
@@ -308,18 +304,18 @@ export function ImageViewer() {
       const newPrompt = {
         id: generateUUID(),
         isOpen: false,
-        name: selectedImage.prompt.substring(0, 20) + "...",
-        text: selectedImage.prompt,
-        negativePrompt: selectedImage.negativePrompt || "",
-        seed: selectedImage.seed,
-        steps: selectedImage.steps,
-        sampler: selectedImage.sampler,
-        model: selectedImage.model,
-        width: selectedImage.width,
-        height: selectedImage.height,
+        name: image.prompt.substring(0, 20) + "...",
+        text: image.prompt,
+        negativePrompt: image.negativePrompt || "",
+        seed: image.seed,
+        steps: image.steps,
+        sampler: image.sampler,
+        model: image.model,
+        width: image.width,
+        height: image.height,
         runCount: 1,
-        tags: [...selectedImage.tags],
-        loras: selectedImage.loras || [],
+        tags: [...image.tags],
+        loras: image.loras || [],
         currentRun: 0,
         status: "idle",
       };
@@ -342,16 +338,28 @@ export function ImageViewer() {
     return image.folder || 'default';
   };
 
+  // Fixed function for downloading images in ImageViewer.tsx
+
   const handleDetailsDownload = () => {
     if (!selectedImage || !imageUrl) return;
 
-    //Create a download link
-    const a = document.createElement('a');
-    a.href = imageUrl;
-    a.download = `${selectedImage.id}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    fetch(imageUrl)
+      .then(response => response.blob())
+      .then(blob => {
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `${selectedImage.id}.png`;
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+      })
+      .catch(error => {
+        console.error('Error downloading image:', error);
+      });
   };
 
   //If there are no images
@@ -460,7 +468,6 @@ export function ImageViewer() {
                 onMoveToFolder={handleMoveToFolder}
                 onCreatePrompt={handleCreatePrompt}
                 onDeleteClick={handleDeleteClick}
-                onReRunClick={handleReRunClick}
                 availableFolders={availableFolders}
               />
             ))}
@@ -498,7 +505,6 @@ export function ImageViewer() {
             image={selectedImage}
             imageUrl={imageUrl}
             onCreatePrompt={handleCreatePrompt}
-            onReRunImage={handleReRunClick}
             onDownload={handleDetailsDownload}
             onAddTag={async (tag) => {
               if (!selectedImage) return;
@@ -527,11 +533,8 @@ export function ImageViewer() {
             getImageFolder={getImageFolder}
             onNavigate={handleImageNavigation}
           />
-
         )
-
       }
-
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

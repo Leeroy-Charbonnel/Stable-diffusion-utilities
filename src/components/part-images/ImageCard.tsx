@@ -1,10 +1,16 @@
-import React from 'react';
-import { Card, CardFooter } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Folder, CheckSquare, Image as ImageIcon, Trash2, InfoIcon, Pencil } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import {
+  Folder,
+  CheckSquare,
+  Trash2,
+  Copy,
+  MoreVertical
+} from 'lucide-react';
 import { ImageMetadata } from '@/types';
 import { getImageUrl } from '@/services/fileSystemApi';
 
@@ -14,9 +20,8 @@ interface ImageCardProps {
   toggleSelection: (imageId: string) => void;
   onImageClick: (image: ImageMetadata) => void;
   onMoveToFolder: (imageId: string, folder: string) => void;
-  onCreatePrompt: () => void;
+  onCreatePrompt: (image: ImageMetadata) => void;
   onDeleteClick: (image: ImageMetadata) => void;
-  onReRunClick: (image: ImageMetadata) => void;
   availableFolders: string[];
 }
 
@@ -30,138 +35,173 @@ export function ImageCard({
   onDeleteClick,
   availableFolders,
 }: ImageCardProps) {
+  //Assume square images but respect actual dimensions if not square
   const imageFolder = image.folder;
   const imageUrl = getImageUrl(image.id);
   const formattedDate = new Date(image.createdAt).toLocaleDateString();
+  const truncatedPrompt = image.prompt.substring(0, 90);
+  const numberOfTagsToShow = 3;
 
   return (
     <Card
       key={image.id}
-      className={`overflow-hidden group relative ${isSelected ? 'ring-2 ring-primary' : 'hover:ring-1 hover:ring-accent-foreground/20'}`}
+      className={`p-0 gap-0 overflow-hidden relative rounded-lg m-0.5 transition-all h-full ${isSelected ? 'shadow-[0_0_0_2px_var(--primary)]' : 'hover:shadow-md'}`}
     >
-      {/* Selection Checkbox */}
-      <div className="absolute top-2 left-2 z-10">
+      {/*Quick Actions*/}
+      <div className="absolute w-full flex justify-between px-3 pt-3 items-center z-20 gap-2">
         <Checkbox
           checked={isSelected}
-          className="h-5 w-5 bg-background/80 rounded-sm shadow-md border-0 transition-all"
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleSelection(image.id);
-          }}
+          className="rounded-sm shadow-md transition-all"
+          onClick={(e) => { e.stopPropagation(); toggleSelection(image.id); }}
         />
-      </div>
 
-      {/* Quick Actions */}
-      <div className="absolute top-2 right-2 z-10 flex gap-1">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 bg-background/80 rounded-full hover:bg-background shadow-md">
-              <Folder className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-48" align="end">
-            <div className="space-y-2">
-              <h4 className="font-medium text-sm">Move to folder</h4>
-              <div className="space-y-1 max-h-48 overflow-y-auto">
-                {availableFolders.map(folder => (
-                  <div
-                    key={folder}
-                    className={`text-sm px-2 py-1.5 rounded cursor-pointer flex items-center ${imageFolder === folder
-                      ? 'bg-accent text-accent-foreground'
-                      : 'hover:bg-accent hover:text-accent-foreground'
-                      }`}
-                    onClick={() => {
-                      if (imageFolder !== folder) {
-                        onMoveToFolder(image.id, folder);
-                      }
-                    }}
-                  >
-                    {imageFolder === folder && <CheckSquare className="mr-2 h-4 w-4" />}
-                    {folder}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      {/* Image Preview */}
-      <div className="relative aspect-square overflow-hidden">
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={image.prompt}
-            className="object-cover w-full h-full cursor-pointer transition-transform duration-300 group-hover:scale-105"
-            onClick={() => onImageClick(image)}
-            loading="lazy"
-          />
-        ) : (
-          <div
-            className="w-full h-full flex items-center justify-center bg-muted cursor-pointer"
-            onClick={() => onImageClick(image)}
+        <div className="flex gap-1">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-8 w-8 p-0 bg-background/90 backdrop-blur-sm rounded-full shadow-md"
+            onClick={(e) => { e.stopPropagation(); onCreatePrompt && onCreatePrompt(image); }}
+            title="Copy prompt"
           >
-            <ImageIcon className="h-12 w-12 text-muted-foreground" />
-          </div>
-        )}
+            <Copy className="h-4 w-4" />
+          </Button>
 
-        {/* Hover Overlay */}
-        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-4">
-          <div className="flex gap-2">
-            <Button size="sm" variant="secondary" onClick={() => onImageClick(image)} className="h-8"><InfoIcon className="h-3.5 w-3.5" /></Button>
-            <Button size="sm" variant="secondary" onClick={onCreatePrompt} className="h-8"><Pencil className="h-3.5 w-3.5" /></Button>
-            <Button size="sm" variant="destructive" onClick={() => onDeleteClick(image)} className="h-8"><Trash2 className="h-3.5 w-3.5" /></Button>
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-8 w-8 p-0 bg-background/90 backdrop-blur-sm rounded-full shadow-md"
+                title="Move to folder"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Folder className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-52" align="end">
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm">Move to folder</h4>
+                <div className="space-y-1 max-h-52 overflow-y-auto">
+                  {availableFolders.map(folder => (
+                    <div
+                      key={folder}
+                      className={`text-sm px-2 py-1.5 rounded cursor-pointer flex items-center ${imageFolder === folder
+                        ? 'bg-accent text-accent-foreground'
+                        : 'hover:bg-accent hover:text-accent-foreground'
+                        }`}
+                      onClick={() => {
+                        if (imageFolder !== folder) { onMoveToFolder(image.id, folder); }
+                      }}
+                    >
+                      {imageFolder === folder && <CheckSquare className="mr-2 h-4 w-4" />}
+                      {folder}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
 
-          {/* Display Size */}
-          <div className="absolute bottom-2 left-2 text-xs text-white/80 bg-black/50 px-2 py-1 rounded">
-            {image.width}×{image.height}
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-8 w-8 p-0 bg-background/90 backdrop-blur-sm rounded-full shadow-md"
+                title="Options"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-52" align="end">
+              <div className="space-y-2">
+                {/*Main Info Section*/}
+                <div className="flex items-center text-sm py-1">
+                  <span className="flex-1">Dimensions:</span>
+                  <Badge variant="outline" className="ml-2">
+                    {image.width}×{image.height}
+                  </Badge>
+                </div>
 
-          {/* Display Date */}
-          <div className="absolute bottom-2 right-2 text-xs text-white/80 bg-black/50 px-2 py-1 rounded">
-            {formattedDate}
+                <div className="flex items-center text-sm py-1">
+                  <span className="flex-1">Date:</span>
+                  <Badge variant="outline" className="ml-2">
+                    {formattedDate}
+                  </Badge>
+                </div>
+
+                <Separator />
+
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteClick(image);
+                  }}
+                  className="w-full h-8"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+
+      {/*Image Preview*/}
+      <div
+        className="relative overflow-hidden bg-muted cursor-pointer group min-h-64"
+        style={{ aspectRatio: `${image.width} / ${image.height}` }}
+        onClick={() => onImageClick(image)}
+      >
+        <img
+          src={imageUrl}
+          alt={image.prompt}
+          className="object-cover w-full h-full transition-all duration-300 group-hover:scale-105"
+          loading="lazy"
+        />
+
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-4 bg-gradient-to-t from-black/90 via-black/70 to-transparent">
+          <div className="mt-auto space-y-3">
+            <div className="w-full">
+              <p className="text-sm font-medium text-white leading-tight line-clamp-3" title={image.prompt}>
+                {truncatedPrompt}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Card Footer */}
-      <CardFooter className="flex flex-col items-start p-3">
-        <div className="flex justify-between w-full items-start mb-2">
-          <p className="text-sm line-clamp-2 font-medium leading-tight">
-            {image.prompt.length > 80
-              ? image.prompt.substring(0, 80) + "..."
-              : image.prompt}
-          </p>
-        </div>
-
-        <div className="flex justify-between w-full">
-          {/* Folder Badge */}
+      {/*Tags and Folder - Now below the image*/}
+      <div className="p-2 bg-background">
+        <div className="flex flex-wrap gap-1 justify-end items-center">
+          {/*Folder Badge - Always first with distinct styling*/}
           {imageFolder !== 'default' && (
-            <Badge variant="outline" className="rounded-full">
-              <Folder className="h-3 w-3 mr-1" />{imageFolder}
+            <Badge variant="outline" className="text-xs rounded-full px-2 h-6 border-primary/30 bg-primary/5 text-primary-foreground flex items-center">
+              <Folder className="h-3 w-3 mr-1 text-primary" />{imageFolder}
             </Badge>
           )}
 
-          <div className="flex-1" />
-
-          {/* Tags */}
+          {/*Regular Tags*/}
           {image.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1 justify-end">
-              {image.tags.slice(0, 3).map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-xs rounded-full px-2">
+            <>
+              {image.tags.slice(0, numberOfTagsToShow).map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-xs rounded-full px-2 h-6 bg-muted/80">
                   {tag}
                 </Badge>
               ))}
-              {image.tags.length > 3 && (
-                <Badge variant="secondary" className="text-xs rounded-full px-2">
-                  +{image.tags.length - 3}
+              {image.tags.length > numberOfTagsToShow && (
+                <Badge variant="secondary" className="text-xs rounded-full px-2 h-6 bg-muted/80">
+                  +{image.tags.length - numberOfTagsToShow}
                 </Badge>
               )}
-            </div>
+            </>
           )}
         </div>
-      </CardFooter>
+      </div>
     </Card>
   );
 }

@@ -259,6 +259,10 @@ const server = Bun.serve({
               { status: 400, headers: corsHeaders });
           }
 
+          //Create folder if it doesn't exist
+          const folderPath = join(OUTPUT_DIR, folder);
+          await ensureDirectories(folderPath);
+
           const metadata = await readMetadata();
           const imageIndex = metadata.findIndex(img => img.id === imageId);
 
@@ -270,16 +274,10 @@ const server = Bun.serve({
           const image = metadata[imageIndex];
           const oldPath = image.path;
 
-          //Create folder if it doesn't exist
-          const folderPath = join(OUTPUT_DIR, folder);
-          await ensureDirectories(folderPath);
-
-          //Move the file
           const filename = `${imageId}.png`;
           const newPath = join(folderPath, filename);
 
           try {
-            //Copy then delete (to handle cross-device moves)
             if (existsSync(oldPath)) {
               copyFileSync(oldPath, newPath);
               unlinkSync(oldPath);
@@ -290,9 +288,13 @@ const server = Bun.serve({
               { status: 500, headers: corsHeaders });
           }
 
-          //Update metadata
           metadata[imageIndex] = { ...image, path: newPath, folder };
-          await saveMetadata(metadata);
+
+          const metadataSaved = await saveMetadata(metadata);
+          if (!metadataSaved) {
+            return Response.json({ success: false, error: 'Failed to update metadata' },
+              { status: 500, headers: corsHeaders });
+          }
 
           return Response.json({
             success: true,

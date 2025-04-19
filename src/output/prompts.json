@@ -1,10 +1,10 @@
 [
   {
-    "id": "f16768b1-0b50-435a-ba4e-e7c6b6ff1412",
+    "id": "8c44455c-ace7-4723-bef1-95ea4be39a79",
     "isOpen": false,
-    "name": "An orchid blooming a...",
-    "text": "An orchid blooming at night in a lush jungle, its petals glowing with soft bioluminescent blue and purple hues. Dewdrops sparkle on the flower, and fireflies dance in the background. Sci-fi botanical illustration, vibrant colors, mystical ambiance.",
-    "negativePrompt": "",
+    "name": "A delicate rose scul...",
+    "text": "A delicate rose sculpted entirely from translucent glass and shimmering crystal, with light refracting through its petals like a prism. Set against a soft black velvet background to enhance the glow and elegance. Hyperrealistic style, high detail, ethereal lighting.",
+    "negativePrompt": "ffaaaaffaaa",
     "seed": -1,
     "steps": 20,
     "sampler": "Euler a",
@@ -14,18 +14,29 @@
     "runCount": 1,
     "tags": [
       "flower",
-      "glowing"
+      "rose",
+      "crystal",
+      "glass"
     ],
-    "loras": [],
+    "loras": [
+      {
+        "name": "Sepia",
+        "weight": 1
+      },
+      {
+        "name": "bichu-v0612",
+        "weight": 1
+      }
+    ],
     "currentRun": 0,
     "status": "idle"
   },
   {
-    "id": "1e957654-c3b3-493a-b1b5-4946115d7bd2",
+    "id": "cacc5cfe-2b50-48a7-83b7-77b2c2c10b63",
     "isOpen": false,
-    "name": "An orchid blooming a...",
-    "text": "An orchid blooming at night in a lush jungle, its petals glowing with soft bioluminescent blue and purple hues. Dewdrops sparkle on the flower, and fireflies dance in the background. Sci-fi botanical illustration, vibrant colors, mystical ambiance.",
-    "negativePrompt": "",
+    "name": "A delicate rose scul...",
+    "text": "A delicate rose sculpted entirely from translucent glass and shimmering crystal, with light refracting through its petals like a prism. Set against a soft black velvet background to enhance the glow and elegance. Hyperrealistic style, high detail, ethereal lighting.",
+    "negativePrompt": "ffaaaaffaaa",
     "seed": -1,
     "steps": 20,
     "sampler": "Euler a",
@@ -35,9 +46,20 @@
     "runCount": 1,
     "tags": [
       "flower",
-      "glowing"
+      "rose",
+      "crystal",
+      "glass"
     ],
-    "loras": [],
+    "loras": [
+      {
+        "name": "Sepia",
+        "weight": 1
+      },
+      {
+        "name": "bichu-v0612",
+        "weight": 1
+      }
+    ],
     "currentRun": 0,
     "status": "idle"
   }
