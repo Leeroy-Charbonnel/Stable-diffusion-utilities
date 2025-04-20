@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Play, StopCircle, CheckCircle, XCircle } from 'lucide-react';
 import { ExecutionStatus, Prompt } from '@/types';
+import { Separator } from '@/components/ui/separator';
 
 interface ExecutionPanelProps {
   prompts: Prompt[];
@@ -36,31 +37,32 @@ export function ExecutionPanel({
     <div className="h-full flex flex-col p-4">
       <h3 className="text-lg font-semibold mb-4">Execution Status</h3>
 
+      <Separator className='my-2' />
+
       {/* Progress Section */}
       <div className="mb-4">
         <div className="flex justify-between text-sm font-medium mb-1">
           <span>Progress</span>
           <span>{currentPromptIndex} of {promptsToRunCount} ({progressPercentage}%)</span>
         </div>
-        <Progress value={progressPercentage} className="h-2" />
+        <Progress value={progressPercentage} className="h-1" />
       </div>
+      <Separator className='my-2' />
 
       {/* Counters Section */}
       <div className="grid grid-cols-2 gap-2 mb-4">
-        <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md">
-          <div className="flex items-center text-green-600 dark:text-green-400">
+        <div className="p-3 rounded-md flex">
+          <div className="flex items-center">
             <CheckCircle className="h-4 w-4 mr-2" />
-            <span className="font-medium">Success</span>
+            <span>Success {successCount}</span>
           </div>
-          <p className="text-2xl font-bold mt-1">{successCount}</p>
         </div>
 
-        <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-md">
-          <div className="flex items-center text-red-600 dark:text-red-400">
+        <div className="p-3 rounded-md flex">
+          <div className="flex items-center ">
             <XCircle className="h-4 w-4 mr-2" />
-            <span className="font-medium">Failed</span>
+            <span>Failed {failureCount}</span>
           </div>
-          <p className="text-2xl font-bold mt-1">{failureCount}</p>
         </div>
       </div>
 

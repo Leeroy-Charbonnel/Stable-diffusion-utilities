@@ -151,7 +151,7 @@ export function ImageDetailsDialog({
       >
         <div
           ref={dialogRef}
-          className="dark text-foreground flex flex-col p-0 gap-0 overflow-hidden w-[90vw] h-[90vh] max-w-[1600px] max-h-[900px] fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+          className="dark text-foreground flex flex-col p-0 gap-0 overflow-hidden fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Background blur effect using the image itself */}

@@ -45,13 +45,13 @@ export function FilterPanel({
   const hasActiveFilters = selectedTags.length > 0 || selectedModels.length > 0 || selectedLoras.length > 0 || selectedFolders.length > 0;
 
   return (
-    <Card className="p-4">
-      <CardHeader className="p-0 pb-4">
-        <CardTitle className="text-lg flex items-center">
+    <div className="p-4">
+      <div className="p-0 pb-4">
+        <div className="text-lg flex items-center">
           <Sliders className="h-4 w-4 mr-2" />
           Filter Options
-        </CardTitle>
-      </CardHeader>
+        </div>
+      </div>
 
       {/* Tags Filter */}
       <div className="flex flex-col gap-5">
@@ -172,6 +172,6 @@ export function FilterPanel({
           </div>
         )}
       </div>
-    </Card>
+    </div>
   );
 }

@@ -7,6 +7,7 @@ import { useApi } from '@/contexts/contextSD';
 import { ImageMetadata } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
 //Import our component files
 import { FilterPanel } from './FilterPanel';
@@ -17,7 +18,7 @@ import { toast } from 'sonner';
 import { generateUUID } from '@/lib/utils';
 
 export function ImageViewer() {
-  const { apiFS } = useApi();
+  const { apiFS, isLoading: isApiLoading } = useApi();
   const { addPrompt } = usePrompt();
 
   const [generatedImages, setGeneratedImages] = useState<ImageMetadata[]>([]);
@@ -77,6 +78,19 @@ export function ImageViewer() {
   useEffect(() => {
     loadImagesFromServer();
     loadFolders();
+  }, []);
+
+  //Listen for image-saved events to refresh the image list (for automatic refresh after execution)
+  useEffect(() => {
+    const handleImageSaved = () => {
+      loadImagesFromServer();
+    };
+
+    window.addEventListener('image-saved', handleImageSaved);
+
+    return () => {
+      window.removeEventListener('image-saved', handleImageSaved);
+    };
   }, []);
 
   //Refresh images and folders
@@ -302,16 +316,16 @@ export function ImageViewer() {
 
     setIsLoading(true);
     try {
-      // Update image metadata
+      //Update image metadata
       const success = await apiFS.updateImageMetadata(imageId, { name });
 
       if (success) {
-        // Update local state if the selected image is the one being updated
+        //Update local state if the selected image is the one being updated
         if (selectedImage && selectedImage.id === imageId) {
           setSelectedImage({ ...selectedImage, name });
         }
 
-        // Refresh image list
+        //Refresh image list
         await loadImagesFromServer();
       } else {
         console.error('Failed to update image name');
@@ -387,9 +401,9 @@ export function ImageViewer() {
       <div className="w-full max-w-[1600px] mx-auto">
         <div className="flex items-center justify-between mb-4">
           <div className="flex gap-2">
-            <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-              {isLoading ? 'Refreshing...' : 'Refresh'}
+            <Button onClick={handleRefresh} variant="outline" disabled={isLoading || isApiLoading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading || isApiLoading ? 'animate-spin' : ''}`} />
+              {isLoading || isApiLoading ? 'Refreshing...' : 'Refresh'}
             </Button>
             <Button onClick={openOutputFolder} variant="outline">
               <FolderOpen className="mr-2 h-4 w-4" />
@@ -412,110 +426,119 @@ export function ImageViewer() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 w-full max-w-[1600px] mx-auto">
-      <div className="flex-1">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex gap-2">
-            <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-              {isLoading ? 'Refreshing...' : 'Refresh'}
-            </Button>
-            <Button onClick={openOutputFolder} variant="outline">
-              <FolderOpen className="mr-2 h-4 w-4" />
-              Open Folder
-            </Button>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Search images..." className="pl-8 w-64" value={searchQuery} onChange={handleSearchChange} />
-            </div>
-          </div>
-
-          {selectedImages.length > 0 && (
+    <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-8rem)]">
+      {/* Main Content - Left Side */}
+      <ResizablePanel defaultSize={75} minSize={30}>
+        <div className="h-full flex flex-col">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex gap-2">
-              <Button
-                onClick={selectAllImages}
-                variant="outline"
-                size="sm"
-                className="flex items-center"
-              >
-                <CheckSquare className="mr-2 h-4 w-4" />
-                {selectedImages.length === filteredImages.length ? 'Deselect All' : 'Select All'}
+              <Button onClick={handleRefresh} variant="outline" disabled={isLoading || isApiLoading}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${isLoading || isApiLoading ? 'animate-spin' : ''}`} />
+                {isLoading || isApiLoading ? 'Refreshing...' : 'Refresh'}
               </Button>
-
-              <Button
-                onClick={() => setMoveFolderDialogOpen(true)}
-                variant="outline"
-                size="sm"
-                className="flex items-center"
-              >
-                <FolderClosed className="mr-2 h-4 w-4" />
-                Move ({selectedImages.length})
+              <Button onClick={openOutputFolder} variant="outline">
+                <FolderOpen className="mr-2 h-4 w-4" />
+                Open Folder
               </Button>
-
-              <Button
-                onClick={handleDeleteSelected}
-                variant="destructive"
-                size="sm"
-                className="flex items-center"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete ({selectedImages.length})
-              </Button>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input type="search" placeholder="Search images..." className="pl-8 w-64" value={searchQuery} onChange={handleSearchChange} />
+              </div>
             </div>
-          )}
-        </div>
 
-        {filteredImages.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Matching Images</h3>
-              <p className="text-muted-foreground">
-                Try adjusting your filters or search criteria.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredImages.map((image) => (
-              <ImageCard
-                key={image.id}
-                image={image}
-                isSelected={selectedImages.includes(image.id)}
-                toggleSelection={toggleImageSelection}
-                onImageClick={handleImageClick}
-                onMoveToFolder={handleMoveToFolder}
-                onCreatePrompt={handleCreatePrompt}
-                onDeleteClick={handleDeleteClick}
-                availableFolders={availableFolders}
-              />
-            ))}
+            {selectedImages.length > 0 && (
+              <div className="flex gap-2">
+                <Button
+                  onClick={selectAllImages}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center"
+                >
+                  <CheckSquare className="mr-2 h-4 w-4" />
+                  {selectedImages.length === filteredImages.length ? 'Deselect All' : 'Select All'}
+                </Button>
+
+                <Button
+                  onClick={() => setMoveFolderDialogOpen(true)}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center"
+                >
+                  <FolderClosed className="mr-2 h-4 w-4" />
+                  Move ({selectedImages.length})
+                </Button>
+
+                <Button
+                  onClick={handleDeleteSelected}
+                  variant="destructive"
+                  size="sm"
+                  className="flex items-center"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete ({selectedImages.length})
+                </Button>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+
+          <div className="flex-1 overflow-auto pr-2">
+            {filteredImages.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Matching Images</h3>
+                  <p className="text-muted-foreground">
+                    Try adjusting your filters or search criteria.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredImages.map((image) => (
+                  <ImageCard
+                    key={image.id}
+                    image={image}
+                    isSelected={selectedImages.includes(image.id)}
+                    toggleSelection={toggleImageSelection}
+                    onImageClick={handleImageClick}
+                    onMoveToFolder={handleMoveToFolder}
+                    onCreatePrompt={handleCreatePrompt}
+                    onDeleteClick={handleDeleteClick}
+                    availableFolders={availableFolders}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </ResizablePanel>
+
+      <ResizableHandle />
 
       {/* Filters Panel (right side) */}
-      <div className={`w-full md:w-64 space-y-6 block`}>
-        <FilterPanel
-          availableTags={availableTags}
-          selectedTags={selectedTags}
-          toggleTagFilter={toggleTagFilter}
+      <ResizablePanel defaultSize={25} minSize={15}>
+        <div className="h-full p-1">
+          <FilterPanel
+            availableTags={availableTags}
+            selectedTags={selectedTags}
+            toggleTagFilter={toggleTagFilter}
 
-          availableModels={availableModels}
-          selectedModels={selectedModels}
-          toggleModelFilter={toggleModelFilter}
+            availableModels={availableModels}
+            selectedModels={selectedModels}
+            toggleModelFilter={toggleModelFilter}
 
-          availableLoras={availableLoras}
-          selectedLoras={selectedLoras}
-          toggleLoraFilter={toggleLoraFilter}
+            availableLoras={availableLoras}
+            selectedLoras={selectedLoras}
+            toggleLoraFilter={toggleLoraFilter}
 
-          availableFolders={availableFolders}
-          selectedFolders={selectedFolders}
-          onFolderSelect={toggleFolderFilter}
+            availableFolders={availableFolders}
+            selectedFolders={selectedFolders}
+            onFolderSelect={toggleFolderFilter}
 
-          clearAllFilters={clearAllFilters}
-        />
-      </div>
+            clearAllFilters={clearAllFilters}
+          />
+        </div>
+      </ResizablePanel>
 
       {
         selectedImage && (
@@ -620,6 +643,6 @@ export function ImageViewer() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </ResizablePanelGroup>
   );
 }

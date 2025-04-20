@@ -17,7 +17,7 @@ import { AiSettingsModal } from './AiSettingsModal';
 export function AiChat() {
   const { messages, isProcessing, error, settings, sendMessage, clearMessages, updateMessageContent } = useAi();
   const { addPrompt } = usePrompt();
-  const { availableSamplers, availableModels, availableLoras } = useApi();
+  const { availableSamplers, availableModels, availableLoras, isLoading: isApiLoading } = useApi();
 
   const [inputMessage, setInputMessage] = useState('');
   const [mode, setMode] = useState<'generation' | 'extraction'>('generation');
@@ -237,7 +237,7 @@ export function AiChat() {
             )}
           </div>
 
-          {/* Message Area */}
+          {/* Message Area - Fixed the scroll implementation */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {messages.filter(m => m.role !== 'system').length === 0 ? (
               <div className="flex-1 flex items-center justify-center text-muted-foreground">
@@ -250,12 +250,14 @@ export function AiChat() {
                 </div>
               </div>
             ) : (
-              <ScrollArea className="flex-1 px-4 py-2">
-                <div className="space-y-1">
-                  {messages.map(renderMessage)}
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
+              <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full w-full">
+                  <div className="p-4">
+                    {messages.map(renderMessage)}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </ScrollArea>
+              </div>
             )}
           </div>
 
@@ -273,7 +275,7 @@ export function AiChat() {
               />
               <Button
                 onClick={handleSendMessage}
-                disabled={!inputMessage.trim() || isProcessing}
+                disabled={!inputMessage.trim() || isProcessing || isApiLoading}
                 className="h-10 w-10 p-0"
               >
                 {isProcessing ?
@@ -355,6 +357,7 @@ export function AiChat() {
               <Button
                 onClick={savePromptToList}
                 className="w-full"
+                disabled={isApiLoading}
               >
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Save to Prompt List

@@ -189,7 +189,7 @@ export function PromptsManager() {
     <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-8rem)]">
       {/* Main Content - Left Side */}
       <ResizablePanel defaultSize={75} minSize={30}>
-        <div className="h-full flex flex-col">
+        <div className="h-full flex flex-col p-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Prompt List</h2>
             <Button
@@ -210,7 +210,7 @@ export function PromptsManager() {
             </Alert>
           )}
 
-          <div className="flex-1 overflow-auto space-y-3 pr-2">
+          <div className="flex-1 overflow-auto space-y-3">
             {prompts.map((prompt) => (
               <PromptCard
                 key={prompt.id}

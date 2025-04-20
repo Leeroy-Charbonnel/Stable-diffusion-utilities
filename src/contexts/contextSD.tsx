@@ -34,9 +34,9 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [availableLoras, setAvailableLoras] = useState<any[]>([]);
 
-
   useEffect(() => {
     const initializeApi = async () => {
+      setIsLoading(true);
       const connected = await checkConnection();
 
       if (connected) {
@@ -54,7 +54,10 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         } catch (error) {
           console.error('Failed to load API data:', error);
         } finally {
+          setIsLoading(false);
         }
+      } else {
+        setIsLoading(false);
       }
     };
 
@@ -114,8 +117,6 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       setIsLoading(false);
     }
   };
-
-
 
   const value = {
     apiSD: apiSD,

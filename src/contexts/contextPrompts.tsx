@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { Prompt } from '@/types';
 import * as promptsApi from '@/services/apiPrompt';
 import { toast } from 'sonner';
-import { DEBOUNCE_DELAY, MAX_DEBOUNCE_TIME } from '@/lib/constants';
+import { DEBOUNCE_DELAY } from '@/lib/constants';
 
 interface PromptContextType {
     prompts: Prompt[];
@@ -28,8 +28,6 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const pendingUpdatesRef = useRef<{ [id: string]: Prompt }>({});
     //Timer for debouncing
     const debouncerRef = useRef<NodeJS.Timeout | null>(null);
-    //Last save timestamp
-    const lastSaveTimeRef = useRef<number>(0);
 
     //Load prompts from the server
     const loadPrompts = async (): Promise<void> => {
@@ -50,9 +48,6 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const savePromptsToServer = useCallback(async () => {
         //Only save if there are pending updates
         if (Object.keys(pendingUpdatesRef.current).length === 0) return;
-
-        //Record the save time
-        lastSaveTimeRef.current = Date.now();
 
         //Create updated prompts array with all pending changes
         const updatedPrompts = prompts.map(prompt => {
@@ -78,19 +73,9 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
     }, [prompts]);
 
-    //Debounced prompt update
     const debouncedSave = useCallback(() => {
-        if (debouncerRef.current) {
-            clearTimeout(debouncerRef.current);
-        }
-
-        //Check if MAX_DEBOUNCE_TIME has passed since last save
-        const timeSinceLastSave = Date.now() - lastSaveTimeRef.current;
-        const timeoutDelay = timeSinceLastSave >= MAX_DEBOUNCE_TIME ? 0 : DEBOUNCE_DELAY;
-
-        debouncerRef.current = setTimeout(() => {
-            savePromptsToServer();
-        }, timeoutDelay);
+        if (debouncerRef.current) clearTimeout(debouncerRef.current);
+        debouncerRef.current = setTimeout(() => { savePromptsToServer(); }, DEBOUNCE_DELAY);
     }, [savePromptsToServer]);
 
     //Cleanup timeout on unmount
