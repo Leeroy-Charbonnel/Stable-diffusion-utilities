@@ -10,7 +10,7 @@ import { AlertCircle, BrainCog, Send, RefreshCw, Trash2, Image, ListChecks, Chec
 import { useAi } from '@/contexts/AiContext';
 import { usePrompt } from '@/contexts/PromptContext';
 import { ChatMessage, Prompt } from '@/types';
-import { useApi } from '@/contexts/ApiContext';
+import { useApi } from '@/contexts/SdContext';
 import { generateUUID } from '@/lib/utils';
 import { PromptForm } from '../part-prompt/PromptForm';
 import { CHAT_SYSTEM_PROMPT, EXTRACTION_PROMPT } from '@/lib/constantsAI';

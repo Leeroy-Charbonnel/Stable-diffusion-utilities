@@ -1,7 +1,31 @@
 [
   {
     "id": "198d7c24-6603-41c1-a881-380a037d4bb4",
-    "isOpen": true,
+    "isOpen": false,
+    "name": "Imagine a serene mountain...",
+    "text": "Imagine a serene mountain landscape at dusk, with a crystal-clear lake reflecting the colorful sky. The scene includes a lone cabin nestled among tall pine trees, emitting a warm glow from its windows. The sky is painted in hues of orange, pink, and purple, casting a tranquil atmosphere over the entire setting.",
+    "negativePrompt": "Avoid any urban elements or modern technology in the scene.",
+    "seed": -1,
+    "steps": 20,
+    "sampler": "Euler a",
+    "model": "hassakuXLIllustrious_v21.safetensors [d9edf21821]",
+    "width": 512,
+    "height": 512,
+    "runCount": 1,
+    "tags": [
+      "landscape",
+      "mountain",
+      "dusk",
+      "cabin",
+      "lake"
+    ],
+    "loras": [],
+    "currentRun": 0,
+    "status": "idle"
+  },
+  {
+    "id": "198d7c24-6603-41c1-a881-380a037d4bb4",
+    "isOpen": false,
     "name": "Imagine a serene mountain...",
     "text": "Imagine a serene mountain landscape at dusk, with a crystal-clear lake reflecting the colorful sky. The scene includes a lone cabin nestled among tall pine trees, emitting a warm glow from its windows. The sky is painted in hues of orange, pink, and purple, casting a tranquil atmosphere over the entire setting.",
     "negativePrompt": "Avoid any urban elements or modern technology in the scene.",

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { PromptsManager } from '@/components/part-prompt/PromptsManager';
 import { ImageViewer } from '@/components/part-images/ImageViewer';
 import { AiChat } from '@/components/part-ai/AiChat';
-import { ApiProvider } from '@/contexts/ApiContext';
+import { SdProvider } from '@/contexts/SdContext';
 import { AiProvider } from '@/contexts/AiContext';
 import { PromptProvider } from '@/contexts/PromptContext';
 import { Sidebar } from '@/components/Sidebar';
@@ -24,7 +24,7 @@ function App() {
   }, [activeTab]);
 
   return (
-    <ApiProvider>
+    <SdProvider>
       <PromptProvider>
         <AiProvider>
 
@@ -42,7 +42,7 @@ function App() {
           <Toaster />
         </AiProvider>
       </PromptProvider>
-    </ApiProvider>
+    </SdProvider>
   );
 }
 

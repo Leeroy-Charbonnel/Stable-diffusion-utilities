@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { PlusCircle, Play, CheckCircle, AlertCircle, StopCircle } from 'lucide-react';
 import { ExecutionStatus, Prompt } from '@/types';
 import { PromptCard } from './PromptCard';
-import { useApi } from '@/contexts/ApiContext';
+import { useApi } from '@/contexts/SdContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { generateUUID } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
