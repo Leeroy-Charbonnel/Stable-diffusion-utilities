@@ -354,7 +354,6 @@ export function AiChat() {
             <div className="p-2 border-t">
               <Button
                 onClick={savePromptToList}
-                disabled={isLoadingApiData}
                 className="w-full"
               >
                 <PlusCircle className="h-4 w-4 mr-2" />
