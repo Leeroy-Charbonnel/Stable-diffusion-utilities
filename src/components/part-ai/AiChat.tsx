@@ -113,18 +113,6 @@ export function AiChat() {
         return;
       }
     } catch (error) {
-      //Fallback to previous JSON block extraction
-      const jsonMatch = message.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      if (jsonMatch && jsonMatch[1]) {
-        try {
-          const extractedData = JSON.parse(jsonMatch[1]);
-          createPromptFromData(extractedData);
-          return;
-        } catch (extractError) {
-          console.error('Error parsing JSON from message:', extractError);
-        }
-      }
-      console.error('Response not in expected format:', error);
     }
   };
 
