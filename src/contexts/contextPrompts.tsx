@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { Prompt } from '@/types';
 import * as promptsApi from '@/services/apiPrompt';
 import { toast } from 'sonner';
-import { DEBOUNCE_DELAY } from '@/lib/constants';
+import { DEBOUNCE_DELAY, MAX_DEBOUNCE_TIME } from '@/lib/constants';
 
 interface PromptContextType {
     prompts: Prompt[];
@@ -24,10 +24,12 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Keep a ref to pending updates to avoid race conditions
+    //Keep a ref to pending updates to avoid race conditions
     const pendingUpdatesRef = useRef<{ [id: string]: Prompt }>({});
-    // Timer for debouncing
+    //Timer for debouncing
     const debouncerRef = useRef<NodeJS.Timeout | null>(null);
+    //Last save timestamp
+    const lastSaveTimeRef = useRef<number>(0);
 
     //Load prompts from the server
     const loadPrompts = async (): Promise<void> => {
@@ -44,23 +46,26 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
     };
 
-    // Function to actually save all prompts to server (called after debounce)
+    //Function to actually save all prompts to server (called after debounce)
     const savePromptsToServer = useCallback(async () => {
         //Only save if there are pending updates
         if (Object.keys(pendingUpdatesRef.current).length === 0) return;
 
-        // Create updated prompts array with all pending changes
+        //Record the save time
+        lastSaveTimeRef.current = Date.now();
+
+        //Create updated prompts array with all pending changes
         const updatedPrompts = prompts.map(prompt => {
             const pendingUpdate = pendingUpdatesRef.current[prompt.id];
             return pendingUpdate || prompt;
         });
 
         try {
-            // Don't set loading state for debounced updates to prevent UI flicker
+            //Don't set loading state for debounced updates to prevent UI flicker
             const success = await promptsApi.saveAllPrompts(updatedPrompts);
 
             if (success) {
-                // Only update state if save was successful
+                //Only update state if save was successful
                 setPrompts(updatedPrompts);
             } else {
                 console.error('Failed to save prompts to server');
@@ -68,30 +73,38 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         } catch (error) {
             console.error('Error saving prompts:', error);
         } finally {
-            // Clear pending updates
+            //Clear pending updates
             pendingUpdatesRef.current = {};
         }
     }, [prompts]);
 
-    // Debounced prompt update
+    //Debounced prompt update
     const debouncedSave = useCallback(() => {
         if (debouncerRef.current) {
             clearTimeout(debouncerRef.current);
         }
 
+        //Check if MAX_DEBOUNCE_TIME has passed since last save
+        const timeSinceLastSave = Date.now() - lastSaveTimeRef.current;
+        const timeoutDelay = timeSinceLastSave >= MAX_DEBOUNCE_TIME ? 0 : DEBOUNCE_DELAY;
+
         debouncerRef.current = setTimeout(() => {
             savePromptsToServer();
-        }, DEBOUNCE_DELAY);
+        }, timeoutDelay);
     }, [savePromptsToServer]);
 
-    // Cleanup timeout on unmount
+    //Cleanup timeout on unmount
     useEffect(() => {
         return () => {
             if (debouncerRef.current) {
                 clearTimeout(debouncerRef.current);
+                //Force save any pending updates on unmount
+                if (Object.keys(pendingUpdatesRef.current).length > 0) {
+                    savePromptsToServer();
+                }
             }
         };
-    }, []);
+    }, [savePromptsToServer]);
 
     const addPrompt = async (prompt: Prompt): Promise<boolean> => {
         setIsLoading(true);
@@ -118,22 +131,22 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     //Update an existing prompt
     const updatePrompt = async (updatedPrompt: Prompt): Promise<boolean> => {
-        // For certain operations that need to be immediate (run counts, execution status)
+        //For certain operations that need to be immediate (run counts, execution status)
         const needsImmediateUpdate = updatedPrompt.currentRun > 0 || updatedPrompt.status !== 'idle';
 
-        // Immediately update the UI with the changes
+        //Immediately update the UI with the changes
         setPrompts(prev =>
             prev.map(p => p.id === updatedPrompt.id ? updatedPrompt : p)
         );
 
-        // Store this update as pending
+        //Store this update as pending
         pendingUpdatesRef.current[updatedPrompt.id] = updatedPrompt;
 
         if (needsImmediateUpdate) {
-            // Save immediately for execution-related updates
+            //Save immediately for execution-related updates
             return savePromptsToServer().then(() => true).catch(() => false);
         } else {
-            // Otherwise debounce the save
+            //Otherwise debounce the save
             debouncedSave();
             return Promise.resolve(true);
         }

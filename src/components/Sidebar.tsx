@@ -9,7 +9,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
-    const { isConnected, error: apiError } = useApi();
+    const { isConnected } = useApi();
 
     return (
         <div className="w-64 border-r border-border h-screen flex flex-col">
@@ -39,19 +39,13 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                 {isConnected ? (
                     <Alert className="mb-4 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
                         <CheckCircle className="h-4 w-4" />
-                        <AlertTitle>Connected</AlertTitle>
-                        <AlertDescription>
-                            Successfully connected to Stable Diffusion API.
-                        </AlertDescription>
+                        <AlertTitle>Connected to SD</AlertTitle>
                     </Alert>
                 ) : (
                     <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Not Connected</AlertTitle>
-                        <AlertDescription>
-                            {apiError ||
-                                "Not connected to the Stable Diffusion API. Check your connection settings."}
-                        </AlertDescription>
+                        <AlertDescription>Not connected to the Stable Diffusion API. Check your connection settings.</AlertDescription>
                     </Alert>
                 )}
             </div>

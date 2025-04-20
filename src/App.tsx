@@ -33,9 +33,9 @@ function App() {
 
             <div className="w-full h-screen">
               <div className="p-6 h-full">
-                <div style={{ display: activeTab === 'prompts' ? 'block' : 'none' }}><PromptsManager /></div>
-                <div style={{ display: activeTab === 'images' ? 'block' : 'none' }}><ImageViewer /></div>
-                <div style={{ display: activeTab === 'ai' ? 'block' : 'none' }}><AiChat /></div>
+                <div className="h-full" style={{ display: activeTab === 'prompts' ? 'block' : 'none' }}><PromptsManager /></div>
+                <div className="h-full" style={{ display: activeTab === 'images' ? 'block' : 'none' }}><ImageViewer /></div>
+                <div className="h-full" style={{ display: activeTab === 'ai' ? 'block' : 'none' }}><AiChat /></div>
               </div>
             </div>
           </div>

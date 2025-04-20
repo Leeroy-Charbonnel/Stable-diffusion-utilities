@@ -10,9 +10,10 @@ import { generateUUID } from '@/lib/utils';
 import { usePrompt } from '@/contexts/contextPrompts';
 import { toast } from 'sonner';
 import { ExecutionPanel } from './ExecutionPanel';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
 export function PromptsManager() {
-  const { isConnected, generateImage, availableSamplers, availableModels, availableLoras, isLoadingApiData } = useApi();
+  const { isConnected, generateImage, availableSamplers, availableModels, availableLoras } = useApi();
   const { prompts, loadPrompts, addPrompt, updatePrompt, deletePrompt, reorderPrompt, isLoading: isPromptLoading } = usePrompt();
 
   const [status, setStatus] = useState<ExecutionStatus>('idle');
@@ -185,80 +186,78 @@ export function PromptsManager() {
   };
 
   return (
-    <div className="flex gap-4">
+    <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-8rem)]">
       {/* Main Content - Left Side */}
-      <div className="flex-1">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Prompt List</h2>
-          <Button
-            onClick={handleAddPrompt}
-            disabled={isPromptLoading || status === 'single-execution' || status === 'global-execution'}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Prompt
-          </Button>
+      <ResizablePanel defaultSize={75} minSize={30}>
+        <div className="h-full flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Prompt List</h2>
+            <Button
+              onClick={handleAddPrompt}
+              disabled={isPromptLoading || status === 'single-execution' || status === 'global-execution'}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Prompt
+            </Button>
+          </div>
+
+          {executionError && status !== 'failed' && (
+            <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>
+                {executionError}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex-1 overflow-auto space-y-3 pr-2">
+            {prompts.map((prompt) => (
+              <PromptCard
+                key={prompt.id}
+                prompt={prompt}
+                onDelete={() => deletePrompt(prompt.id)}
+                onMove={reorderPrompt}
+                onRunPrompt={handleExecutePrompt}
+                onCancelExecution={handleInterruptExecution}
+                onPromptUpdate={updatePrompt}
+                isExecuted={executedPromptIds.has(prompt.id)}
+                isExecuting={status === 'global-execution' || status === 'single-execution'}
+                isCurrentlyExecuting={executingPromptId === prompt.id}
+                isApiConnected={isConnected}
+                availableSamplers={availableSamplers}
+                availableModels={availableModels}
+                availableLoras={availableLoras}
+              />
+            ))}
+
+            {prompts.length === 0 && !isPromptLoading && (
+              <Card className="p-6 text-center text-muted-foreground">
+                <p>No prompts added yet. Click "Add Prompt" to get started.</p>
+              </Card>
+            )}
+          </div>
         </div>
+      </ResizablePanel>
 
-        {(isLoadingApiData || isPromptLoading) && (
-          <Card className="p-4 mb-4">
-            <div className="text-center text-muted-foreground">
-              {isLoadingApiData ? 'Loading data from API...' : 'Loading prompts...'}
-            </div>
-          </Card>
-        )}
-
-        {executionError && status !== 'failed' && (
-          <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-              {executionError}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div className="space-y-3">
-          {prompts.map((prompt) => (
-            <PromptCard
-              key={prompt.id}
-              prompt={prompt}
-              onDelete={() => deletePrompt(prompt.id)}
-              onMove={reorderPrompt}
-              onRunPrompt={handleExecutePrompt}
-              onCancelExecution={handleInterruptExecution}
-              onPromptUpdate={updatePrompt}
-              isExecuted={executedPromptIds.has(prompt.id)}
-              isExecuting={status === 'global-execution' || status === 'single-execution'}
-              isCurrentlyExecuting={executingPromptId === prompt.id}
-              isApiConnected={isConnected}
-              availableSamplers={availableSamplers}
-              availableModels={availableModels}
-              availableLoras={availableLoras}
-            />
-          ))}
-        </div>
-
-        {prompts.length === 0 && !isLoadingApiData && !isPromptLoading && (
-          <Card className="p-6 text-center text-muted-foreground">
-            <p>No prompts added yet. Click "Add Prompt" to get started.</p>
-          </Card>
-        )}
-      </div>
+      <ResizableHandle />
 
       {/* Execution Panel - Right Side */}
-      <div className="w-80 h-full">
-        <ExecutionPanel
-          prompts={prompts}
-          status={status}
-          successCount={successCount}
-          failureCount={failureCount}
-          currentPromptIndex={currentPromptIndex}
-          promptsToRunCount={promptsToRunCount}
-          isApiConnected={isConnected}
-          isCancelling={isCancelling}
-          onStartExecution={handleExecuteAll}
-          onCancelExecution={handleInterruptExecution}
-        />
-      </div>
-    </div>
+      <ResizablePanel defaultSize={25} minSize={15}>
+        <div className="h-full p-1">
+          <ExecutionPanel
+            prompts={prompts}
+            status={status}
+            successCount={successCount}
+            failureCount={failureCount}
+            currentPromptIndex={currentPromptIndex}
+            promptsToRunCount={promptsToRunCount}
+            isApiConnected={isConnected}
+            isCancelling={isCancelling}
+            onStartExecution={handleExecuteAll}
+            onCancelExecution={handleInterruptExecution}
+          />
+        </div>
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 }
