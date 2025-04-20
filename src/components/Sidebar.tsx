@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ListChecks, Image, CheckCircle, AlertCircle, BrainCog, } from "lucide-react";
-import { useApi } from "@/contexts/SdContext";
+import { useApi } from "@/contexts/contextSD";
 
 interface SidebarProps {
     activeTab: "prompts" | "ai" | "images";

@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Prompt } from '@/types';
-import * as promptsApi from '@/services/promptsApi';
-import { generateUUID } from '@/lib/utils';
+import * as promptsApi from '@/services/apiPrompt';
 import { toast } from 'sonner';
 
 interface PromptContextType {
@@ -43,10 +42,6 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setIsLoading(true);
         setError(null);
         try {
-            if (!prompt.id) {
-                prompt.id = generateUUID();
-            }
-
             const updatedPrompts = [...prompts, prompt];
             const success = await promptsApi.saveAllPrompts(updatedPrompts);
 

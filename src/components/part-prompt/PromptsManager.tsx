@@ -1,14 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { PlusCircle, Play, CheckCircle, AlertCircle, StopCircle } from 'lucide-react';
+import { PlusCircle, Play, AlertCircle, StopCircle } from 'lucide-react';
 import { ExecutionStatus, Prompt } from '@/types';
 import { PromptCard } from './PromptCard';
-import { useApi } from '@/contexts/SdContext';
+import { useApi } from '@/contexts/contextSD';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { generateUUID } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
-import { usePrompt } from '@/contexts/PromptContext';
+import { usePrompt } from '@/contexts/contextPrompts';
 import { toast } from 'sonner';
 
 

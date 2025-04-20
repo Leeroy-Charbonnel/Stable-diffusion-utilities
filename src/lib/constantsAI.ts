@@ -1,4 +1,5 @@
 export const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+export const OPENAI_API_MODEL = 'https://api.openai.com/v1/models';
 
 export const CHAT_SYSTEM_PROMPT = `You are an AI assistant specialized in Stable Diffusion image generation. 
 Help users craft effective prompts for image generation.

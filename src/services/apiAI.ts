@@ -1,6 +1,7 @@
 // src/services/openAiApi.ts
-import { AiModel, ChatMessage } from '@/types';
-import { OPENAI_API_URL } from '@/lib/constantsAI';
+import { ChatMessage } from '@/types';
+import { OPENAI_API_MODEL, OPENAI_API_URL } from '@/lib/constantsAI';
+import { DEFAULT_AI_API_KEY } from '@/lib/constantsKeys';
 
 //OpenAI API request interface
 interface OpenAIRequest {
@@ -34,19 +35,38 @@ interface OpenAIResponse {
   };
 }
 
+
+export const getOpenAiModels = async (): Promise<string | null> => {
+  try {
+
+    const response = await fetch(OPENAI_API_MODEL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DEFAULT_AI_API_KEY}`
+      }
+    });
+    console.log(response.json());
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`OpenAI API error: ${errorData.error?.message || response.statusText}`);
+    }
+    console.log(response.json());
+    return response.json();
+  } catch (error) {
+    console.error('Error calling OpenAI API:', error);
+    return null;
+  }
+}
+
 //Chat with OpenAI
 export const chatWithOpenAI = async (
-  apiKey: string,
-  model: AiModel,
+  model: string,
   messages: { role: string; content: string }[],
   temperature: number = 0.7,
   maxTokens?: number
 ): Promise<string | null> => {
   try {
-    if (!apiKey) {
-      throw new Error('OpenAI API key is required');
-    }
-
     const requestBody: OpenAIRequest = {
       model,
       messages,
@@ -61,7 +81,7 @@ export const chatWithOpenAI = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${DEFAULT_AI_API_KEY}`
       },
       body: JSON.stringify(requestBody)
     });
@@ -81,17 +101,18 @@ export const chatWithOpenAI = async (
 
 //Generate a chat completion
 export const generateChatCompletion = async (
-  apiKey: string,
-  model: AiModel,
+  model: string,
   messages: ChatMessage[],
   temperature: number = 0.7,
   maxTokens?: number
 ): Promise<string | null> => {
-  //Convert our ChatMessage format to OpenAI format
   const openAiMessages = messages.map(msg => ({
     role: msg.role,
     content: msg.content
   }));
 
-  return chatWithOpenAI(apiKey, model, openAiMessages, temperature, maxTokens);
+  return chatWithOpenAI(model, openAiMessages, temperature, maxTokens);
 };
+
+
+

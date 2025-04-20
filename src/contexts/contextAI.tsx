@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { ChatMessage, AiSettings, AiModel } from '@/types';
-import { generateChatCompletion } from '@/services/openAiApi';
+import { generateChatCompletion, getOpenAiModels } from '@/services/apiAI';
 import { generateUUID } from '@/lib/utils';
 import { DEFAULT_AI_API_KEY } from '@/lib/constantsKeys';
+import { AiChatRole, ChatMessage } from '@/types';
+import { OPENAI_API_MODEL } from '@/lib/constantsAI';
 
 const DEFAULT_AI_SETTINGS: AiSettings = {
   apiKey: DEFAULT_AI_API_KEY,
@@ -11,34 +12,40 @@ const DEFAULT_AI_SETTINGS: AiSettings = {
   maxTokens: 1000,
 };
 
+
+interface AiSettings {
+  apiKey: string;
+  model: string;
+  temperature: number;
+  maxTokens: number;
+}
+
 interface AiContextType {
   messages: ChatMessage[];
   settings: AiSettings;
-  isProcessing: boolean;
-  error: string | null;
+  isLoading: boolean;
+  availableModels: string[];
 
-  //Methods
-  sendMessage: (content: string, role?: 'user' | 'assistant' | 'system') => Promise<void>;
-  clearMessages: () => void;
+  sendMessage: (content: string, role?: AiChatRole) => Promise<void>;
   updateMessageContent: (messageId: string, newContent: string) => void;
-  setModel: (model: AiModel) => void;
+  clearMessages: () => void;
+  setModel: (model: string) => void;
   setTemperature: (temp: number) => void;
   setMaxTokens: (tokens: number) => void;
 }
 
-//Create the context
 const AiContext = createContext<AiContextType | undefined>(undefined);
 
-//Storage keys
 const STORAGE_KEY_SETTINGS = 'sd-utilities-ai-settings';
-const STORAGE_KEY_MESSAGES = 'sd-utilities-ai-messages';
 
 export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   //State
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [settings, setSettings] = useState<AiSettings>(DEFAULT_AI_SETTINGS);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   //Load settings from local storage
   useEffect(() => {
@@ -47,11 +54,6 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       if (storedSettings) {
         const parsedSettings = JSON.parse(storedSettings) as AiSettings;
         setSettings({ ...DEFAULT_AI_SETTINGS, ...parsedSettings });
-      }
-
-      const storedMessages = localStorage.getItem(STORAGE_KEY_MESSAGES);
-      if (storedMessages) {
-        setMessages(JSON.parse(storedMessages));
       }
     } catch (error) {
       console.error('Error loading AI settings from localStorage:', error);
@@ -67,17 +69,44 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     }
   }, [settings]);
 
-  //Save messages to local storage when changed
+  //Fetch available models when component mounts
   useEffect(() => {
+    fetchAvailableModels();
+  }, []);
+
+  const fetchAvailableModels = async () => {
+    setIsLoadingModels(true);
+
     try {
-      localStorage.setItem(STORAGE_KEY_MESSAGES, JSON.stringify(messages));
+
+      const data = await getOpenAiModels();
+
+      if (!data || !data.data) {
+        throw new Error('Error fetching models');
+      }
+      //Filter to get only GPT chat models and sort by newest/most capable first
+      const chatModels = data.data
+        .filter((model: any) =>
+          model.id.includes('gpt') && !model.id.includes('preview') && model.id.includes('turbo')
+        )
+        .map((model: any) => model.id as string);
+
+      setAvailableModels(chatModels);
+
+      //If current model is not in available models, select the first one
+      if (!chatModels.includes(settings.model)) {
+        setModel(chatModels[0]);
+      }
     } catch (error) {
-      console.error('Error saving AI messages to localStorage:', error);
+      console.error('Error fetching models:', error);
+      setAvailableModels(['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']);
+    } finally {
+      setIsLoadingModels(false);
     }
-  }, [messages]);
+  };
 
   //Setting updaters
-  const setModel = (model: AiModel) => { setSettings((prev) => ({ ...prev, model })); };
+  const setModel = (model: string) => { setSettings((prev) => ({ ...prev, model })); };
   const setTemperature = (temperature: number) => { setSettings((prev) => ({ ...prev, temperature })); };
   const setMaxTokens = (maxTokens: number) => { setSettings((prev) => ({ ...prev, maxTokens })); };
 
@@ -151,6 +180,8 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     settings,
     isProcessing,
     error,
+    availableModels,
+    isLoadingModels,
     sendMessage,
     clearMessages,
     updateMessageContent,

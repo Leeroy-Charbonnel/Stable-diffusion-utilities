@@ -1,27 +1,23 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ImageMetadata, Prompt } from '@/types';
-
-import { apiService, ApiService } from '@/services/stableDiffusionApi';
-import * as fileSystemApi from '@/services/fileSystemApi';
-import * as promptsApi from '@/services/promptsApi';
+import * as apiSD from '@/services/apiSD';
+import * as apiFS from '@/services/apiFs';
+import * as apiPrompt from '@/services/apiPrompt';
 import { generateUUID } from '@/lib/utils';
 
 interface ApiContextType {
-  //Service objects
-  stableDiffusionApi: ApiService;
-  fileSystemApi: typeof fileSystemApi;
-  promptsApi: typeof promptsApi;
+  apiSD: typeof apiSD;
+  apiFS: typeof apiFS;
+  apiPrompt: typeof apiPrompt;
 
-  //SD Connection state
+  //Connection state
   isConnected: boolean;
   isLoading: boolean;
-  error: string | null;
 
   //Available options from SD API - loaded only once
   availableSamplers: string[];
   availableModels: string[];
   availableLoras: any[];
-  isLoadingApiData: boolean;
 
   //API methods
   checkConnection: () => Promise<boolean>;
@@ -33,26 +29,47 @@ const ApiContext = createContext<ApiContextType | undefined>(undefined);
 export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  //Shared API data - loaded once
+
   const [availableSamplers, setAvailableSamplers] = useState<string[]>([]);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [availableLoras, setAvailableLoras] = useState<any[]>([]);
-  const [isLoadingApiData, setIsLoadingApiData] = useState<boolean>(false);
 
-  //Check connection to Stable Diffusion API
+
+  useEffect(() => {
+    const initializeApi = async () => {
+      const connected = await checkConnection();
+
+      if (connected) {
+        try {
+          const [samplers, models, loras] = await Promise.all([
+            apiSD.getSamplers(),
+            apiSD.getModels(),
+            apiSD.getLoras()
+          ]);
+
+          setAvailableSamplers(samplers);
+          setAvailableModels(models);
+          setAvailableLoras(loras);
+          console.log('contextSD - API data loaded successfully');
+        } catch (error) {
+          console.error('Failed to load API data:', error);
+        } finally {
+        }
+      }
+    };
+
+    initializeApi();
+  }, []);
+
   const checkConnection = async (): Promise<boolean> => {
     setIsLoading(true);
-    setError(null);
     try {
-      const connected = await apiService.testConnection();
+      const connected = await apiSD.testConnection();
       setIsConnected(connected);
-
-      if (!connected) { setError("Connection failed. Check if SD server is running."); }
+      if (!connected) { console.log("Connection failed. Check if SD server is running.") }
       return connected;
     } catch (err) {
-      setError("API error: " + (err instanceof Error ? err.message : String(err)));
+      console.log("Error checking connection:", err);
       setIsConnected(false);
       return false;
     } finally {
@@ -60,10 +77,8 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     }
   };
 
-  //Generate an image based on a prompt
   const generateImage = async (prompt: Prompt): Promise<ImageMetadata | null> => {
     setIsLoading(true);
-    setError(null);
 
     try {
       const params: any = {
@@ -87,69 +102,30 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         params.prompt = params.prompt + " " + prompt.loras.map(lora => `<lora:${lora.name}:${lora.weight}>`).join(", ");
       }
 
-      const result = await apiService.generateImage(params);
-
-      if (!result || !result.images || result.images.length === 0) {
-        throw new Error("Failed to generate image");
-      }
-
-      //Save the generated image
-      const generatedImage = await fileSystemApi.saveGeneratedImage(
-        generateUUID(),
-        result.images[0],
-        prompt
-      );
+      const result = await apiSD.generateImage(params);
+      if (!result || !result.images || result.images.length === 0) throw new Error("Failed to generate image");
+      const generatedImage = await apiFS.saveGeneratedImage(generateUUID(), result.images[0], prompt);
 
       return generatedImage;
     } catch (err) {
-      setError("Error generating image: " + (err instanceof Error ? err.message : String(err)));
+      console.log("Error generating image:", err);
       return null;
     } finally {
       setIsLoading(false);
     }
   };
 
-  //Load initial data on mount - THIS ONLY HAPPENS ONCE
-  useEffect(() => {
-    const initializeApi = async () => {
-      const connected = await checkConnection();
-      
-      if (connected) {
-        //Load all API data in one go
-        setIsLoadingApiData(true);
-        try {
-          const [samplers, models, loras] = await Promise.all([
-            apiService.getSamplers(),
-            apiService.getModels(),
-            apiService.getLoras()
-          ]);
-  
-          setAvailableSamplers(samplers);
-          setAvailableModels(models);
-          setAvailableLoras(loras);
-        } catch (error) {
-          console.error('Failed to load API data:', error);
-          setError("Failed to load API data: " + (error instanceof Error ? error.message : String(error)));
-        } finally {
-          setIsLoadingApiData(false);
-        }
-      }
-    };
-    
-    initializeApi();
-  }, []);
+
 
   const value = {
-    stableDiffusionApi: apiService,
-    fileSystemApi,
-    promptsApi,
+    apiSD: apiSD,
+    apiFS,
+    apiPrompt,
     isConnected,
     isLoading,
-    error,
     availableSamplers,
     availableModels,
     availableLoras,
-    isLoadingApiData,
     checkConnection,
     generateImage
   };
@@ -157,7 +133,6 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;
 };
 
-//Custom hook to use the API context
 export const useApi = (): ApiContextType => {
   const context = useContext(ApiContext);
   if (context === undefined) {

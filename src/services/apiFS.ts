@@ -23,9 +23,7 @@ export const saveGeneratedImage = async (
     const timestamp = new Date().toISOString();
     const metadata: ImageMetadata = {
       id: imageId,
-      path: '',
       folder: '',
-      promptId: promptData.id,
       prompt: promptData.text,
       name: promptData.name || `Image ${new Date().toLocaleDateString()}`, // Add default name based on prompt name
       negativePrompt: promptData.negativePrompt,

@@ -4,20 +4,14 @@ export interface LoraConfig {
 }
 
 export type ExecutionStatus = 'idle' | 'global-execution' | 'single-execution' | 'cancelling' | 'completed' | 'failed';
-export type AiModel = string;
 
-export interface ChatMessage {  
+export type AiChatRole = 'user' | 'assistant' | 'system'
+
+export interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant' | 'system';
+  role: AiChatRole;
   content: string;
   timestamp: string;
-}
-
-export interface AiSettings {
-  apiKey: string;
-  model: AiModel;
-  temperature: number;
-  maxTokens: number;
 }
 
 export interface CivitaiData {
@@ -54,11 +48,9 @@ export interface Prompt {
 
 export interface ImageMetadata {
   id: string;
-  path: string;
+  name: string;
   folder: string;
-  promptId: string;
   prompt: string;
-  name: string; // Added name field
   negativePrompt?: string;
   seed: number;
   steps: number;

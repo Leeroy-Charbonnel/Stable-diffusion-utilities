@@ -12,9 +12,10 @@ import {
   MoreVertical
 } from 'lucide-react';
 import { ImageMetadata } from '@/types';
-import { getImageUrl } from '@/services/fileSystemApi';
-import { usePrompt } from '@/contexts/PromptContext';
+import { getImageUrl } from '@/services/apiFs';
+import { usePrompt } from '@/contexts/contextPrompts';
 import { toast } from 'sonner';
+import { generateUUID } from '@/lib/utils';
 
 interface ImageCardProps {
   image: ImageMetadata;
@@ -51,7 +52,7 @@ export function ImageCard({
 
     try {
       const newPrompt = {
-        id: image.promptId || crypto.randomUUID(),
+        id: generateUUID(),
         isOpen: false,
         name: image.name || image.prompt.substring(0, 20) + "...",
         text: image.prompt,

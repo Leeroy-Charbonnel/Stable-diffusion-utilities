@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Image as ImageIcon, RefreshCw, FolderOpen, Trash2, CheckSquare, FolderClosed } from 'lucide-react';
-import { useApi } from '@/contexts/SdContext';
+import { useApi } from '@/contexts/contextSD';
 import { ImageMetadata } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,11 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FilterPanel } from './FilterPanel';
 import { ImageCard } from './ImageCard';
 import { ImageDetailsDialog } from './ImageDetailsDialog';
-import { usePrompt } from '@/contexts/PromptContext';
+import { usePrompt } from '@/contexts/contextPrompts';
 import { toast } from 'sonner';
+import { generateUUID } from '@/lib/utils';
 
 export function ImageViewer() {
-  const { fileSystemApi } = useApi();
+  const { apiFS } = useApi();
   const { addPrompt } = usePrompt();
 
   const [generatedImages, setGeneratedImages] = useState<ImageMetadata[]>([]);
@@ -54,7 +55,7 @@ export function ImageViewer() {
   //Function to load images from server
   async function loadImagesFromServer() {
     try {
-      const loadedImages = await fileSystemApi.getAllImageMetadata();
+      const loadedImages = await apiFS.getAllImageMetadata();
       setGeneratedImages(loadedImages);
     } catch (error) {
       console.error('Failed to load images from server:', error);
@@ -64,7 +65,7 @@ export function ImageViewer() {
   //Load available folders from server
   const loadFolders = async () => {
     try {
-      const folders = await fileSystemApi.getFolders();
+      const folders = await apiFS.getFolders();
       setAvailableFolders(folders.sort());
     } catch (error) {
       console.error('Failed to load folders:', error);
@@ -96,7 +97,7 @@ export function ImageViewer() {
   //Open output folder
   const openOutputFolder = async () => {
     try {
-      await fileSystemApi.openOutputFolder();
+      await apiFS.openOutputFolder();
     } catch (error) {
       console.error('Error opening folder:', error);
     }
@@ -130,7 +131,7 @@ export function ImageViewer() {
     const image = filteredImages[newIndex];
     setSelectedImageIndex(newIndex);
     setSelectedImage(image);
-    setImageUrl(fileSystemApi.getImageUrl(image.id));
+    setImageUrl(apiFS.getImageUrl(image.id));
   };
 
   //Extract all unique tags, models, and loras from images
@@ -221,14 +222,14 @@ export function ImageViewer() {
     const index = filteredImages.findIndex(img => img.id === image.id);
     setSelectedImageIndex(index);
     setSelectedImage(image);
-    setImageUrl(fileSystemApi.getImageUrl(image.id));
+    setImageUrl(apiFS.getImageUrl(image.id));
     setDetailsDialogOpen(true);
   };
 
   const handleMoveToFolder = async (imageId: string, folder: string) => {
     setIsLoading(true);
     try {
-      const success = await fileSystemApi.moveImageToFolder(imageId, folder);
+      const success = await apiFS.moveImageToFolder(imageId, folder);
       if (success) {
         await loadImagesFromServer();
       }
@@ -245,7 +246,7 @@ export function ImageViewer() {
     setIsLoading(true);
     try {
       for (const imageId of selectedImages) {
-        await fileSystemApi.moveImageToFolder(imageId, targetFolder);
+        await apiFS.moveImageToFolder(imageId, targetFolder);
         await new Promise(resolve => setTimeout(resolve, 300));
       }
 
@@ -277,13 +278,13 @@ export function ImageViewer() {
       if (isMultiDelete) {
         //Delete multiple images
         const deletePromises = selectedImages.map(imageId =>
-          fileSystemApi.deleteImage(imageId)
+          apiFS.deleteImage(imageId)
         );
         await Promise.all(deletePromises);
         setSelectedImages([]);
       } else if (imageToDelete) {
         //Delete a single image
-        await fileSystemApi.deleteImage(imageToDelete.id);
+        await apiFS.deleteImage(imageToDelete.id);
       }
 
       await loadImagesFromServer();
@@ -302,7 +303,7 @@ export function ImageViewer() {
     setIsLoading(true);
     try {
       // Update image metadata
-      const success = await fileSystemApi.updateImageMetadata(imageId, { name });
+      const success = await apiFS.updateImageMetadata(imageId, { name });
 
       if (success) {
         // Update local state if the selected image is the one being updated
@@ -326,7 +327,7 @@ export function ImageViewer() {
     try {
       //Create a new prompt from the image
       const newPrompt = {
-        id: image.promptId || crypto.randomUUID(),
+        id: generateUUID(),
         isOpen: false,
         name: image.name || image.prompt.substring(0, 20) + "...",
         text: image.prompt,
@@ -534,7 +535,7 @@ export function ImageViewer() {
               };
 
               setSelectedImage(updatedImage);
-              await fileSystemApi.updateImageMetadata(selectedImage.id, {
+              await apiFS.updateImageMetadata(selectedImage.id, {
                 tags: [...selectedImage.tags, tag]
               });
               await loadImagesFromServer();
@@ -550,7 +551,7 @@ export function ImageViewer() {
               };
 
               setSelectedImage(updatedImage);
-              await fileSystemApi.updateImageMetadata(selectedImage.id, {
+              await apiFS.updateImageMetadata(selectedImage.id, {
                 tags: updatedTags
               });
               await loadImagesFromServer();
