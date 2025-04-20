@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { Prompt } from '@/types';
 import * as promptsApi from '@/services/apiPrompt';
 import { toast } from 'sonner';
+import { DEBOUNCE_DELAY } from '@/lib/constants';
 
 interface PromptContextType {
     prompts: Prompt[];
@@ -23,6 +24,11 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Keep a ref to pending updates to avoid race conditions
+    const pendingUpdatesRef = useRef<{ [id: string]: Prompt }>({});
+    // Timer for debouncing
+    const debouncerRef = useRef<NodeJS.Timeout | null>(null);
+
     //Load prompts from the server
     const loadPrompts = async (): Promise<void> => {
         setIsLoading(true);
@@ -38,6 +44,55 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
     };
 
+    // Function to actually save all prompts to server (called after debounce)
+    const savePromptsToServer = useCallback(async () => {
+        //Only save if there are pending updates
+        if (Object.keys(pendingUpdatesRef.current).length === 0) return;
+
+        // Create updated prompts array with all pending changes
+        const updatedPrompts = prompts.map(prompt => {
+            const pendingUpdate = pendingUpdatesRef.current[prompt.id];
+            return pendingUpdate || prompt;
+        });
+
+        try {
+            // Don't set loading state for debounced updates to prevent UI flicker
+            const success = await promptsApi.saveAllPrompts(updatedPrompts);
+
+            if (success) {
+                // Only update state if save was successful
+                setPrompts(updatedPrompts);
+            } else {
+                console.error('Failed to save prompts to server');
+            }
+        } catch (error) {
+            console.error('Error saving prompts:', error);
+        } finally {
+            // Clear pending updates
+            pendingUpdatesRef.current = {};
+        }
+    }, [prompts]);
+
+    // Debounced prompt update
+    const debouncedSave = useCallback(() => {
+        if (debouncerRef.current) {
+            clearTimeout(debouncerRef.current);
+        }
+
+        debouncerRef.current = setTimeout(() => {
+            savePromptsToServer();
+        }, DEBOUNCE_DELAY);
+    }, [savePromptsToServer]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (debouncerRef.current) {
+                clearTimeout(debouncerRef.current);
+            }
+        };
+    }, []);
+
     const addPrompt = async (prompt: Prompt): Promise<boolean> => {
         setIsLoading(true);
         setError(null);
@@ -50,7 +105,7 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 toast("Prompt created successfully!");
                 return true;
             }
-            toast("Failed to create prompt")
+            toast("Failed to create prompt");
             return false;
         } catch (error) {
             console.error('Failed to add prompt:', error);
@@ -63,26 +118,24 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     //Update an existing prompt
     const updatePrompt = async (updatedPrompt: Prompt): Promise<boolean> => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const updatedPrompts = prompts.map(p =>
-                p.id === updatedPrompt.id ? updatedPrompt : p
-            );
+        // For certain operations that need to be immediate (run counts, execution status)
+        const needsImmediateUpdate = updatedPrompt.currentRun > 0 || updatedPrompt.status !== 'idle';
 
-            const success = await promptsApi.saveAllPrompts(updatedPrompts);
+        // Immediately update the UI with the changes
+        setPrompts(prev =>
+            prev.map(p => p.id === updatedPrompt.id ? updatedPrompt : p)
+        );
 
-            if (success) {
-                setPrompts(updatedPrompts);
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.error('Failed to update prompt:', error);
-            setError(`Failed to update prompt: ${error instanceof Error ? error.message : String(error)}`);
-            return false;
-        } finally {
-            setIsLoading(false);
+        // Store this update as pending
+        pendingUpdatesRef.current[updatedPrompt.id] = updatedPrompt;
+
+        if (needsImmediateUpdate) {
+            // Save immediately for execution-related updates
+            return savePromptsToServer().then(() => true).catch(() => false);
+        } else {
+            // Otherwise debounce the save
+            debouncedSave();
+            return Promise.resolve(true);
         }
     };
 

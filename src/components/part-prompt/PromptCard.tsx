@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Progress } from '@/components/ui/progress';
 import { PromptForm } from './PromptForm';
+import { DEBOUNCE_DELAY } from '@/lib/constants';
 
 type PromptCardProps = {
   prompt: Prompt;
@@ -51,6 +52,8 @@ export function PromptCard({
   const [accordionValue, setAccordionValue] = useState<string | undefined>(
     prompt.isOpen && !isExecuting ? prompt.id : undefined
   );
+  const [localPrompt, setLocalPrompt] = useState<Prompt>(prompt);
+  const nameUpdateTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   //Effect to close accordion when execution starts
   useEffect(() => {
@@ -61,13 +64,40 @@ export function PromptCard({
     }
   }, [isExecuting, prompt.id, prompt.isOpen]);
 
+  //Update local prompt when props change
+  useEffect(() => {
+    setLocalPrompt(prompt);
+    setNameValue(prompt.name);
+  }, [prompt]);
+
+  //Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (nameUpdateTimeoutRef.current) {
+        clearTimeout(nameUpdateTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNameValue(e.target.value);
   };
 
   const saveNameChange = () => {
     if (nameValue.trim()) {
-      onPromptUpdate({ ...prompt, name: nameValue });
+      // Update local state immediately
+      setLocalPrompt(prev => ({ ...prev, name: nameValue }));
+
+      // Clear any pending updates
+      if (nameUpdateTimeoutRef.current) {
+        clearTimeout(nameUpdateTimeoutRef.current);
+      }
+
+      // Debounce the actual save
+      nameUpdateTimeoutRef.current = setTimeout(() => {
+        onPromptUpdate({ ...prompt, name: nameValue });
+      }, DEBOUNCE_DELAY);
+
       setIsEditingName(false);
     }
   };
@@ -88,10 +118,20 @@ export function PromptCard({
   const handleOpenAccordion = (value: string) => {
     const newIsOpen = value === prompt.id;
     setAccordionValue(newIsOpen ? prompt.id : undefined);
+
+    // For accordion open/close, don't use debouncing as it's a simple operation
     onPromptUpdate({ ...prompt, isOpen: newIsOpen });
   };
 
-  const currentProgress = (prompt.currentRun / prompt.runCount) * 100
+  const handlePromptUpdate = (updatedPrompt: Prompt) => {
+    // Update local state immediately for responsive UI
+    setLocalPrompt(updatedPrompt);
+
+    // Pass the update to parent component (which will handle debouncing)
+    onPromptUpdate(updatedPrompt);
+  };
+
+  const currentProgress = (localPrompt.currentRun / localPrompt.runCount) * 100;
 
   return (
     <Card className={`overflow-hidden p-0`}>
@@ -102,12 +142,12 @@ export function PromptCard({
         className="w-full"
         onValueChange={handleOpenAccordion}
       >
-        <AccordionItem value={prompt.id} className="border-none">
+        <AccordionItem value={localPrompt.id} className="border-none">
           <div className="px-3 py-2 flex items-center justify-between border-b">
             <div className="flex-1 truncate flex items-center">
               <AccordionTrigger disabled={isExecuting} className="hover:no-underline py-0 mr-2 flex"></AccordionTrigger>
 
-              {isExecuting && (<h3 className="text-sm font-medium truncate">{prompt.name}</h3>)}
+              {isExecuting && (<h3 className="text-sm font-medium truncate">{localPrompt.name}</h3>)}
 
               {!isExecuting && (
                 isEditingName ? (
@@ -120,7 +160,7 @@ export function PromptCard({
                   </div>
                 ) : (
                   <h3 className="text-sm font-medium truncate hover:underline cursor-pointer" onClick={() => { setIsEditingName(true); }}>
-                    {prompt.name}
+                    {localPrompt.name}
                   </h3>
                 ))}
             </div>
@@ -134,7 +174,7 @@ export function PromptCard({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => { onRunPrompt(prompt); }}
+                  onClick={() => { onRunPrompt(localPrompt); }}
                   className="h-7 text-xs"
                   disabled={isExecuting || !isApiConnected}
                 >
@@ -143,15 +183,15 @@ export function PromptCard({
                 </Button>
               )}
 
-              <div className="text-xs bg-secondary text-secondary-foreground rounded py-1.5 px-3">{prompt.runCount}×</div>
+              <div className="text-xs bg-secondary text-secondary-foreground rounded py-1.5 px-3">{localPrompt.runCount}×</div>
 
-              <Button variant="ghost" size="icon" onClick={() => { onMove(prompt.id, 'up'); }}
+              <Button variant="ghost" size="icon" onClick={() => { onMove(localPrompt.id, 'up'); }}
                 className="h-6 w-6 text-muted-foreground hover:text-foreground"
                 disabled={isExecuting}>
                 <ChevronUp />
               </Button>
 
-              <Button variant="ghost" size="icon" onClick={() => { onMove(prompt.id, 'down'); }}
+              <Button variant="ghost" size="icon" onClick={() => { onMove(localPrompt.id, 'down'); }}
                 className="h-6 w-6 text-muted-foreground hover:text-foreground"
                 disabled={isExecuting}>
                 <ChevronDown />
@@ -170,7 +210,7 @@ export function PromptCard({
               <div className="w-full">
                 <div className="flex items-center gap-2">
                   <Progress value={currentProgress} className="h-1 flex-1" />
-                  <span className="text-xs">{prompt.currentRun}/{prompt.runCount}</span>
+                  <span className="text-xs">{localPrompt.currentRun}/{localPrompt.runCount}</span>
                 </div>
               </div>
             </div>
@@ -178,8 +218,8 @@ export function PromptCard({
           <AccordionContent className="pt-0">
             <div className="p-4">
               <PromptForm
-                prompt={prompt}
-                onPromptUpdate={onPromptUpdate}
+                prompt={localPrompt}
+                onPromptUpdate={handlePromptUpdate}
                 availableSamplers={availableSamplers}
                 availableModels={availableModels}
                 availableLoras={availableLoras}
@@ -187,10 +227,10 @@ export function PromptCard({
             </div>
           </AccordionContent>
 
-          {!accordionValue && prompt.tags && prompt.tags.length > 0 && (
+          {!accordionValue && localPrompt.tags && localPrompt.tags.length > 0 && (
             <div className={`px-3 ${isExecuting ? "pb-2" : "py-2"} border-b`}>
               <div className="flex flex-wrap gap-1">
-                {prompt.tags.map(tag => (
+                {localPrompt.tags.map(tag => (
                   <Badge key={tag} variant="secondary" className="text-xs px-1 py-0 h-5">
                     {tag}
                   </Badge>

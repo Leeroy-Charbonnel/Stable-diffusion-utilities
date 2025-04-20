@@ -3,18 +3,18 @@
     "id": "f75497d1-477c-4d7d-bb09-30fa87c9ca9e",
     "isOpen": true,
     "name": "New Prompt",
-    "text": "fffffffffffffffffffffffffffffffffffffffffff",
+    "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "negativePrompt": "",
     "seed": -1,
-    "steps": 20,
+    "steps": 10,
     "sampler": "DPM++ 2M",
     "model": "hassakuXLIllustrious_v21.safetensors [d9edf21821]",
-    "width": 512,
+    "width": 514,
     "height": 512,
     "runCount": 1,
     "tags": [],
     "loras": [],
-    "currentRun": 0,
+    "currentRun": 1,
     "status": "idle"
   }
 ]

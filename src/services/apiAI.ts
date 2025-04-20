@@ -35,27 +35,28 @@ interface OpenAIResponse {
   };
 }
 
-
-export const getOpenAiModels = async (): Promise<string | null> => {
+export const getOpenAiModels = async (): Promise<any> => {
   try {
-
     const response = await fetch(OPENAI_API_MODEL, {
-      method: 'POST',
+      method: 'GET',  // Changed from POST to GET as model listing is usually a GET operation
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${DEFAULT_AI_API_KEY}`
       }
     });
-    console.log(response.json());
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(`OpenAI API error: ${errorData.error?.message || response.statusText}`);
     }
-    console.log(response.json());
-    return response.json();
+
+    //Only parse the response once and return it
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error('Error calling OpenAI API:', error);
-    return null;
+    //Return a structured object to prevent null reference errors
+    return { data: [] };
   }
 }
 
@@ -113,6 +114,3 @@ export const generateChatCompletion = async (
 
   return chatWithOpenAI(model, openAiMessages, temperature, maxTokens);
 };
-
-
-

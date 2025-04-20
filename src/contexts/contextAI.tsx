@@ -3,7 +3,6 @@ import { generateChatCompletion, getOpenAiModels } from '@/services/apiAI';
 import { generateUUID } from '@/lib/utils';
 import { DEFAULT_AI_API_KEY } from '@/lib/constantsKeys';
 import { AiChatRole, ChatMessage } from '@/types';
-import { OPENAI_API_MODEL } from '@/lib/constantsAI';
 
 const DEFAULT_AI_SETTINGS: AiSettings = {
   apiKey: DEFAULT_AI_API_KEY,
@@ -11,7 +10,6 @@ const DEFAULT_AI_SETTINGS: AiSettings = {
   temperature: 0.7,
   maxTokens: 1000,
 };
-
 
 interface AiSettings {
   apiKey: string;
@@ -23,8 +21,10 @@ interface AiSettings {
 interface AiContextType {
   messages: ChatMessage[];
   settings: AiSettings;
-  isLoading: boolean;
+  isProcessing: boolean;
+  error: string | null;
   availableModels: string[];
+  isLoadingModels: boolean;
 
   sendMessage: (content: string, role?: AiChatRole) => Promise<void>;
   updateMessageContent: (messageId: string, newContent: string) => void;
@@ -78,27 +78,32 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setIsLoadingModels(true);
 
     try {
+      const response = await getOpenAiModels();
 
-      const data = await getOpenAiModels();
+      // Handle the response properly based on the fixed API function
+      if (response && response.data) {
+        // Filter to get only GPT chat models
+        const chatModels = response.data
+          .filter((model: any) =>
+            model.id.includes('gpt') &&
+            model.id.includes('turbo') &&
+            !model.id.includes('preview')
+          )
+          .map((model: any) => model.id);
 
-      if (!data || !data.data) {
-        throw new Error('Error fetching models');
-      }
-      //Filter to get only GPT chat models and sort by newest/most capable first
-      const chatModels = data.data
-        .filter((model: any) =>
-          model.id.includes('gpt') && !model.id.includes('preview') && model.id.includes('turbo')
-        )
-        .map((model: any) => model.id as string);
+        setAvailableModels(chatModels);
 
-      setAvailableModels(chatModels);
-
-      //If current model is not in available models, select the first one
-      if (!chatModels.includes(settings.model)) {
-        setModel(chatModels[0]);
+        // If current model is not in available models, select the first one
+        if (chatModels.length > 0 && !chatModels.includes(settings.model)) {
+          setModel(chatModels[0]);
+        }
+      } else {
+        // Fallback models if API doesn't return proper data
+        setAvailableModels(['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']);
       }
     } catch (error) {
       console.error('Error fetching models:', error);
+      // Fallback to default models
       setAvailableModels(['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']);
     } finally {
       setIsLoadingModels(false);
@@ -142,7 +147,6 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
         //Get response from OpenAI
         const response = await generateChatCompletion(
-          DEFAULT_AI_API_KEY,
           settings.model,
           updatedMessages,
           settings.temperature,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,7 @@ import { XIcon, Trash } from 'lucide-react';
 import { Prompt } from '@/types';
 import { Slider } from "@/components/ui/slider"
 import { NumberInput } from '@/components/ui/number-input';
-
+import { DEBOUNCE_DELAY } from '@/lib/constants';
 
 type PromptFormProps = {
   prompt?: Prompt;
@@ -29,6 +29,7 @@ export function PromptForm({
 
   const [formData, setFormData] = useState<Prompt>(prompt!);
   const [tagInput, setTagInput] = useState('');
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (prompt) {
@@ -36,10 +37,29 @@ export function PromptForm({
     }
   }, [prompt]);
 
+  //Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  //Debounced update function
   const handleFormChange = (updatedData: Partial<Prompt>) => {
     const newFormData = { ...formData, ...updatedData };
-    setFormData(newFormData);
-    onPromptUpdate(newFormData);
+    setFormData(newFormData); //Update local state immediately
+
+    //Clear any pending updates
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+
+    //Set timeout for debounced update to parent
+    updateTimeoutRef.current = setTimeout(() => {
+      onPromptUpdate(newFormData);
+    }, DEBOUNCE_DELAY);
   };
 
   const handleChange = (name: string, value: any) => {
