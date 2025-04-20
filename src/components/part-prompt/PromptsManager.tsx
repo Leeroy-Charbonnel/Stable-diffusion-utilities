@@ -65,7 +65,8 @@ export function PromptsManager() {
       });
     }
 
-    resetExecution();
+    //Use await to ensure we wait for resetExecution to complete
+    await resetExecution();
   };
 
   //Handle execution of all prompts
@@ -107,26 +108,29 @@ export function PromptsManager() {
       setStatus('completed');
     }
 
-    resetExecution();
+    await resetExecution();
   };
 
-  const resetExecution = () => {
-    //Reset all prompts to idle state
-    prompts.forEach(async (p) => {
-      if (p.currentRun > 0) {
-        await updatePrompt({
-          ...p,
-          currentRun: 0,
-          status: 'idle'
-        });
-      }
-    });
+  const resetExecution = async () => {
+    //Reset all prompts to idle state in a sequential manner
+    const promptsToReset = prompts.filter(p => p.currentRun > 0);
+    for (const p of promptsToReset) {
+      await updatePrompt({
+        ...p,
+        currentRun: 0,
+        status: 'idle'
+      });
+    }
 
     //Clear execution state
     setExecutingPromptId(null);
     setExecutedPromptIds(new Set());
     setIsCancelling(false);
     cancelExecutionRef.current = false;
+    
+    //Reset counters
+    setCurrentPromptIndex(0);
+    setPromptsToRunCount(0);
   }
 
   const executePrompt = async (prompt: Prompt): Promise<void> => {

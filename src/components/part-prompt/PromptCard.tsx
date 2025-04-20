@@ -55,13 +55,9 @@ export function PromptCard({
   const [localPrompt, setLocalPrompt] = useState<Prompt>(prompt);
   const nameUpdateTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  //Effect to close accordion when execution starts
+  //Effect to sync accordionValue with prompt.isOpen
   useEffect(() => {
-    if (isExecuting) {
-      setAccordionValue(undefined);
-    } else if (prompt.isOpen) {
-      setAccordionValue(prompt.id);
-    }
+    setAccordionValue(prompt.isOpen && !isExecuting ? prompt.id : undefined);
   }, [isExecuting, prompt.id, prompt.isOpen]);
 
   //Update local prompt when props change
@@ -117,9 +113,7 @@ export function PromptCard({
 
   const handleOpenAccordion = (value: string) => {
     const newIsOpen = value === prompt.id;
-    setAccordionValue(newIsOpen ? prompt.id : undefined);
-
-    // For accordion open/close, don't use debouncing as it's a simple operation
+    //Only update parent state, local state will be updated by the effect
     onPromptUpdate({ ...prompt, isOpen: newIsOpen });
   };
 

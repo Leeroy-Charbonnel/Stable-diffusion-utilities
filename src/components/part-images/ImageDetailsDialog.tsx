@@ -151,7 +151,7 @@ export function ImageDetailsDialog({
       >
         <div
           ref={dialogRef}
-          className="dark text-foreground flex flex-col p-0 gap-0 overflow-hidden fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-[1200px] max-h-[90vh]"
+          className="dark text-foreground flex flex-col p-0 gap-0 overflow-hidden fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-[1200px] h-[90vh]"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Background blur effect using the image itself */}
@@ -213,7 +213,7 @@ export function ImageDetailsDialog({
             </Button>
           </div>
 
-          <div className="flex flex-1 overflow-hidden relative z-10">
+          <div className="flex flex-1 overflow-hidden relative z-10 h-full">
             {/* Image Preview Section */}
             <div className="relative bg-black/10 h-full flex-1 backdrop-blur-sm flex items-center justify-center">
               {/* Square image container */}
