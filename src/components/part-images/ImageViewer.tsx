@@ -8,14 +8,14 @@ import { ImageMetadata } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import { toast } from 'sonner';
+import { generateUUID } from '@/lib/utils';
 
 //Import our component files
 import { FilterPanel } from './FilterPanel';
 import { ImageCard } from './ImageCard';
 import { ImageDetailsDialog } from './ImageDetailsDialog';
 import { usePrompt } from '@/contexts/contextPrompts';
-import { toast } from 'sonner';
-import { generateUUID } from '@/lib/utils';
 
 export function ImageViewer() {
   const { apiFS, isLoading: isApiLoading } = useApi();
@@ -259,16 +259,18 @@ export function ImageViewer() {
 
     setIsLoading(true);
     try {
+      // Process each image move sequentially
       for (const imageId of selectedImages) {
         await apiFS.moveImageToFolder(imageId, targetFolder);
-        await new Promise(resolve => setTimeout(resolve, 300));
       }
 
       setSelectedImages([]);
       await loadImagesFromServer();
       setMoveFolderDialogOpen(false);
+      toast.success(`Moved ${selectedImages.length} images to ${targetFolder}`);
     } catch (error) {
       console.error('Error moving images to folder:', error);
+      toast.error("Failed to move images");
     } finally {
       setIsLoading(false);
     }
@@ -290,20 +292,23 @@ export function ImageViewer() {
     setIsLoading(true);
     try {
       if (isMultiDelete) {
-        //Delete multiple images
-        const deletePromises = selectedImages.map(imageId =>
-          apiFS.deleteImage(imageId)
-        );
-        await Promise.all(deletePromises);
+        // Delete multiple images sequentially
+        for (const imageId of selectedImages) {
+          await apiFS.deleteImage(imageId);
+        }
+        toast.success(`Deleted ${selectedImages.length} images`);
         setSelectedImages([]);
       } else if (imageToDelete) {
-        //Delete a single image
+        // Delete a single image
         await apiFS.deleteImage(imageToDelete.id);
+        toast.success("Image deleted");
       }
 
+      // Refresh the image list
       await loadImagesFromServer();
     } catch (error) {
       console.error('Error deleting image(s):', error);
+      toast.error("Failed to delete image(s)");
     } finally {
       setIsLoading(false);
       setDeleteDialogOpen(false);
@@ -360,10 +365,11 @@ export function ImageViewer() {
       };
 
       await addPrompt(newPrompt);
+      toast.success("Prompt created successfully");
 
     } catch (error) {
       console.error('Error creating prompt:', error);
-      toast("Error creating prompt", {
+      toast.error("Error creating prompt", {
         description: error instanceof Error ? error.message : String(error)
       });
     }
@@ -493,19 +499,20 @@ export function ImageViewer() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-auto gap-4">
                 {filteredImages.map((image) => (
-                  <ImageCard
-                    key={image.id}
-                    image={image}
-                    isSelected={selectedImages.includes(image.id)}
-                    toggleSelection={toggleImageSelection}
-                    onImageClick={handleImageClick}
-                    onMoveToFolder={handleMoveToFolder}
-                    onCreatePrompt={handleCreatePrompt}
-                    onDeleteClick={handleDeleteClick}
-                    availableFolders={availableFolders}
-                  />
+                  <div key={image.id} className="h-auto">
+                    <ImageCard
+                      image={image}
+                      isSelected={selectedImages.includes(image.id)}
+                      toggleSelection={toggleImageSelection}
+                      onImageClick={handleImageClick}
+                      onMoveToFolder={handleMoveToFolder}
+                      onCreatePrompt={handleCreatePrompt}
+                      onDeleteClick={handleDeleteClick}
+                      availableFolders={availableFolders}
+                    />
+                  </div>
                 ))}
               </div>
             )}

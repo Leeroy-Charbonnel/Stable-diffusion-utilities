@@ -3,15 +3,15 @@
     "id": "126cc653-ce06-429e-aac6-4d522514cd9c",
     "isOpen": false,
     "name": "Create a scene featuring...",
-    "text": "Create a scene featuring a futuristic cybergirl in a neon-lit cyberpunk cityscape. The cybergirl should have metallic enhancements and neon accents, exuding a sexy and mysterious vibe. Include elements like skyscrapers, holographic ads, flying cars, and futuristic technology. The lighting should consist of neon colors and shadows to enhance the cyberpunk atmosphere.",
-    "negativePrompt": "Avoid overly bright and cheerful colors that deviate from the cyberpunk theme. Steer clear of traditional elements not fitting the futuristic setting.",
+    "text": "",
+    "negativePrompt": "",
     "seed": -1,
     "steps": 20,
     "sampler": "Euler a",
-    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
+    "model": "hassakuXLIllustrious_v21.safetensors [d9edf21821]",
     "width": 512,
     "height": 512,
-    "runCount": 1,
+    "runCount": 10,
     "tags": [
       "cybergirl",
       "neon",
@@ -19,7 +19,7 @@
       "cyberpunk"
     ],
     "loras": [],
-    "currentRun": 1,
+    "currentRun": 4,
     "status": "idle"
   }
 ]

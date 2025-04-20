@@ -151,7 +151,7 @@ export function ImageDetailsDialog({
       >
         <div
           ref={dialogRef}
-          className="dark text-foreground flex flex-col p-0 gap-0 overflow-hidden fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+          className="dark text-foreground flex flex-col p-0 gap-0 overflow-hidden fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-[1200px] max-h-[90vh]"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Background blur effect using the image itself */}
@@ -172,9 +172,41 @@ export function ImageDetailsDialog({
 
           {/* Header */}
           <div className="px-4 py-2 border-b bg-black/30 backdrop-blur-md z-10 relative flex items-center justify-between">
-            <div className="flex items-center gap-2 text-lg font-medium">
-              <ImageIcon className="h-4 w-4" />
-              Image Details
+            <div className="flex items-center gap-2 text-lg font-medium flex-1">
+              {isEditingName ? (
+                <div className="flex gap-2 items-center flex-1">
+                  <ImageIcon className="h-4 w-4 flex-shrink-0" />
+                  <Input
+                    value={nameValue}
+                    onChange={(e) => setNameValue(e.target.value)}
+                    onKeyDown={handleNameKeyDown}
+                    className="h-8 text-sm flex-1"
+                    placeholder="Enter image name..."
+                    autoFocus
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleSaveName}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 flex-1 truncate">
+                  <ImageIcon className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">{image.name || 'Untitled Image'}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setIsEditingName(true)}
+                    className="h-6 w-6 p-0 text-foreground/70 hover:text-foreground"
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
             </div>
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               <XIcon className="h-4 w-4" />
@@ -183,47 +215,7 @@ export function ImageDetailsDialog({
 
           <div className="flex flex-1 overflow-hidden relative z-10">
             {/* Image Preview Section */}
-            <div className="relative bg-black/10 aspect-square h-full flex-shrink-0 backdrop-blur-sm flex items-center justify-center">
-              {/* Image name at the top */}
-              <div className="absolute top-4 left-0 right-0 z-10 px-4">
-                <div className="bg-black/60 backdrop-blur-md rounded-md p-2 max-w-lg mx-auto">
-                  {isEditingName ? (
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        value={nameValue}
-                        onChange={(e) => setNameValue(e.target.value)}
-                        onKeyDown={handleNameKeyDown}
-                        className="h-8 text-sm"
-                        placeholder="Enter image name..."
-                        autoFocus
-                      />
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={handleSaveName}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center gap-2">
-                      <h2 className="text-lg font-semibold text-center text-white truncate">
-                        {image.name || 'Untitled Image'}
-                      </h2>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setIsEditingName(true)}
-                        className="h-6 w-6 p-0 text-white/70 hover:text-white"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
+            <div className="relative bg-black/10 h-full flex-1 backdrop-blur-sm flex items-center justify-center">
               {/* Square image container */}
               <div className="relative w-full h-full">
                 {imageUrl && (
@@ -231,6 +223,7 @@ export function ImageDetailsDialog({
                     src={imageUrl}
                     alt={image.prompt}
                     className="object-contain w-full h-full"
+                    loading="lazy"
                   />
                 )}
               </div>
@@ -258,8 +251,8 @@ export function ImageDetailsDialog({
               )}
             </div>
 
-            {/* Image Details Section - Fixed to fill available height */}
-            <div className="border-l border-white/10 bg-black/40 backdrop-blur-md w-[420px] flex-shrink-0 flex flex-col h-full">
+            {/* Image Details Section - Fixed width sidebar */}
+            <div className="border-l border-white/10 bg-black/40 backdrop-blur-md w-[320px] flex-shrink-0 flex flex-col h-full">
               <ScrollArea className="flex-1 px-4 py-3">
                 <div className="space-y-4 pr-2">
                   {/* Action Buttons */}
@@ -422,24 +415,26 @@ export function ImageDetailsDialog({
 
               {/* Footer stays at bottom of the detail section */}
               <div className="p-3 border-t border-white/10 bg-black/50 backdrop-blur-md">
-                <Button
-                  variant="outline"
-                  onClick={() => onCreatePrompt(image)}
-                  className="flex items-center w-full"
-                  size="sm"
-                >
-                  <TerminalSquare className="h-4 w-4 mr-2" />
-                  Create Prompt
-                </Button>
-                <Button
-                  onClick={onDownload}
-                  variant="default"
-                  size="sm"
-                  className="w-full mt-2"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => onCreatePrompt(image)}
+                    className="w-full"
+                    size="sm"
+                  >
+                    <TerminalSquare className="h-4 w-4 mr-1" />
+                    Create Prompt
+                  </Button>
+                  <Button
+                    onClick={onDownload}
+                    variant="default"
+                    size="sm"
+                    className="w-full"
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Download
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

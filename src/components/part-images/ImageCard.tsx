@@ -40,7 +40,6 @@ export function ImageCard({
 }: ImageCardProps) {
   const { addPrompt } = usePrompt();
 
-  //Assume square images but respect actual dimensions if not square
   const imageFolder = image.folder;
   const imageUrl = getImageUrl(image.id);
   const formattedDate = new Date(image.createdAt).toLocaleDateString();
@@ -82,7 +81,7 @@ export function ImageCard({
   return (
     <Card
       key={image.id}
-      className={`p-0 gap-0 overflow-hidden relative rounded-lg m-0.5 transition-all h-full ${isSelected ? 'shadow-[0_0_0_2px_var(--primary)]' : 'hover:shadow-md'}`}
+      className={`p-0 gap-0 overflow-hidden relative rounded-lg m-0.5 transition-all ${isSelected ? 'shadow-[0_0_0_2px_var(--primary)]' : 'hover:shadow-md'}`}
     >
       {/*Quick Actions*/}
       <div className="absolute w-full flex justify-between px-3 pt-3 items-center z-20 gap-2">
@@ -190,7 +189,7 @@ export function ImageCard({
 
       {/*Image Preview*/}
       <div
-        className="relative overflow-hidden bg-muted cursor-pointer group min-h-64"
+        className="relative overflow-hidden bg-muted cursor-pointer group"
         style={{ aspectRatio: `${image.width} / ${image.height}` }}
         onClick={() => onImageClick(image)}
       >
