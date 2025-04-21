@@ -144,28 +144,6 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   }
 
 
-  const setupSytemPrompt = () => {
-    console.log('setupSytemPrompt');
-    if (mode == 'extraction') {
-      const systemPrompt = prepareExtractionSystemPrompt();
-      const newMessage: ChatMessage = {
-        id: generateUUID(),
-        role: 'system',
-        content: systemPrompt,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages([newMessage]);
-    } else {
-      const newMessage: ChatMessage = {
-        id: generateUUID(),
-        role: 'system',
-        content: CHAT_SYSTEM_GENERATION_PROMPT,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages([newMessage]);
-    }
-  }
-
   //Send a message and get a response
   const sendMessage = async (content: string, role: 'user' | 'assistant' | 'system' = 'user') => {
     if (!content.trim()) return;
@@ -173,38 +151,51 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setError(null);
     if (role === 'user') { setIsProcessing(true); }
 
+    let newMessage: ChatMessage;
+    let updatedMessages: ChatMessage[] = [...messages];
+
+    let updatedMode = checkIfExtractionMode(content) ? 'extraction' : 'generation';
+
     //Setup system prompt
-    if (messages.length == 0) {
-      setMode(checkIfExtractionMode(content) ? 'extraction' : 'generation');
-      setupSytemPrompt();
+    if (messages.length == 0 || updatedMode === 'extraction') {
+      const systemMessage = {
+        id: generateUUID(),
+        role: 'system' as AiChatRole,
+        content: updatedMode === 'extraction' ? prepareExtractionSystemPrompt() : CHAT_SYSTEM_GENERATION_PROMPT,
+        timestamp: new Date().toISOString(),
+      };
+      updatedMessages = [systemMessage];
     }
 
-    console.log("sendmessage", messages);
     //Treat the message
-    if (mode == 'extraction') {
+    if (updatedMode == 'extraction') {
       const civitId = extractCivitaiId(content);
       if (!civitId) return
       const civitData = await fetchCivitaiData(civitId);
       console.log({ civitData });
 
       //Create a new message
-      const newMessage: ChatMessage = {
+      newMessage = {
         id: generateUUID(),
         role: role,
         content: JSON.stringify(civitData),
         timestamp: new Date().toISOString(),
       };
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
+      updatedMessages = [...updatedMessages, newMessage];
+      setMessages(updatedMessages);
 
     } else {
       //Create a new message
-      const newMessage: ChatMessage = {
+      newMessage = {
         id: generateUUID(),
         role: role,
         content: content,
         timestamp: new Date().toISOString(),
       };
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
+      updatedMessages = [...updatedMessages, newMessage];
+
+      console.log("answer, ", updatedMessages);
+      setMessages(updatedMessages);
 
     }
     //If it's a user message, get a response from the AI
@@ -213,7 +204,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         //Get response from OpenAI
         const response = await generateChatCompletion(
           settings.model,
-          messages,
+          updatedMessages,
           settings.temperature,
           settings.maxTokens
         );
@@ -229,8 +220,9 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
           content: response,
           timestamp: new Date().toISOString(),
         };
-        extractPromptFromResponse(response);
+
         setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+        extractPromptFromResponse(response);
       } catch (err) {
         console.error('Error getting AI response:', err);
         setError(err instanceof Error ? err.message : String(err));
@@ -239,7 +231,6 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       }
     }
   };
-
   const clearMessages = () => {
     setMessages([]);
   };
@@ -270,7 +261,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
 
   function extractPromptFromResponse(response: string) {
-    const jsonResponse = JSON.parse(response);
+    const jsonResponse = JSON.parse(response).data;
 
     if (mode == 'extraction') {
       const prompt: Prompt = {
@@ -304,7 +295,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         seed: -1,
         steps: DEFAULT_PROMPT_STEP,
         sampler: availableSDSamplers.length > 0 ? availableSDSamplers[0] : '',
-        model: availableModels.length > 0 ? availableModels[0] : '',
+        model: availableSDModels.length > 0 ? availableSDModels[0] : '',
         width: DEFAULT_PROMPT_HEIGHT,
         height: DEFAULT_PROMPT_WIDTH,
         tags: jsonResponse.tags,

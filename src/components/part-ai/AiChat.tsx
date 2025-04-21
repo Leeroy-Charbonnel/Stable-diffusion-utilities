@@ -132,11 +132,7 @@ export function AiChat() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  if (confirm('Are you sure you want to clear the chat?')) {
-                    clearMessages();
-                  }
-                }}
+                onClick={clearMessages}
                 className="h-8 w-8 p-0"
               >
                 <Trash2 className="h-4 w-4" />
