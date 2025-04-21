@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,8 @@ import { XIcon, Trash } from 'lucide-react';
 import { Prompt } from '@/types';
 import { Slider } from "@/components/ui/slider"
 import { NumberInput } from '@/components/ui/number-input';
-import { DEBOUNCE_DELAY } from '@/lib/constants';
+import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
 type PromptFormProps = {
   prompt?: Prompt;
@@ -31,40 +32,22 @@ export function PromptForm({
 
   const [formData, setFormData] = useState<Prompt>(prompt!);
   const [tagInput, setTagInput] = useState('');
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (prompt) {
-      setFormData(prompt);
-    }
+    if (prompt) { setFormData(prompt); }
   }, [prompt]);
 
-  //Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  //Debounced update function
   const handleFormChange = (updatedData: Partial<Prompt>) => {
+    if (readOnly) return;
+
     const newFormData = { ...formData, ...updatedData };
-    setFormData(newFormData); //Update local state immediately
-
-    //Clear any pending updates
-    if (updateTimeoutRef.current) {
-      clearTimeout(updateTimeoutRef.current);
-    }
-
-    //Set timeout for debounced update to parent
-    updateTimeoutRef.current = setTimeout(() => {
-      onPromptUpdate(newFormData);
-    }, DEBOUNCE_DELAY);
+    setFormData(newFormData);
+    onPromptUpdate(newFormData); //Parent component should handle debouncing
   };
 
   const handleChange = (name: string, value: any) => {
+    if (readOnly) return;
+
     if (['seed', 'steps', 'width', 'height', 'runCount'].includes(name)) {
       const numValue = value === '' ? undefined : parseInt(value, 10);
       handleFormChange({ [name]: numValue });
@@ -77,10 +60,12 @@ export function PromptForm({
   };
 
   const handleSelectChange = (name: string, value: string) => {
+    if (readOnly) return;
     handleFormChange({ [name]: value });
   };
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (readOnly) return;
     if (e.key === 'Enter' && tagInput.trim()) {
       e.preventDefault();
       addTags(tagInput.trim());
@@ -88,185 +73,211 @@ export function PromptForm({
   };
 
   const addTags = (tag: string) => {
+    if (readOnly) return;
     const tags = tag.split(/\s+/);
     const updatedTags = [...formData.tags];
-    let hasNewTags = false;
-
-    tags.forEach(t => {
-      if (!updatedTags.includes(t) && t !== "") {
-        updatedTags.push(t);
-        hasNewTags = true;
-      }
-    });
-
-    if (hasNewTags) {
-      handleFormChange({ tags: updatedTags });
-    }
-
+    tags.forEach(t => { if (!updatedTags.includes(t) && t !== "") updatedTags.push(t); });
+    handleFormChange({ tags: updatedTags });
     setTagInput('');
   };
 
   const removeTag = (tag: string) => {
+    if (readOnly) return;
     handleFormChange({ tags: formData.tags.filter((t) => t !== tag) });
   };
 
   const handleLoraSelect = (loraName: string) => {
+    if (readOnly) return;
+
     if (loraName && !formData.loras?.some(l => l.name === loraName)) {
-      handleFormChange({
-        loras: [...(formData.loras || []), { name: loraName, weight: 1.0 }]
-      });
+      handleFormChange({ loras: [...(formData.loras || []), { name: loraName, weight: 1.0 }] });
     }
   };
 
   const removeLora = (loraName: string) => {
-    handleFormChange({
-      loras: formData.loras?.filter(l => l.name !== loraName) || []
-    });
+    if (readOnly) return;
+    handleFormChange({ loras: formData.loras?.filter(l => l.name !== loraName) || [] });
   };
 
   const updateLoraWeight = (loraName: string, weight: number) => {
-    handleFormChange({
-      loras: formData.loras?.map(l =>
-        l.name === loraName ? { ...l, weight } : l
-      ) || []
-    });
+    if (readOnly) return;
+    handleFormChange({ loras: formData.loras?.map(l => l.name === loraName ? { ...l, weight } : l) || [] });
   };
 
+  const readOnlyCss = "bg-muted/30 border-dashed text-muted-foreground cursor-not-allowed opacity-75";
+
   return (
-    <div className="space-y-3 rounded-lg p-4 bg-gradient-to-br from-background/80 to-background/50 backdrop-blur-sm border shadow-sm">
-      <div>
-        <div className="relative">
-          <Textarea
-            id="text"
-            name="text"
-            value={formData.text}
-            onChange={(e) => handleChange('text', e.target.value)}
-            placeholder="Enter prompt text..."
-            className={`min-h-20 ${readOnly ? 'bg-muted/50 border-dashed' : ''}`}
-            readOnly={readOnly}
-          />
-        </div>
-      </div>
+    <div className={"space-y-3 rounded-lg p-4 shadow-md border relative overflow-hidden bg-background/50 backdrop-blur-sm"}>
+      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/5 via-background/20 to-secondary/5 backdrop-blur-md"></div>
 
-      <div>
-        <div className="relative">
-          <Textarea
-            id="negativePrompt"
-            name="negativePrompt"
-            value={formData.negativePrompt}
-            onChange={(e) => handleChange('negativePrompt', e.target.value)}
-            placeholder="Enter negative prompt text..."
-            className={`min-h-16 ${readOnly ? 'bg-muted/50 border-dashed' : ''}`}
-            readOnly={readOnly}
-          />
-        </div>
-      </div>
+      {/* Read only overlay */}
+      {/* {readOnly && (<div className={"absolute inset-0 z-10 bg-muted/50 border-dashed text-muted-foreground cursor-not-allowed opacity-100"}></div>)} */}
 
-      <div className="grid grid-cols-4 gap-2">
-        <div>
-          <Label htmlFor="seed" className="text-xs pb-1">Seed</Label>
-          <Input id="seed" type="number" value={formData.seed !== undefined ? formData.seed : -1} onChange={(e) => handleChange('seed', e.target.value)} placeholder="Random" className="h-8" readOnly={readOnly}></Input>
-        </div>
-        <div>
-          <Label htmlFor="steps" className="text-xs pb-1">Steps</Label>
-          <NumberInput containerClassName="w-auto" id="steps" value={formData.steps} onChange={(e) => handleChange('steps', e)} required min={1} max={150} className="h-8" readOnly={readOnly} />
-        </div>
-        <div>
-          <Label htmlFor="width" className="text-xs pb-1">Width</Label>
-          <NumberInput id="width" value={formData.width} onChange={(e) => handleChange('width', e)} required min={64} max={2048} className="h-8" readOnly={readOnly} />
-        </div>
-        <div>
-          <Label htmlFor="height" className="text-xs pb-1">Height</Label>
-          <NumberInput id="height" value={formData.height} onChange={(e) => handleChange('height', e)} required min={64} max={2048} className="h-8" readOnly={readOnly} />
-        </div>
-      </div>
-
+      {/* Prompt */}
       <div>
-        <div className="flex justify-between items-center gap-2 mb-1">
-          <Label htmlFor="cfgScale" className="text-xs">CFG Scale</Label>
-          <NumberInput
-            id="cfgScaleInput"
-            value={formData.cfgScale || 7}
-            onChange={(value) => handleChange('cfgScale', value)}
-            min={1}
-            max={30}
-            step={0.1}
-            className="h-7 w-16 text-sm"
-            readOnly={readOnly}
-          />
-        </div>
-        <Slider
-          id="cfgScale"
-          min={1}
-          max={30}
-          step={0.1}
-          value={[formData.cfgScale || 7]}
-          onValueChange={(values) => handleChange('cfgScale', values[0])}
+        <Textarea id="text" name="text" value={formData.text} onChange={(e) => handleChange('text', e.target.value)}
+          placeholder="Enter prompt text..."
+          className={"min-h-20"}
           disabled={readOnly}
         />
       </div>
 
+      {/* Negative Prompt */}
+      <div>
+        <Textarea
+          id="negativePrompt"
+          name="negativePrompt"
+          value={formData.negativePrompt}
+          onChange={(e) => handleChange('negativePrompt', e.target.value)}
+          placeholder="Enter negative prompt text..."
+          className={"min-h-16"}
+          disabled={readOnly}
+        />
+      </div>
+      <Separator className='my-2' />
+
+      {/* Number settings */}
+      <div className="grid grid-cols-4 gap-2">
+        <div>
+          <Label htmlFor="seed" className="text-xs pb-1">Seed</Label>
+          <Input
+            id="seed"
+            type="number"
+            value={formData.seed !== undefined ? formData.seed : -1}
+            onChange={(e) => handleChange('seed', e.target.value)}
+            placeholder="Random"
+            className={"h-8"}
+            disabled={readOnly}
+          />
+        </div>
+        <div>
+          <Label htmlFor="steps" className="text-xs pb-1">Steps</Label>
+          <NumberInput
+            containerClassName="w-auto"
+            id="steps"
+            value={formData.steps}
+            onChange={(e) => handleChange('steps', e)}
+            min={1} max={150} className={"h-8"}
+            disabled={readOnly}
+          />
+        </div>
+        <div>
+          <Label htmlFor="width" className="text-xs pb-1">Width</Label>
+          <NumberInput
+            id="width"
+            value={formData.width}
+            onChange={(e) => handleChange('width', e)}
+            min={64} max={2048} className={"h-8"}
+            disabled={readOnly}
+          />
+        </div>
+        <div>
+          <Label htmlFor="height" className="text-xs pb-1">Height</Label>
+          <NumberInput
+            id="height"
+            value={formData.height}
+            onChange={(e) => handleChange('height', e)}
+            min={64} max={2048} className={"h-8"}
+            disabled={readOnly}
+          />
+        </div>
+      </div>
+
+
+      {/* CFG Scale */}
+      <div>
+        <div className="flex flex-row items-center gap-2 mb-1">
+          <Label htmlFor="cfgScale" className="text-xs text-nowrap mr-5">CFG Scale</Label>
+          <NumberInput
+            id="cfgScaleInput"
+            value={formData.cfgScale || 7}
+            onChange={(value) => handleChange('cfgScale', value)}
+            min={1} max={30} step={0.1} className={"h-7 w-16 text-sm"}
+            disabled={readOnly}
+          />
+          <Slider
+            id="cfgScale"
+            min={1} max={30} step={0.1} value={[formData.cfgScale || 7]}
+            onValueChange={(values) => handleChange('cfgScale', values[0])}
+            disabled={readOnly}
+          />
+        </div>
+      </div>
+
+      <Separator className='my-2' />
+
+      {/* Sampler and Model */}
       <div className="flex gap-2">
-        <div className='flex-auto'>
+        <div className='w-[25%]'>
           <Label htmlFor="sampler" className="text-xs pb-1">Sampler</Label>
           <Select value={formData.sampler} onValueChange={(value) => handleSelectChange('sampler', value)} disabled={readOnly}>
-            <SelectTrigger id="sampler" className="h-8 w-full">
+            <SelectTrigger id="sampler" className={"h-8 w-full"} >
               <SelectValue placeholder="Select a sampler" />
             </SelectTrigger>
             <SelectContent>
-              {availableSamplers.map((sampler) => (<SelectItem key={sampler} value={sampler}>{sampler}</SelectItem>))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className='flex-auto'>
-          <Label htmlFor="model" className="text-xs pb-1">Model</Label>
-          <Select value={formData.model || ''} onValueChange={(value) => handleSelectChange('model', value)} disabled={readOnly}>
-            <SelectTrigger id="model" className="h-8 w-full">
-              <SelectValue placeholder="Select a model" className="truncate" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableModels.map((model) => (
-                <SelectItem key={model} value={model} className="truncate" title={model}>
-                  {model}
-                </SelectItem>
+              {availableSamplers.map((sampler) => (
+                <SelectItem key={sampler} value={sampler} title={sampler}>{sampler}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        <div className='flex-auto'>
+        <div className='w-[50%]'>
+          <Label htmlFor="model" className="text-xs pb-1">Model</Label>
+          <Select value={formData.model} onValueChange={(value) => handleSelectChange('model', value)} disabled={readOnly}>
+            <SelectTrigger id="model" className="h-8 w-full" >
+              <SelectValue placeholder="Select a model" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableModels.map((model) => (
+                <SelectItem key={model} value={model} title={model}>{model}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className='w-[25%]'>
           <Label htmlFor="runCount" className="text-xs pb-1">Run Count</Label>
-          <NumberInput id="runCount" value={formData.runCount} onChange={(e) => handleChange('runCount', e)} required min={1} max={999} className="h-8" readOnly={readOnly} />
+          <NumberInput
+            id="runCount"
+            value={formData.runCount}
+            onChange={(e) => handleChange('runCount', e)}
+            min={1}
+            max={999}
+            className={"h-8 w-full"}
+            readOnly={readOnly}
+            disabled={readOnly}
+          />
         </div>
       </div>
 
+      <Separator className='my-2' />
+
+      {/* LoRAs */}
       <div>
-        <div className="flex items-center">
-          <Label className="text-xs pb-1">LoRAs</Label>
-        </div>
+        <div className="flex items-center"><Label className="text-xs pb-1">LoRAs</Label></div>
 
         <div className="mb-2">
-          <Select onValueChange={handleLoraSelect} value="" disabled={readOnly}>
-            <SelectTrigger className="h-8"><SelectValue placeholder="Add a LoRA..." /></SelectTrigger>
+          <Select onValueChange={handleLoraSelect} value="" disabled={readOnly}><SelectTrigger className={"h-8"}>
+            <SelectValue placeholder="Add a LoRA..." />
+          </SelectTrigger>
             <SelectContent>
-              {availableLoras.filter((lora) => !formData.loras?.some(existingLora => existingLora.name === lora.name)).map((lora) => (<SelectItem key={lora.name} value={lora.name}>{lora.name}</SelectItem>))}
+              {availableLoras.filter((lora) => !formData.loras?.some(existingLora => existingLora.name === lora.name)).map((lora) => (
+                <SelectItem key={lora.name} value={lora.name} title={lora.name}>{lora.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
-        {formData.loras && formData.loras.length > 0 ? (
+        {formData.loras && formData.loras.length > 0 && (
           <div className="space-y-1">
             {formData.loras.map((lora) => (
-              <div key={lora.name} className="grid grid-cols-2 gap-2 p-1 border rounded-md">
-                <div className="flex-1 font-medium truncate" title={lora.name}>{lora.name}</div>
+              <div key={lora.name} className="grid grid-cols-2 gap-2 p-1 rounded-md">
+                <div className="flex-1 font-medium truncate max-w-full" title={lora.name}>{lora.name}</div>
                 <div className="flex items-center gap-1 w-full">
                   <NumberInput
                     value={lora.weight}
                     onChange={(value) => updateLoraWeight(lora.name, value)}
-                    min={0}
-                    max={2}
-                    step={0.1}
-                    className="h-7 w-16 text-sm"
-                    readOnly={readOnly}
+                    min={0} max={2} step={0.1} className={"h-7 w-16 text-sm"}
+                    disabled={readOnly}
                   />
 
                   <Slider
@@ -275,7 +286,7 @@ export function PromptForm({
                     step={0.1}
                     onValueChange={(value: number[]) => updateLoraWeight(lora.name, value[0])}
                     disabled={readOnly}
-                    className="flex-1"
+                    className={cn("flex-1", readOnly && "opacity-50")}
                   />
 
                   <Button
@@ -292,11 +303,12 @@ export function PromptForm({
               </div>
             ))}
           </div>
-        ) : (
-          <div className="text-xs text-muted-foreground">No LoRAs added</div>
         )}
       </div>
 
+      <Separator className='my-2' />
+
+      {/* Tags */}
       <div>
         <Label htmlFor="tags" className="text-xs pb-1">Tags</Label>
         <div className="flex justify-between gap-2 mb-3">
@@ -306,8 +318,9 @@ export function PromptForm({
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={handleTagKeyDown}
             placeholder="Add tags (press Enter to add)"
-            className="h-8 flex-1"
+            className={cn("h-8 flex-1", readOnly && readOnlyCss)}
             readOnly={readOnly}
+            disabled={readOnly}
           />
           <Button
             type="button"
@@ -332,6 +345,6 @@ export function PromptForm({
           ))}
         </div>
       </div>
-    </div>
+    </div >
   );
 }

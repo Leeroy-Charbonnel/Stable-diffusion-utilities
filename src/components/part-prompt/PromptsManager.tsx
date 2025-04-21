@@ -11,6 +11,7 @@ import { usePrompt } from '@/contexts/contextPrompts';
 import { toast } from 'sonner';
 import { ExecutionPanel } from './ExecutionPanel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import { DEBOUNCE_DELAY } from '@/lib/constants';
 
 export function PromptsManager() {
   const { isConnected, generateImage, availableSamplers, availableModels, availableLoras } = useApi();
@@ -29,11 +30,34 @@ export function PromptsManager() {
 
   const cancelExecutionRef = useRef(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   //Load prompts again if they might have been updated elsewhere
   useEffect(() => {
     loadPrompts();
   }, []);
+
+  //Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  //Handle prompt update with debounce
+  const handlePromptUpdate = (updatedPrompt: Prompt) => {
+    //Clear any pending updates
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+
+    //Set timeout for debounced update
+    updateTimeoutRef.current = setTimeout(() => {
+      updatePrompt(updatedPrompt);
+    }, DEBOUNCE_DELAY);
+  };
 
   //Handle interruption of execution
   const handleInterruptExecution = () => {
@@ -111,11 +135,7 @@ export function PromptsManager() {
     //Reset all prompts to idle state in a sequential manner
     const promptsToReset = prompts.filter(p => p.currentRun > 0);
     for (const p of promptsToReset) {
-      await updatePrompt({
-        ...p,
-        currentRun: 0,
-        status: 'idle'
-      });
+      await updatePrompt({...p,currentRun: 0,status: 'idle'});
     }
 
     //Clear execution state
@@ -172,7 +192,7 @@ export function PromptsManager() {
       cfgScale: 7,
       seed: -1,
       steps: 20,
-      sampler: availableSamplers.length > 0 ? availableSamplers[0] : 'Euler a',
+      sampler: availableSamplers.length > 0 ? availableSamplers[0] : '',
       model: availableModels.length > 0 ? availableModels[0] : '',
       width: 512,
       height: 512,
@@ -190,7 +210,10 @@ export function PromptsManager() {
     <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-8rem)]">
       {/* Main Content - Left Side */}
       <ResizablePanel defaultSize={75} minSize={30}>
-        <div className="h-full flex flex-col p-4">
+        <div className="h-full flex flex-col p-4 relative overflow-hidden">
+          {/* Gradient background */}
+          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/5 via-background/10 to-secondary/5"></div>
+
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Prompt List</h2>
             <Button
@@ -221,7 +244,7 @@ export function PromptsManager() {
                 onMove={reorderPrompt}
                 onRunPrompt={handleExecutePrompt}
                 onCancelExecution={handleInterruptExecution}
-                onPromptUpdate={updatePrompt}
+                onPromptUpdate={handlePromptUpdate}
                 isExecuted={executedPromptIds.has(prompt.id)}
                 isExecuting={status === 'execution'}
                 isCurrentlyExecuting={executingPromptId === prompt.id}

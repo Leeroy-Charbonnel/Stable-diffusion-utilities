@@ -1,7 +1,7 @@
 [
   {
     "id": "e5acb118-ee8d-4919-b22e-247cd5383273",
-    "isOpen": true,
+    "isOpen": false,
     "name": "PRSNL4 Style, very aesthetic,...",
     "text": "PRSNL4 Style, very aesthetic, digital drawing, 1girl, flower, mole, solo, portrait, rose, glowing, mole under eye, parted lips, looking at viewer, simple background, black background, purple theme, glowing eyes, white eyes, short hair",
     "negativePrompt": "score_5, score_4, score_3, ugly, fat",
@@ -34,11 +34,7 @@
     ],
     "loras": [
       {
-        "name": "[BSS] - Styles for Pony",
-        "weight": 1
-      },
-      {
-        "name": "Realistic filter [IL]",
+        "name": "All Disney Princess XL LoRA Model from Ralph Breaks the Internet",
         "weight": 1
       }
     ],
@@ -138,6 +134,25 @@
         "weight": 0.8
       }
     ],
+    "currentRun": 0,
+    "status": "idle"
+  },
+  {
+    "id": "5759e637-d288-40ee-96b6-caeca320146d",
+    "isOpen": false,
+    "name": "New Prompt",
+    "text": "",
+    "negativePrompt": "",
+    "cfgScale": 7,
+    "seed": -1,
+    "steps": 20,
+    "sampler": "DPM++ 2M",
+    "model": "Flux.1-Dev Hyper NF4 + Flux.1-Dev BNB NF4 + Flux.1-Schnell BNB NF4.safetensors [fef37763b8]",
+    "width": 512,
+    "height": 512,
+    "runCount": 1,
+    "tags": [],
+    "loras": [],
     "currentRun": 0,
     "status": "idle"
   }

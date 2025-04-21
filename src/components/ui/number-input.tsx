@@ -18,7 +18,7 @@ export function NumberInput({
     max,
     step = 1,
     containerClassName,
-    readOnly = false,
+    disabled = false,
     ...props
 }: NumberInputProps) {
     const [localValue, setLocalValue] = useState<string>(value?.toString() || '');
@@ -45,8 +45,8 @@ export function NumberInput({
         const newValue = e.target.value;
         setLocalValue(newValue);
 
-        //If readonly, don't process changes
-        if (readOnly) return;
+        //If disabled, don't process changes
+        if (disabled) return;
 
         //Clear any pending updates
         if (timeoutRef.current) {
@@ -67,8 +67,8 @@ export function NumberInput({
     };
 
     const handleBlur = () => {
-        //If readonly, don't process changes
-        if (readOnly) return;
+        //If disabled, don't process changes
+        if (disabled) return;
 
         //When field is blurred, validate and convert to number
         let numValue: number;
@@ -100,7 +100,7 @@ export function NumberInput({
                 value={localValue}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className={`${readOnly ? 'bg-muted/50 border-dashed cursor-not-allowed' : ''}`}
+                disabled={disabled}
                 {...props}
             />
         </div>

@@ -140,7 +140,7 @@ export function PromptCard({
   const currentProgress = (localPrompt.currentRun / localPrompt.runCount) * 100;
 
   return (
-    <Card className={`overflow-hidden p-0`}>
+    <Card className={`mx-auto my-2 overflow-hidden p-0 max-w-[950px]`}>
       <Accordion
         type="single"
         collapsible
