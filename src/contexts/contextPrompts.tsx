@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { Prompt } from '@/types';
 import * as promptsApi from '@/services/apiPrompt';
 import { toast } from 'sonner';
@@ -8,8 +8,6 @@ interface PromptContextType {
     prompts: Prompt[];
     isLoading: boolean;
     error: string | null;
-
-    //Methods
     loadPrompts: () => Promise<void>;
     addPrompt: (prompt: Prompt) => Promise<boolean>;
     updatePrompt: (updatedPrompt: Prompt) => Promise<boolean>;
@@ -23,13 +21,38 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [prompts, setPrompts] = useState<Prompt[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    //Keep a ref to pending updates to avoid race conditions
-    const pendingUpdatesRef = useRef<{ [id: string]: Prompt }>({});
-    //Timer for debouncing
-    const debouncerRef = useRef<NodeJS.Timeout | null>(null);
+    const saveToDisk = async () => {
+        try {
+            await promptsApi.saveAllPrompts(prompts);
+        } catch (error) {
+            console.error('Error saving prompts:', error);
+        }
+    };
 
-    //Load prompts from the server
+    //Schedule save with debounce
+    const scheduleSave = () => {
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+        saveTimeoutRef.current = setTimeout(saveToDisk, DEBOUNCE_DELAY);
+    };
+
+    //Save on prompts change
+    useEffect(() => {
+        if (prompts.length > 0) {
+            scheduleSave();
+        }
+
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+                saveToDisk();
+            }
+        };
+    }, [prompts]);
+
     const loadPrompts = async (): Promise<void> => {
         setIsLoading(true);
         setError(null);
@@ -37,63 +60,19 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             const loadedPrompts = await promptsApi.getAllPrompts();
             setPrompts(loadedPrompts);
         } catch (error) {
-            console.error('Failed to load prompts:', error);
             setError(`Failed to load prompts: ${error instanceof Error ? error.message : String(error)}`);
         } finally {
             setIsLoading(false);
         }
     };
 
-    //Function to actually save all prompts to server (called after debounce)
-    const savePromptsToServer = useCallback(async () => {
-        //Only save if there are pending updates
-        if (Object.keys(pendingUpdatesRef.current).length === 0) return;
-
-        //Create updated prompts array with all pending changes
-        const updatedPrompts = prompts.map(prompt => {
-            const pendingUpdate = pendingUpdatesRef.current[prompt.id];
-            return pendingUpdate || prompt;
-        });
-
-        try {
-            //Don't set loading state for debounced updates to prevent UI flicker
-            const success = await promptsApi.saveAllPrompts(updatedPrompts);
-
-            if (success) {
-                //Only update state if save was successful
-                setPrompts(updatedPrompts);
-            } else {
-                console.error('Failed to save prompts to server');
-            }
-        } catch (error) {
-            console.error('Error saving prompts:', error);
-        } finally {
-            //Clear pending updates
-            pendingUpdatesRef.current = {};
-        }
-    }, [prompts]);
-
-    const debouncedSave = useCallback(() => {
-        if (debouncerRef.current) clearTimeout(debouncerRef.current);
-        debouncerRef.current = setTimeout(() => { savePromptsToServer(); }, DEBOUNCE_DELAY);
-    }, [savePromptsToServer]);
-
-    //Cleanup timeout on unmount
+    //Load prompts on mount
     useEffect(() => {
-        return () => {
-            if (debouncerRef.current) {
-                clearTimeout(debouncerRef.current);
-                //Force save any pending updates on unmount
-                if (Object.keys(pendingUpdatesRef.current).length > 0) {
-                    savePromptsToServer();
-                }
-            }
-        };
-    }, [savePromptsToServer]);
+        loadPrompts();
+    }, []);
 
     const addPrompt = async (prompt: Prompt): Promise<boolean> => {
         setIsLoading(true);
-        setError(null);
         try {
             const updatedPrompts = [...prompts, prompt];
             const success = await promptsApi.saveAllPrompts(updatedPrompts);
@@ -106,7 +85,6 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             toast("Failed to create prompt");
             return false;
         } catch (error) {
-            console.error('Failed to add prompt:', error);
             setError(`Failed to add prompt: ${error instanceof Error ? error.message : String(error)}`);
             return false;
         } finally {
@@ -114,33 +92,31 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
     };
 
-    //Update an existing prompt
     const updatePrompt = async (updatedPrompt: Prompt): Promise<boolean> => {
-        //For certain operations that need to be immediate (run counts, execution status)
-        const needsImmediateUpdate = updatedPrompt.status !== 'idle';
-
-        //Immediately update the UI with the changes
+        //Update immediately
         setPrompts(prev =>
             prev.map(p => p.id === updatedPrompt.id ? updatedPrompt : p)
         );
 
-        //Store this update as pending
-        pendingUpdatesRef.current[updatedPrompt.id] = updatedPrompt;
-
-        if (needsImmediateUpdate) {
-            //Save immediately for execution-related updates
-            return savePromptsToServer().then(() => true).catch(() => false);
-        } else {
-            //Otherwise debounce the save
-            debouncedSave();
-            return Promise.resolve(true);
+        //For execution-related updates, save immediately
+        if (updatedPrompt.status !== 'idle' || updatedPrompt.currentRun > 0) {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+                saveTimeoutRef.current = null;
+            }
+            try {
+                await saveToDisk();
+                return true;
+            } catch (error) {
+                return false;
+            }
         }
+
+        return true;
     };
 
-    //Delete a prompt
     const deletePrompt = async (promptId: string): Promise<boolean> => {
         setIsLoading(true);
-        setError(null);
         try {
             const updatedPrompts = prompts.filter(p => p.id !== promptId);
             const success = await promptsApi.saveAllPrompts(updatedPrompts);
@@ -151,7 +127,6 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             }
             return false;
         } catch (error) {
-            console.error('Failed to delete prompt:', error);
             setError(`Failed to delete prompt: ${error instanceof Error ? error.message : String(error)}`);
             return false;
         } finally {
@@ -159,10 +134,8 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
     };
 
-    //Reorder prompts
     const reorderPrompt = async (promptId: string, direction: 'up' | 'down'): Promise<boolean> => {
         setIsLoading(true);
-        setError(null);
         try {
             const promptIndex = prompts.findIndex(p => p.id === promptId);
             if (
@@ -186,18 +159,12 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             }
             return false;
         } catch (error) {
-            console.error('Failed to reorder prompt:', error);
             setError(`Failed to reorder prompt: ${error instanceof Error ? error.message : String(error)}`);
             return false;
         } finally {
             setIsLoading(false);
         }
     };
-
-    //Load prompts when the context is initialized
-    useEffect(() => {
-        loadPrompts();
-    }, []);
 
     const value: PromptContextType = {
         prompts,
@@ -213,7 +180,6 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     return <PromptContext.Provider value={value}>{children}</PromptContext.Provider>;
 };
 
-//Custom hook to use the Prompt context
 export const usePrompt = (): PromptContextType => {
     const context = useContext(PromptContext);
     if (context === undefined) {

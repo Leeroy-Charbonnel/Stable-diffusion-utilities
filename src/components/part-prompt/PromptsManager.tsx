@@ -43,7 +43,7 @@ export function PromptsManager() {
 
   //Handle execution of a single prompt
   const handleExecutePrompt = async (promptToExecute: Prompt) => {
-    setStatus('single-execution');
+    setStatus('execution');
     setSuccessCount(0);
     setFailureCount(0);
     setCurrentPromptIndex(0);
@@ -59,7 +59,6 @@ export function PromptsManager() {
     } catch (err) {
       console.error('Error during prompt execution:', err);
       setExecutionError(`Error during execution: ${err instanceof Error ? err.message : String(err)}`);
-      setStatus('failed');
       toast("Execution failed ", {
         description: err instanceof Error ? err.message : String(err)
       });
@@ -71,7 +70,7 @@ export function PromptsManager() {
 
   //Handle execution of all prompts
   const handleExecuteAll = async () => {
-    setStatus('global-execution');
+    setStatus('execution');
     setSuccessCount(0);
     setFailureCount(0);
     setCurrentPromptIndex(0);
@@ -98,15 +97,12 @@ export function PromptsManager() {
     } catch (err) {
       console.error('Error during batch execution:', err);
       setExecutionError(`Error during execution: ${err instanceof Error ? err.message : String(err)}`);
-      setStatus('failed');
       toast("Execution failed ", {
         description: err instanceof Error ? err.message : String(err)
       });
     }
 
-    if (status !== 'failed') {
-      setStatus('completed');
-    }
+    setStatus('completed');
 
     await resetExecution();
   };
@@ -127,7 +123,7 @@ export function PromptsManager() {
     setExecutedPromptIds(new Set());
     setIsCancelling(false);
     cancelExecutionRef.current = false;
-    
+
     //Reset counters
     setCurrentPromptIndex(0);
     setPromptsToRunCount(0);
@@ -173,6 +169,7 @@ export function PromptsManager() {
       name: 'New Prompt',
       text: '',
       negativePrompt: '',
+      cfgScale: 7,
       seed: -1,
       steps: 20,
       sampler: availableSamplers.length > 0 ? availableSamplers[0] : 'Euler a',
@@ -198,13 +195,13 @@ export function PromptsManager() {
             <h2 className="text-xl font-semibold">Prompt List</h2>
             <Button
               onClick={handleAddPrompt}
-              disabled={isPromptLoading || status === 'single-execution' || status === 'global-execution'}>
+              disabled={isPromptLoading || status === 'execution'}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Prompt
             </Button>
           </div>
 
-          {executionError && status !== 'failed' && (
+          {executionError && (
             <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
@@ -225,7 +222,7 @@ export function PromptsManager() {
                 onCancelExecution={handleInterruptExecution}
                 onPromptUpdate={updatePrompt}
                 isExecuted={executedPromptIds.has(prompt.id)}
-                isExecuting={status === 'global-execution' || status === 'single-execution'}
+                isExecuting={status === 'execution'}
                 isCurrentlyExecuting={executingPromptId === prompt.id}
                 isApiConnected={isConnected}
                 availableSamplers={availableSamplers}
