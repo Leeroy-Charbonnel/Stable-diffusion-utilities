@@ -2,7 +2,9 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { generateChatCompletion, getOpenAiModels } from '@/services/apiAI';
 import { generateUUID } from '@/lib/utils';
 import { DEFAULT_AI_API_KEY } from '@/lib/constantsKeys';
-import { AiChatRole, ChatMessage } from '@/types';
+import { AiChatRole, ChatMessage, Prompt } from '@/types';
+import { useApi } from './contextSD';
+import { CHAT_SYSTEM_EXTRACTION_PROMPT, CHAT_SYSTEM_GENERATION_PROMPT } from '@/lib/constantsAI';
 
 const DEFAULT_AI_SETTINGS: AiSettings = {
   apiKey: DEFAULT_AI_API_KEY,
@@ -27,11 +29,14 @@ interface AiContextType {
   isLoadingModels: boolean;
 
   sendMessage: (content: string, role?: AiChatRole) => Promise<void>;
-  updateMessageContent: (messageId: string, newContent: string) => void;
   clearMessages: () => void;
   setModel: (model: string) => void;
   setTemperature: (temp: number) => void;
   setMaxTokens: (tokens: number) => void;
+
+
+  generatedPrompt: Prompt | null;
+  setGeneratedPrompt: (prompt: Prompt) => void;
 }
 
 const AiContext = createContext<AiContextType | undefined>(undefined);
@@ -46,6 +51,18 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [mode, setMode] = useState('generation');
+
+  //Setting updaters
+  const setModel = (model: string) => { setSettings((prev) => ({ ...prev, model })); };
+  const setTemperature = (temperature: number) => { setSettings((prev) => ({ ...prev, temperature })); };
+  const setMaxTokens = (maxTokens: number) => { setSettings((prev) => ({ ...prev, maxTokens })); };
+
+  const [generatedPrompt, setGeneratedPrompt] = useState<Prompt | null>(null);
+  const { availableSamplers: availableSDSamplers,
+    availableModels: availableSDModels,
+    availableLoras: availableSDLoras,
+    isLoading: isApiLoading } = useApi();
 
   //Load settings from local storage
   useEffect(() => {
@@ -110,45 +127,90 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     }
   };
 
-  //Setting updaters
-  const setModel = (model: string) => { setSettings((prev) => ({ ...prev, model })); };
-  const setTemperature = (temperature: number) => { setSettings((prev) => ({ ...prev, temperature })); };
-  const setMaxTokens = (maxTokens: number) => { setSettings((prev) => ({ ...prev, maxTokens })); };
 
-  //Update message content
-  const updateMessageContent = (messageId: string, newContent: string) => {
-    setMessages(prevMessages =>
-      prevMessages.map(msg =>
-        msg.id === messageId ? { ...msg, content: newContent } : msg
-      )
-    );
-  };
+
+  const prepareExtractionSystemPrompt = (): string => {
+    const modelsSection = `${availableSDModels.join(', ')}`;
+    const samplersSection = `${availableSDSamplers.join(', ')}`;
+    const lorasSection = `${availableSDLoras.map(l => l.name).join(', ')}`;
+
+    let preparedPrompt = CHAT_SYSTEM_EXTRACTION_PROMPT
+      .replace('AVAILABLE_MODELS_PLACEHOLDER', modelsSection)
+      .replace('AVAILABLE_SAMPLERS_PLACEHOLDER', samplersSection)
+      .replace('AVAILABLE_LORAS_PLACEHOLDER', lorasSection);
+
+    return preparedPrompt;
+  }
+
+
+  const setupSytemPrompt = () => {
+    if (mode == 'extraction') {
+      const systemPrompt = prepareExtractionSystemPrompt();
+      const newMessage: ChatMessage = {
+        id: generateUUID(),
+        role: 'system',
+        content: systemPrompt,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+    } else {
+      const newMessage: ChatMessage = {
+        id: generateUUID(),
+        role: 'system',
+        content: CHAT_SYSTEM_GENERATION_PROMPT,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+    }
+  }
 
   //Send a message and get a response
   const sendMessage = async (content: string, role: 'user' | 'assistant' | 'system' = 'user') => {
     if (!content.trim()) return;
 
     setError(null);
-
-    //For user messages, set isProcessing to true
     if (role === 'user') { setIsProcessing(true); }
 
-    //Create a new message
-    const newMessage: ChatMessage = { id: generateUUID(), role, content, timestamp: new Date().toISOString(), };
+    //Setup system prompt
+    if (messages.length == 0) {
+      setMode(checkIfExtractionMode(content) ? 'extraction' : 'generation');
+      setupSytemPrompt();
+    }
 
-    //Add the message to the list
-    setMessages((prevMessages) => [...prevMessages, newMessage]);
+    //Treat the message
+    if (mode == 'extraction') {
+      const civitId = extractCivitaiId(content);
+      if (!civitId) return
+      const civitData = await fetchCivitaiData(civitId);
+      console.log({civitData});
 
+      //Create a new message
+      const newMessage: ChatMessage = {
+        id: generateUUID(),
+        role: role,
+        content: JSON.stringify(civitData),
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+
+    } else {
+      //Create a new message
+      const newMessage: ChatMessage = {
+        id: generateUUID(),
+        role: role,
+        content: content,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+
+    }
     //If it's a user message, get a response from the AI
     if (role === 'user') {
       try {
-        //Get all messages to send to the API
-        const updatedMessages = [...messages, newMessage];
-
         //Get response from OpenAI
         const response = await generateChatCompletion(
           settings.model,
-          updatedMessages,
+          messages,
           settings.temperature,
           settings.maxTokens
         );
@@ -179,6 +241,30 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setMessages([]);
   };
 
+
+  const checkIfExtractionMode = (content: string): boolean => {
+    return content.includes("https://civitai.com/");
+  }
+
+  const extractCivitaiId = (url: string): string | null => {
+    const match = url.match(/https:\/\/civitai\.com\/images\/(\d+)/);
+    return match ? match[1] : null;
+  };
+
+  const fetchCivitaiData = async (imageId: string): Promise<any> => {
+    try {
+      const response = await fetch(`https://civitai.com/api/trpc/image.getGenerationData?input={"json":{"id":${imageId}}}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch from Civitai API');
+      }
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching Civitai data:', error);
+      return null;
+    }
+  };
+
   const value: AiContextType = {
     messages,
     settings,
@@ -188,10 +274,11 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     isLoadingModels,
     sendMessage,
     clearMessages,
-    updateMessageContent,
     setModel,
     setTemperature,
     setMaxTokens,
+    generatedPrompt,
+    setGeneratedPrompt
   };
 
   return <AiContext.Provider value={value}>{children}</AiContext.Provider>;

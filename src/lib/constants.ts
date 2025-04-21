@@ -7,4 +7,3 @@ export const FILE_API_BASE_URL = 'http://localhost:3001/api';
 export const SD_API_BASE_URL = 'http://localhost:7860';
 
 export const DEBOUNCE_DELAY = 300; 
-export const MAX_DEBOUNCE_TIME = 1000;

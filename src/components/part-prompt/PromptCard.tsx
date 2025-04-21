@@ -56,16 +56,11 @@ export function PromptCard({
 }: PromptCardProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(prompt.name);
-  const [localPrompt, setLocalPrompt] = useState<Prompt>(prompt);
-  // Removed nameUpdateTimeoutRef
 
-  //Update local prompt when props change
   useEffect(() => {
-    setLocalPrompt(prompt);
     setNameValue(prompt.name);
   }, [prompt]);
 
-  // Removed cleanup effect for timeout
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNameValue(e.target.value);
@@ -73,12 +68,7 @@ export function PromptCard({
 
   const saveNameChange = () => {
     if (nameValue.trim()) {
-      //Update local state immediately
-      setLocalPrompt(prev => ({ ...prev, name: nameValue }));
-
-      //Direct update without debouncing
       onPromptUpdate({ ...prompt, name: nameValue });
-
       setIsEditingName(false);
     }
   };
@@ -97,28 +87,27 @@ export function PromptCard({
   };
 
   const handlePromptUpdate = (updatedPrompt: Prompt) => {
-    setLocalPrompt(updatedPrompt);
     onPromptUpdate(updatedPrompt);
   };
 
   const handleAccordionChange = () => {
-    handlePromptUpdate({ ...localPrompt, isOpen: !localPrompt.isOpen })
+    handlePromptUpdate({ ...prompt, isOpen: !prompt.isOpen })
   }
 
-  const currentProgress = (localPrompt.currentRun / localPrompt.runCount) * 100;
+  const currentProgress = (prompt.currentRun / prompt.runCount) * 100;
 
   return (
     <Card className="overflow-hidden p-0 gap-0 max-w-[950px]">
-      <Accordion type="single" collapsible value='true' className="w-full" onClick={handleAccordionChange}>
+      <Accordion type="single" collapsible value='true' className="w-full">
         <AccordionItem value={prompt.isOpen.toString()} className="border-none">
           <div className="px-4 py-2 flex items-center justify-between border-b">
             <div className="flex-1 truncate flex items-center">
 
-              <AccordionTrigger className="hover:no-underline py-0 mr-2 flex"></AccordionTrigger>
+              <AccordionTrigger className="hover:no-underline py-0 mr-2 flex" onClick={handleAccordionChange}></AccordionTrigger>
 
               <span className="text-xs font-medium bg-input/30 h-6 w-6 p-3.5 flex items-center justify-center rounded-md mr-2">{index}</span>
 
-              {isExecuting && (<h3 className="text-sm font-medium truncate">{localPrompt.name}</h3>)}
+              {isExecuting && (<h3 className="text-sm font-medium truncate">{prompt.name}</h3>)}
 
               {!isExecuting && (
                 isEditingName ? (
@@ -129,7 +118,7 @@ export function PromptCard({
                   </div>
                 ) : (
                   <h3 className="text-sm font-medium truncate hover:underline cursor-pointer" onClick={() => { setIsEditingName(true); }}>
-                    {localPrompt.name}
+                    {prompt.name}
                   </h3>
                 ))}
             </div>
@@ -139,18 +128,18 @@ export function PromptCard({
                   <StopCircle className="mr-1 h-3 w-3" />Stop</Button>
               ) : (
                 <Button
-                  variant="outline" size="sm" onClick={() => { onRunPrompt(localPrompt); }} className="h-6 p-3.5 text-xs border-0" disabled={isExecuting || !isApiConnected}>
+                  variant="outline" size="sm" onClick={() => { onRunPrompt(prompt); }} className="h-6 p-3.5 text-xs border-0" disabled={isExecuting || !isApiConnected}>
                   <Play className="mr-1 h-3 w-3" />Run</Button>
               )}
 
-              <div className="text-xs font-medium bg-input/30 h-6 px-2 p-3.5 flex items-center justify-center rounded-md">{localPrompt.runCount}×</div>
+              <div className="text-xs font-medium bg-input/30 h-6 px-2 p-3.5 flex items-center justify-center rounded-md">{prompt.runCount}×</div>
 
-              <Button variant="ghost" size="icon" onClick={() => { onMove(localPrompt.id, 'up'); }}
+              <Button variant="ghost" size="icon" onClick={() => { onMove(prompt.id, 'up'); }}
                 className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-white/10 rounded-full" disabled={isExecuting}>
                 <ChevronUp />
               </Button>
 
-              <Button variant="ghost" size="icon" onClick={() => { onMove(localPrompt.id, 'down'); }}
+              <Button variant="ghost" size="icon" onClick={() => { onMove(prompt.id, 'down'); }}
                 className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-white/10 rounded-full" disabled={isExecuting}>
                 <ChevronDown />
               </Button>
@@ -168,7 +157,7 @@ export function PromptCard({
               <div className="w-full">
                 <div className="flex items-center gap-2">
                   <Progress value={currentProgress} className="h-1 flex-1" />
-                  <span className="text-xs">{localPrompt.currentRun}/{localPrompt.runCount}</span>
+                  <span className="text-xs">{prompt.currentRun}/{prompt.runCount}</span>
                 </div>
               </div>
             </div>
@@ -176,7 +165,7 @@ export function PromptCard({
           <AccordionContent className="pt-0">
             <div className="px-0">
               <PromptForm
-                prompt={localPrompt}
+                prompt={prompt}
                 onPromptUpdate={handlePromptUpdate}
                 availableSamplers={availableSamplers}
                 availableModels={availableModels}
@@ -193,15 +182,15 @@ export function PromptCard({
         <div className={`p-2`}>
           <div className="flex flex-wrap gap-1.5">
             {/*Model Badge - Primary*/}
-            {localPrompt.model && showModels && (
-              <div key="model" className="flex items-center px-2 py-0.5 h-5 rounded-md bg-primary/30" title={localPrompt.model}>
+            {prompt.model && showModels && (
+              <div key="model" className="flex items-center px-2 py-0.5 h-5 rounded-md bg-primary/30" title={prompt.model}>
                 <div className="text-xs max-w-[100px] truncate">
-                  {localPrompt.model}
+                  {prompt.model}
                 </div>
               </div>
             )}
             {/*LoRA Badges*/}
-            {localPrompt.loras && showModels && localPrompt.loras.map(lora => (
+            {prompt.loras && showModels && prompt.loras.map(lora => (
               <div key={lora.name} className="flex items-center px-2 py-0.5 h-5 rounded-md border-primary border-1" title={lora.name}>
                 <div className="text-xs max-w-[100px] truncate text-primary">
                   {lora.name}
@@ -210,7 +199,7 @@ export function PromptCard({
             ))}
 
             {/*Regular Tag Badges*/}
-            {localPrompt.tags && showTags && localPrompt.tags.map(tag => (
+            {prompt.tags && showTags && prompt.tags.map(tag => (
               <div key={tag} className="flex items-center px-2 py-0.5 h-5 rounded-md bg-input/30">
                 <div className="text-xs">
                   {tag}

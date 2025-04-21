@@ -1,7 +1,7 @@
 export const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 export const OPENAI_API_MODEL = 'https://api.openai.com/v1/models';
 
-export const CHAT_SYSTEM_PROMPT = `You are an AI assistant specialized in Stable Diffusion image generation. 
+export const CHAT_SYSTEM_GENERATION_PROMPT = `You are an AI assistant specialized in Stable Diffusion image generation. 
 Help users craft effective prompts for image generation.
 When asked to create a prompt, provide detailed, descriptive text that would work well with Stable Diffusion.
 
@@ -39,7 +39,7 @@ You must structure your responses as a valid JSON object with the following exac
 
 Only the "message" part will be displayed to the user, while the "data" part will be used by our system.`;
 
-export const EXTRACTION_PROMPT = `You are an AI assistant specialized in extracting Stable Diffusion generation parameters from text.
+export const CHAT_SYSTEM_EXTRACTION_PROMPT = `You are an AI assistant specialized in extracting Stable Diffusion generation parameters from text.
 The input may be either:
 1. A detailed AI response about Stable Diffusion prompt creation
 2. Raw parameter text copied from Stable Diffusion WebUI or Civitai website
@@ -85,5 +85,4 @@ Example output format:
   "tags": ["masterpiece", "best quality", "1girl", "solo", "portrait"]
 }
 Return in the JSON, the model, sampler, and loras that are available (the name might differ, try to match).  
-
 `;

@@ -107,6 +107,9 @@ export const generateChatCompletion = async (
   temperature: number = 0.7,
   maxTokens?: number
 ): Promise<string | null> => {
+  console.log("generateChatCompletion");
+  console.log(messages);
+
   const openAiMessages = messages.map(msg => ({
     role: msg.role,
     content: msg.content

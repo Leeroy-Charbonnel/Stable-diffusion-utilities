@@ -3,7 +3,7 @@
     "id": "e5acb118-ee8d-4919-b22e-247cd5383273",
     "isOpen": false,
     "name": "PRSNL4 Style, very aesthetic,...",
-    "text": "PRSNL4 Style, very aesthetic, digital drawing, 1girl, flower, mole, solo, portrait, rose, glowing, mole under eye, parted lips, looking at viewer, simple background, black background, purple theme, glowing eyes, white eyes, short hairfff",
+    "text": "PRSNL4 Style, very aesthetic, digital drawing, 1girl, flower, mole, solo, portrait, rose, glowing, mole under eye, parted lips, looking at viewer, simple background, black background, purple theme, glowing eyes, white eyes, short hair",
     "negativePrompt": "score_5, score_4, score_3, ugly, fat",
     "steps": 26,
     "sampler": "DPM++ 2M",
@@ -40,7 +40,7 @@
     ],
     "currentRun": 0,
     "status": "idle",
-    "cfgScale": 15.8
+    "cfgScale": 8.7
   },
   {
     "id": "a7e52069-86a9-43fe-9766-5a195c27816d",
@@ -89,7 +89,8 @@
       }
     ],
     "currentRun": 0,
-    "status": "idle"
+    "status": "idle",
+    "cfgScale": 5.2
   },
   {
     "id": "01ac7324-53e3-40b8-b6da-2232ae103d78",

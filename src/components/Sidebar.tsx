@@ -45,7 +45,6 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                     <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Not Connected</AlertTitle>
-                        <AlertDescription>Not connected to the Stable Diffusion API. Check your connection settings.</AlertDescription>
                     </Alert>
                 )}
             </div>
