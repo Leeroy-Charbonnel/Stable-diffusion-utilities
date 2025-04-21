@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ImageMetadata, Prompt } from '@/types';
 import * as apiSD from '@/services/apiSD';
-import * as apiFS from '@/services/apiFs';
+import * as apiFS from '@/services/apiFS';
 import * as apiPrompt from '@/services/apiPrompt';
 import { generateUUID } from '@/lib/utils';
 
@@ -50,7 +50,7 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
           setAvailableSamplers(samplers);
           setAvailableModels(models);
           setAvailableLoras(loras);
-          console.log('contextSD - API data loaded successfully');
+          console.log(`contextSD - API data loaded successfully (${samplers.length} samplers, ${models.length} models, ${loras.length} loras)`);
         } catch (error) {
           console.error('Failed to load API data:', error);
         } finally {
@@ -87,12 +87,12 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       const params: any = {
         prompt: prompt.text,
         negative_prompt: prompt.negativePrompt,
-        seed: prompt.seed === undefined ? -1 : prompt.seed,
-        steps: prompt.steps || 20,
-        width: prompt.width || 512,
-        height: prompt.height || 512,
-        sampler_name: prompt.sampler || "Euler a",
-        cfg_scale: 7.5,
+        seed: prompt.seed,
+        steps: prompt.steps,
+        width: prompt.width,
+        height: prompt.height,
+        sampler_name: prompt.sampler,
+        cfg_scale: prompt.cfgScale,
         batch_size: 1,
         n_iter: 1,
       };

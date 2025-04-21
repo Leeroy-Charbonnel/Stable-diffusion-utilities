@@ -103,30 +103,44 @@ export function AiChat() {
       //Try to parse the entire message as JSON
       const parsedResponse = JSON.parse(message);
 
-      //Check if it has our expected structure
-      if (parsedResponse && parsedResponse.message && parsedResponse.data) {
-        //Update the displayed message to only show the message part
-        updateMessageContent(messageId, parsedResponse.message);
-
-        //Create prompt from the data
-        createPromptFromData(parsedResponse.data);
-        return;
+      if (mode === 'generation') {
+        //Check if it has our expected structure for generation mode
+        if (parsedResponse && parsedResponse.message && parsedResponse.data) {
+          //Update the displayed message to only show the message part
+          updateMessageContent(messageId, parsedResponse.message);
+          //Create prompt from the data
+          createPromptFromData(parsedResponse.data);
+          return;
+        }
+      } else if (mode === 'extraction') {
+        //For extraction mode, the entire JSON should be the prompt data
+        //No message/data structure, just direct prompt properties
+        if (parsedResponse && (parsedResponse.prompt || parsedResponse.text)) {
+          //Direct extraction format - use as-is
+          createPromptFromData(parsedResponse);
+          return;
+        }
       }
     } catch (error) {
+      console.error('Error parsing JSON from message:', error);
+      setExtractionError('Failed to parse JSON response. Please try again.');
     }
   };
 
   //Create a prompt from extracted data
   const createPromptFromData = (data: any) => {
-    if (!data || !data.prompt) return;
+    if (!data) return;
+
+    //Handle both formats - prompt field (extraction) or text field (generation)
+    const promptText = data.prompt || data.text;
+    if (!promptText) return;
 
     //Create the prompt object with data provided by AI
-    //Since AI already knows available models, samplers, and loras, it should provide valid ones
     const newPrompt: Prompt = {
       id: generateUUID(),
       isOpen: true,
-      name: data.name || createNameFromPrompt(data.prompt),
-      text: data.prompt,
+      name: data.name || createNameFromPrompt(promptText),
+      text: promptText,
       negativePrompt: data.negativePrompt || '',
       seed: typeof data.seed === 'number' ? data.seed : -1,
       steps: typeof data.steps === 'number' ? data.steps : 20,
@@ -159,6 +173,9 @@ export function AiChat() {
 
     try {
       await addPrompt(generatedPrompt);
+      toast.success("Prompt saved successfully");
+      //Clear the generated prompt after saving
+      setGeneratedPrompt(null);
     } catch (error) {
       toast.error("Error saving prompt", {
         description: error instanceof Error ? error.message : String(error)
@@ -245,7 +262,9 @@ export function AiChat() {
                   <BrainCog className="mx-auto h-12 w-12 opacity-50 mb-2" />
                   <p>No messages yet. Start the conversation!</p>
                   <p className="text-sm mt-2 max-w-sm">
-                    Ask for a Stable Diffusion prompt or for tips on crafting effective prompts.
+                    {mode === 'extraction'
+                      ? 'Paste Stable Diffusion parameters text to extract a prompt.'
+                      : 'Ask for a Stable Diffusion prompt or for tips on crafting effective prompts.'}
                   </p>
                 </div>
               </div>
@@ -269,7 +288,9 @@ export function AiChat() {
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask for prompt ideas or help with Stable Diffusion..."
+                placeholder={mode === 'extraction'
+                  ? "Paste Stable Diffusion parameters to extract..."
+                  : "Ask for prompt ideas or help with Stable Diffusion..."}
                 className="min-h-[50px] resize-none"
                 disabled={isProcessing}
               />
@@ -320,7 +341,9 @@ export function AiChat() {
                 <Alert className="bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
                   <CheckCircle className="h-4 w-4 mr-2" />
                   <AlertDescription>
-                    Prompt generated! Review and customize it before saving.
+                    {mode === 'extraction'
+                      ? 'Prompt extracted! Review and customize it before saving.'
+                      : 'Prompt generated! Review and customize it before saving.'}
                   </AlertDescription>
                 </Alert>
 
@@ -344,9 +367,11 @@ export function AiChat() {
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                 <PlusCircle className="h-12 w-12 mb-4 opacity-30" />
-                <p className="mb-2">No prompt generated yet</p>
+                <p className="mb-2">No prompt {mode === 'extraction' ? 'extracted' : 'generated'} yet</p>
                 <p className="text-sm max-w-xs text-center">
-                  Ask the AI to create a prompt for you, and it will appear here for review.
+                  {mode === 'extraction'
+                    ? 'Paste Stable Diffusion parameters to extract a prompt.'
+                    : 'Ask the AI to create a prompt for you, and it will appear here for review.'}
                 </p>
               </div>
             )}

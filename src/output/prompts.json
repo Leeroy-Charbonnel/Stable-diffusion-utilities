@@ -1,1 +1,139 @@
-[]
+[
+  {
+    "id": "e5acb118-ee8d-4919-b22e-247cd5383273",
+    "isOpen": false,
+    "name": "PRSNL4 Style, very aesthetic,...",
+    "text": "PRSNL4 Style, very aesthetic, digital drawing, 1girl, flower, mole, solo, portrait, rose, glowing, mole under eye, parted lips, looking at viewer, simple background, black background, purple theme, glowing eyes, white eyes, short hair",
+    "negativePrompt": "score_5, score_4, score_3, ugly, fat",
+    "steps": 26,
+    "sampler": "DPM++ 2M Karras",
+    "model": "Hassaku XL (Illustrious).safetensors",
+    "width": 832,
+    "height": 1216,
+    "runCount": 30,
+    "tags": [
+      "PRSNL4 Style",
+      "very aesthetic",
+      "digital drawing",
+      "1girl",
+      "flower",
+      "mole",
+      "solo",
+      "portrait",
+      "rose",
+      "glowing",
+      "mole under eye",
+      "parted lips",
+      "looking at viewer",
+      "simple background",
+      "black background",
+      "purple theme",
+      "glowing eyes",
+      "white eyes",
+      "short hair"
+    ],
+    "loras": [
+      {
+        "name": "[BSS] - Styles for Pony",
+        "weight": 1
+      }
+    ],
+    "currentRun": 0,
+    "status": "idle"
+  },
+  {
+    "id": "a7e52069-86a9-43fe-9766-5a195c27816d",
+    "isOpen": false,
+    "name": "masterpiece, best quality, good...",
+    "text": "masterpiece, best quality, good quality, very aesthetic, absurdres, newest, 8K, depth of field, focused subject, close up, 1girl, demon face, solo, black jedi robe, glowing hair, looking at the viewer, heterochromia eyes, neon color palette, holding neon sword, eerie, dynamic lighting, shadows, silhouette, ghost in armor, dynamic angle, from side",
+    "negativePrompt": "score_6, score_5, score_4, bad quality, worst quality, worst detail, sketch, censorship, furry, window, holding, headphones",
+    "steps": 30,
+    "sampler": "Euler a",
+    "model": "Hassaku XL (Illustrious).safetensors",
+    "width": 832,
+    "height": 1216,
+    "runCount": 50,
+    "tags": [
+      "demon face",
+      "solo",
+      "neon color palette",
+      "eerie",
+      "dynamic lighting",
+      "silhouette"
+    ],
+    "loras": [
+      {
+        "name": "MoriiMee Gothic Niji  LoRA Style",
+        "weight": 0.283331298828125
+      },
+      {
+        "name": "Neurocore Anime Shadow Circuit by ChronoKight - [FLUX & IL]",
+        "weight": 0.78
+      },
+      {
+        "name": "Neurocore Anime Cyberpunk by ChronoKnight - [FLUX & IL]",
+        "weight": 0.4
+      },
+      {
+        "name": "Neon Retrowave by ChronoKnight - [FLUX & IL]",
+        "weight": 0.2
+      },
+      {
+        "name": "RavenScript",
+        "weight": 0.7916625976562499
+      },
+      {
+        "name": "LeIsT0  Shiiro's Styles",
+        "weight": 0.3749938964843746
+      }
+    ],
+    "currentRun": 50,
+    "status": "idle"
+  },
+  {
+    "id": "01ac7324-53e3-40b8-b6da-2232ae103d78",
+    "isOpen": false,
+    "name": "AtomicHeartTwinsCosplay in absolute darkness,...",
+    "text": "AtomicHeartTwinsCosplay in absolute darkness, profoundly no light, holding black-pink heart shaped orbstaff, pointed hat, translucent skin. Describe the captivating scene captured in the vintage photograph featuring a Bedouin artist skillfully swallowing a massive sword in the style of Final Fantasy, amidst a mesmerized audience. Provide details about the artist's attire, the sword's intricate design, and the expressions of the onlookers as they witness this extraordinary performance. amazing quality, masterpiece, best quality, hyper detailed, ultra detailed, UHD, perfect anatomy, portrait, dof, hyper-realism, majestic, awesome, inspiring, closeup, an weathered outworn old Fantasy cape, smooth, Closeup, by Dring, rust paint peelz, atmospheric haze, cinematic composition, soft shadows, national geographic style",
+    "negativePrompt": "easynegative, bad proportions, low resolution, bad, ugly, terrible, painting, 3d, render, comic, anime, manga, unrealistic, flat, watermark, signature, worst quality, low quality, normal quality, lowres, simple background, inaccurate limb, extra fingers, fewer fingers, missing fingers, extra arms, inaccurate eyes, bad composition, bad anatomy, error, extra digit, fewer digits, cropped, jpeg artifacts, trademark, artist's name, username, text, words, human",
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "model": "WildCardX-XL-Fusion",
+    "width": 832,
+    "height": 1216,
+    "runCount": 30,
+    "tags": [
+      "darkness",
+      "translucent skin",
+      "vintage photograph",
+      "Final Fantasy style",
+      "hyper-realism",
+      "majestic",
+      "national geographic style"
+    ],
+    "loras": [
+      {
+        "name": "extremely detailed (no trigger) - sliders.ntcai.xyz",
+        "weight": 0.65
+      },
+      {
+        "name": "Zavy's Dark Atmospheric Contrast - SDXL",
+        "weight": 0.6
+      },
+      {
+        "name": "Translucent - Subsurface Scattering Test",
+        "weight": 0.9
+      },
+      {
+        "name": "SDXL / Flux.1 D - Matte (Vanta)Black - Experiment",
+        "weight": 0.6
+      },
+      {
+        "name": "Atomic Heart - Twins Cosplay - SDXL",
+        "weight": 0.8
+      }
+    ],
+    "currentRun": 30,
+    "status": "idle"
+  }
+]

@@ -117,7 +117,7 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     //Update an existing prompt
     const updatePrompt = async (updatedPrompt: Prompt): Promise<boolean> => {
         //For certain operations that need to be immediate (run counts, execution status)
-        const needsImmediateUpdate = updatedPrompt.currentRun > 0 || updatedPrompt.status !== 'idle';
+        const needsImmediateUpdate = updatedPrompt.status !== 'idle';
 
         //Immediately update the UI with the changes
         setPrompts(prev =>

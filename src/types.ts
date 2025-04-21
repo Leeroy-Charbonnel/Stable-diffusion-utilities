@@ -3,8 +3,7 @@ export interface LoraConfig {
   weight: number;
 }
 
-export type ExecutionStatus = 'idle' | 'global-execution' | 'single-execution' | 'cancelling' | 'completed' | 'failed';
-
+export type ExecutionStatus = 'idle' | 'execution' | 'cancelling' | 'completed';
 export type AiChatRole = 'user' | 'assistant' | 'system'
 
 export interface ChatMessage {
@@ -14,17 +13,7 @@ export interface ChatMessage {
   timestamp: string;
 }
 
-export interface CivitaiData {
-  prompt: string;
-  negativePrompt: string;
-  model?: string;
-  sampler?: string;
-  seed?: number;
-  steps?: number;
-  width?: number;
-  height?: number;
-  loras?: LoraConfig[];
-}
+
 
 export interface Prompt {
   id: string;
@@ -32,6 +21,7 @@ export interface Prompt {
   name: string;
   text: string;
   negativePrompt?: string;
+  cfgScale: number;
   seed: number;
   steps: number;
   sampler: string;
@@ -40,7 +30,6 @@ export interface Prompt {
   height: number;
   tags: string[];
   loras?: LoraConfig[];
-
   runCount: number;
   currentRun: number;
   status: string;
@@ -52,6 +41,7 @@ export interface ImageMetadata {
   folder: string;
   prompt: string;
   negativePrompt?: string;
+  cfgScale: number;
   seed: number;
   steps: number;
   width: number;
