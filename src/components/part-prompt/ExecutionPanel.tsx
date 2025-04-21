@@ -29,8 +29,8 @@ export function ExecutionPanel({
   onStartExecution,
   onCancelExecution
 }: ExecutionPanelProps) {
-  const isExecuting = status === 'global-execution' || status === 'single-execution';
-  const hasCompleted = status === 'completed' || status === 'failed';
+  const isExecuting = status === 'execution';
+  const hasCompleted = status === 'completed';
   const progressPercentage = promptsToRunCount > 0 ? Math.round((currentPromptIndex / promptsToRunCount) * 100) : 0;
 
   return (
@@ -89,16 +89,11 @@ export function ExecutionPanel({
 
       {/* Status Message */}
       {status === 'completed' && (
-        <div className="mb-4 p-2 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded text-sm">
-          Execution completed successfully!
+        <div className="mb-4 p-2 bg-green-50 dark:bg-green-900/20 rounded text-sm">
+          Execution completed!
         </div>
       )}
 
-      {status === 'failed' && (
-        <div className="mb-4 p-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-sm">
-          Execution failed. Check console for errors.
-        </div>
-      )}
 
       {/* Action Buttons - Now at the end, using mt-auto to push it to bottom */}
       <div className="mt-auto">

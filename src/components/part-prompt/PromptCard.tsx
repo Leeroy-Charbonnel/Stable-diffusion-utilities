@@ -12,6 +12,7 @@ import { DEBOUNCE_DELAY } from '@/lib/constants';
 
 type PromptCardProps = {
   prompt: Prompt;
+  index: number;
   onDelete: () => void;
   onMove: (id: string, direction: 'up' | 'down') => void;
   onPromptUpdate: (updatedPrompt: Prompt) => void;
@@ -34,6 +35,7 @@ type PromptCardProps = {
 
 export function PromptCard({
   prompt,
+  index,
   onDelete,
   onMove,
   onPromptUpdate,
@@ -50,15 +52,23 @@ export function PromptCard({
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(prompt.name);
   const [accordionValue, setAccordionValue] = useState<string | undefined>(
-    prompt.isOpen && !isExecuting ? prompt.id : undefined
+    prompt.isOpen ? prompt.id : undefined
   );
   const [localPrompt, setLocalPrompt] = useState<Prompt>(prompt);
   const nameUpdateTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   //Effect to sync accordionValue with prompt.isOpen
   useEffect(() => {
-    setAccordionValue(prompt.isOpen && !isExecuting ? prompt.id : undefined);
-  }, [isExecuting, prompt.id, prompt.isOpen]);
+    // We no longer disable accordion when executing, so we only check prompt.isOpen
+    setAccordionValue(prompt.isOpen ? prompt.id : undefined);
+  }, [prompt.id, prompt.isOpen]);
+
+  //Fix for ensuring accordion is properly closed when prompt.isOpen is false
+  useEffect(() => {
+    if (!prompt.isOpen && accordionValue === prompt.id) {
+      setAccordionValue(undefined);
+    }
+  }, [prompt.isOpen, accordionValue, prompt.id]);
 
   //Update local prompt when props change
   useEffect(() => {
@@ -113,7 +123,9 @@ export function PromptCard({
 
   const handleOpenAccordion = (value: string) => {
     const newIsOpen = value === prompt.id;
-    //Only update parent state, local state will be updated by the effect
+    //Update local state immediately for better user experience
+    setAccordionValue(newIsOpen ? prompt.id : undefined);
+    //Update parent state
     onPromptUpdate({ ...prompt, isOpen: newIsOpen });
   };
 
@@ -139,7 +151,10 @@ export function PromptCard({
         <AccordionItem value={localPrompt.id} className="border-none">
           <div className="px-3 py-2 flex items-center justify-between border-b">
             <div className="flex-1 truncate flex items-center">
-              <AccordionTrigger disabled={isExecuting} className="hover:no-underline py-0 mr-2 flex"></AccordionTrigger>
+              <div className="flex items-center mr-1">
+                <span className="text-xs font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded-md">{index}</span>
+              </div>
+              <AccordionTrigger className="hover:no-underline py-0 mr-2 flex"></AccordionTrigger>
 
               {isExecuting && (<h3 className="text-sm font-medium truncate">{localPrompt.name}</h3>)}
 
@@ -210,21 +225,37 @@ export function PromptCard({
             </div>
           )}
           <AccordionContent className="pt-0">
-            <div className="p-4">
+            <div className="px-0">
               <PromptForm
                 prompt={localPrompt}
                 onPromptUpdate={handlePromptUpdate}
                 availableSamplers={availableSamplers}
                 availableModels={availableModels}
                 availableLoras={availableLoras}
+                readOnly={isExecuting || isCurrentlyExecuting}
               />
             </div>
           </AccordionContent>
 
-          {!accordionValue && localPrompt.tags && localPrompt.tags.length > 0 && (
+          {!accordionValue && (
             <div className={`px-3 ${isExecuting ? "pb-2" : "py-2"} border-b`}>
               <div className="flex flex-wrap gap-1">
-                {localPrompt.tags.map(tag => (
+                {/* Model Badge - Primary */}
+                {localPrompt.model && (
+                  <Badge key="model" variant="default" className="text-xs px-1 py-0 h-5 truncate max-w-[150px]" title={localPrompt.model}>
+                    {localPrompt.model}
+                  </Badge>
+                )}
+
+                {/* LoRA Badges */}
+                {localPrompt.loras && localPrompt.loras.map(lora => (
+                  <Badge key={`lora-${lora.name}`} variant="outline" className="text-xs px-1 py-0 h-5 border-primary/50 text-primary-foreground truncate max-w-[120px]" title={lora.name}>
+                    {lora.name}
+                  </Badge>
+                ))}
+
+                {/* Regular Tag Badges */}
+                {localPrompt.tags && localPrompt.tags.map(tag => (
                   <Badge key={tag} variant="secondary" className="text-xs px-1 py-0 h-5">
                     {tag}
                   </Badge>

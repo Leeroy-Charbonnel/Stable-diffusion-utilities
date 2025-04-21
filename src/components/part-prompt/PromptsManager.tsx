@@ -212,10 +212,11 @@ export function PromptsManager() {
           )}
 
           <div className="flex-1 overflow-auto space-y-3">
-            {prompts.map((prompt) => (
+            {prompts.map((prompt, idx) => (
               <PromptCard
                 key={prompt.id}
                 prompt={prompt}
+                index={idx + 1}
                 onDelete={() => deletePrompt(prompt.id)}
                 onMove={reorderPrompt}
                 onRunPrompt={handleExecutePrompt}

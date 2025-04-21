@@ -17,6 +17,7 @@ type PromptFormProps = {
   availableSamplers?: string[];
   availableModels?: string[];
   availableLoras?: any[];
+  readOnly?: boolean;
 };
 
 export function PromptForm({
@@ -25,6 +26,7 @@ export function PromptForm({
   availableSamplers = [],
   availableModels = [],
   availableLoras = [],
+  readOnly = false,
 }: PromptFormProps) {
 
   const [formData, setFormData] = useState<Prompt>(prompt!);
@@ -65,6 +67,9 @@ export function PromptForm({
   const handleChange = (name: string, value: any) => {
     if (['seed', 'steps', 'width', 'height', 'runCount'].includes(name)) {
       const numValue = value === '' ? undefined : parseInt(value, 10);
+      handleFormChange({ [name]: numValue });
+    } else if (name === 'cfgScale') {
+      const numValue = value === '' ? undefined : parseFloat(value);
       handleFormChange({ [name]: numValue });
     } else {
       handleFormChange({ [name]: value });
@@ -128,7 +133,7 @@ export function PromptForm({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 rounded-lg p-4 bg-gradient-to-br from-background/80 to-background/50 backdrop-blur-sm border shadow-sm">
       <div>
         <div className="relative">
           <Textarea
@@ -137,7 +142,8 @@ export function PromptForm({
             value={formData.text}
             onChange={(e) => handleChange('text', e.target.value)}
             placeholder="Enter prompt text..."
-            className="min-h-20"
+            className={`min-h-20 ${readOnly ? 'bg-muted/50 border-dashed' : ''}`}
+            readOnly={readOnly}
           />
         </div>
       </div>
@@ -150,7 +156,8 @@ export function PromptForm({
             value={formData.negativePrompt}
             onChange={(e) => handleChange('negativePrompt', e.target.value)}
             placeholder="Enter negative prompt text..."
-            className="min-h-16"
+            className={`min-h-16 ${readOnly ? 'bg-muted/50 border-dashed' : ''}`}
+            readOnly={readOnly}
           />
         </div>
       </div>
@@ -158,28 +165,51 @@ export function PromptForm({
       <div className="grid grid-cols-4 gap-2">
         <div>
           <Label htmlFor="seed" className="text-xs pb-1">Seed</Label>
-          <Input id="seed" type="number" value={formData.seed !== undefined ? formData.seed : -1} onChange={(e) => handleChange('seed', e.target.value)} placeholder="Random" className="h-8"></Input>
+          <Input id="seed" type="number" value={formData.seed !== undefined ? formData.seed : -1} onChange={(e) => handleChange('seed', e.target.value)} placeholder="Random" className="h-8" readOnly={readOnly}></Input>
         </div>
         <div>
           <Label htmlFor="steps" className="text-xs pb-1">Steps</Label>
-          <NumberInput containerClassName="w-auto" id="steps" value={formData.steps} onChange={(e) => handleChange('steps', e)} required min={1} max={150} className="h-8" />
-
+          <NumberInput containerClassName="w-auto" id="steps" value={formData.steps} onChange={(e) => handleChange('steps', e)} required min={1} max={150} className="h-8" readOnly={readOnly} />
         </div>
         <div>
           <Label htmlFor="width" className="text-xs pb-1">Width</Label>
-          <NumberInput id="width" value={formData.width} onChange={(e) => handleChange('width', e)} required min={64} max={2048} className="h-8" />
-
+          <NumberInput id="width" value={formData.width} onChange={(e) => handleChange('width', e)} required min={64} max={2048} className="h-8" readOnly={readOnly} />
         </div>
         <div>
           <Label htmlFor="height" className="text-xs pb-1">Height</Label>
-          <NumberInput id="height" value={formData.height} onChange={(e) => handleChange('height', e)} required min={64} max={2048} className="h-8" />
+          <NumberInput id="height" value={formData.height} onChange={(e) => handleChange('height', e)} required min={64} max={2048} className="h-8" readOnly={readOnly} />
         </div>
+      </div>
+
+      <div>
+        <div className="flex justify-between items-center gap-2 mb-1">
+          <Label htmlFor="cfgScale" className="text-xs">CFG Scale</Label>
+          <NumberInput
+            id="cfgScaleInput"
+            value={formData.cfgScale || 7}
+            onChange={(value) => handleChange('cfgScale', value)}
+            min={1}
+            max={30}
+            step={0.1}
+            className="h-7 w-16 text-sm"
+            readOnly={readOnly}
+          />
+        </div>
+        <Slider
+          id="cfgScale"
+          min={1}
+          max={30}
+          step={0.1}
+          value={[formData.cfgScale || 7]}
+          onValueChange={(values) => handleChange('cfgScale', values[0])}
+          disabled={readOnly}
+        />
       </div>
 
       <div className="flex gap-2">
         <div className='flex-auto'>
           <Label htmlFor="sampler" className="text-xs pb-1">Sampler</Label>
-          <Select value={formData.sampler} onValueChange={(value) => handleSelectChange('sampler', value)}>
+          <Select value={formData.sampler} onValueChange={(value) => handleSelectChange('sampler', value)} disabled={readOnly}>
             <SelectTrigger id="sampler" className="h-8 w-full">
               <SelectValue placeholder="Select a sampler" />
             </SelectTrigger>
@@ -190,20 +220,22 @@ export function PromptForm({
         </div>
         <div className='flex-auto'>
           <Label htmlFor="model" className="text-xs pb-1">Model</Label>
-          <Select value={formData.model || ''} onValueChange={(value) => handleSelectChange('model', value)}>
+          <Select value={formData.model || ''} onValueChange={(value) => handleSelectChange('model', value)} disabled={readOnly}>
             <SelectTrigger id="model" className="h-8 w-full">
-              <SelectValue placeholder="Select a model" />
+              <SelectValue placeholder="Select a model" className="truncate" />
             </SelectTrigger>
             <SelectContent>
               {availableModels.map((model) => (
-                <SelectItem key={model} value={model}>{model}</SelectItem>
+                <SelectItem key={model} value={model} className="truncate" title={model}>
+                  {model}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className='flex-auto'>
           <Label htmlFor="runCount" className="text-xs pb-1">Run Count</Label>
-          <NumberInput id="runCount" value={formData.runCount} onChange={(e) => handleChange('runCount', e)} required min={1} max={999} className="h-8" />
+          <NumberInput id="runCount" value={formData.runCount} onChange={(e) => handleChange('runCount', e)} required min={1} max={999} className="h-8" readOnly={readOnly} />
         </div>
       </div>
 
@@ -213,7 +245,8 @@ export function PromptForm({
         </div>
 
         <div className="mb-2">
-          <Select onValueChange={handleLoraSelect} value=""><SelectTrigger className="h-8"><SelectValue placeholder="Add a LoRA..." /></SelectTrigger>
+          <Select onValueChange={handleLoraSelect} value="" disabled={readOnly}>
+            <SelectTrigger className="h-8"><SelectValue placeholder="Add a LoRA..." /></SelectTrigger>
             <SelectContent>
               {availableLoras.filter((lora) => !formData.loras?.some(existingLora => existingLora.name === lora.name)).map((lora) => (<SelectItem key={lora.name} value={lora.name}>{lora.name}</SelectItem>))}
             </SelectContent>
@@ -224,14 +257,35 @@ export function PromptForm({
           <div className="space-y-1">
             {formData.loras.map((lora) => (
               <div key={lora.name} className="grid grid-cols-2 gap-2 p-1 border rounded-md">
-                <div className="flex-1 font-medium">{lora.name}</div>
+                <div className="flex-1 font-medium truncate" title={lora.name}>{lora.name}</div>
                 <div className="flex items-center gap-1 w-full">
-                  <span className="text-xs text-muted-foreground w-10">{lora.weight.toFixed(2)}</span>
+                  <NumberInput
+                    value={lora.weight}
+                    onChange={(value) => updateLoraWeight(lora.name, value)}
+                    min={0}
+                    max={2}
+                    step={0.1}
+                    className="h-7 w-16 text-sm"
+                    readOnly={readOnly}
+                  />
 
-                  <Slider defaultValue={[lora.weight]} max={2} step={0.1} onValueChange={(value: number[]) => updateLoraWeight(lora.name, value[0])} />
+                  <Slider
+                    value={[lora.weight]}
+                    max={2}
+                    step={0.1}
+                    onValueChange={(value: number[]) => updateLoraWeight(lora.name, value[0])}
+                    disabled={readOnly}
+                    className="flex-1"
+                  />
 
-
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeLora(lora.name)} className="h-6 w-6" >
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeLora(lora.name)}
+                    className="h-6 w-6"
+                    disabled={readOnly}
+                  >
                     <Trash className="h-3 w-3" />
                   </Button>
                 </div>
@@ -246,17 +300,34 @@ export function PromptForm({
       <div>
         <Label htmlFor="tags" className="text-xs pb-1">Tags</Label>
         <div className="flex justify-between gap-2 mb-3">
-          <Input id="tags" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleTagKeyDown} placeholder="Add tags (press Enter to add)" className="h-8 flex-1" />
-          <Button type="button" variant="default" size="sm" onClick={() => addTags(tagInput)} disabled={tagInput === ''}>Add</Button>
+          <Input
+            id="tags"
+            value={tagInput}
+            onChange={(e) => setTagInput(e.target.value)}
+            onKeyDown={handleTagKeyDown}
+            placeholder="Add tags (press Enter to add)"
+            className="h-8 flex-1"
+            readOnly={readOnly}
+          />
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            onClick={() => addTags(tagInput)}
+            disabled={tagInput === '' || readOnly}
+          >
+            Add
+          </Button>
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
           {formData.tags.map((tag) => (
             <Badge key={tag} variant="secondary" className="flex items-center justify-center gap-1 text-xs py-1">
               {tag}
-              <div className="h-3 w-3 cursor-pointer" onClick={() => removeTag(tag)} >
-                <XIcon size={12} />
-              </div>
-
+              {!readOnly && (
+                <div className="h-3 w-3 cursor-pointer" onClick={() => removeTag(tag)} >
+                  <XIcon size={12} />
+                </div>
+              )}
             </Badge>
           ))}
         </div>
