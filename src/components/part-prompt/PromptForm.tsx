@@ -104,11 +104,9 @@ export function PromptForm({
     handleFormChange({ loras: formData.loras?.map(l => l.name === loraName ? { ...l, weight } : l) || [] });
   };
 
-  const readOnlyCss = "bg-muted/30 border-dashed text-muted-foreground cursor-not-allowed opacity-75";
 
   return (
-    <div className={"space-y-3 rounded-lg p-4 shadow-md border relative overflow-hidden bg-background/50 backdrop-blur-sm"}>
-      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/5 via-background/20 to-secondary/5 backdrop-blur-md"></div>
+    <div className={"space-y-3 rounded-lg p-4 relative overflow-hidden"}>
 
       {/* Read only overlay */}
       {/* {readOnly && (<div className={"absolute inset-0 z-10 bg-muted/50 border-dashed text-muted-foreground cursor-not-allowed opacity-100"}></div>)} */}
@@ -139,7 +137,7 @@ export function PromptForm({
       {/* Number settings */}
       <div className="grid grid-cols-4 gap-2">
         <div>
-          <Label htmlFor="seed" className="text-xs pb-1">Seed</Label>
+          <Label htmlFor="seed" className="pb-2">Seed</Label>
           <Input
             id="seed"
             type="number"
@@ -151,9 +149,8 @@ export function PromptForm({
           />
         </div>
         <div>
-          <Label htmlFor="steps" className="text-xs pb-1">Steps</Label>
+          <Label htmlFor="steps" className="pb-2">Steps</Label>
           <NumberInput
-            containerClassName="w-auto"
             id="steps"
             value={formData.steps}
             onChange={(e) => handleChange('steps', e)}
@@ -162,7 +159,7 @@ export function PromptForm({
           />
         </div>
         <div>
-          <Label htmlFor="width" className="text-xs pb-1">Width</Label>
+          <Label htmlFor="width" className="pb-2">Width</Label>
           <NumberInput
             id="width"
             value={formData.width}
@@ -172,7 +169,7 @@ export function PromptForm({
           />
         </div>
         <div>
-          <Label htmlFor="height" className="text-xs pb-1">Height</Label>
+          <Label htmlFor="height" className="pb-2">Height</Label>
           <NumberInput
             id="height"
             value={formData.height}
@@ -187,12 +184,12 @@ export function PromptForm({
       {/* CFG Scale */}
       <div>
         <div className="flex flex-row items-center gap-2 mb-1">
-          <Label htmlFor="cfgScale" className="text-xs text-nowrap mr-5">CFG Scale</Label>
+          <Label htmlFor="cfgScale" className="text-nowrap mr-5">CFG Scale</Label>
           <NumberInput
             id="cfgScaleInput"
             value={formData.cfgScale || 7}
             onChange={(value) => handleChange('cfgScale', value)}
-            min={1} max={30} step={0.1} className={"h-7 w-16 text-sm"}
+            min={1} max={30} step={0.1} className={"h-7 w-16 text-sm border-0 !bg-transparent"}
             disabled={readOnly}
           />
           <Slider
@@ -209,7 +206,7 @@ export function PromptForm({
       {/* Sampler and Model */}
       <div className="flex gap-2">
         <div className='w-[25%]'>
-          <Label htmlFor="sampler" className="text-xs pb-1">Sampler</Label>
+          <Label htmlFor="sampler" className="pb-2">Sampler</Label>
           <Select value={formData.sampler} onValueChange={(value) => handleSelectChange('sampler', value)} disabled={readOnly}>
             <SelectTrigger id="sampler" className={"h-8 w-full"} >
               <SelectValue placeholder="Select a sampler" />
@@ -222,7 +219,7 @@ export function PromptForm({
           </Select>
         </div>
         <div className='w-[50%]'>
-          <Label htmlFor="model" className="text-xs pb-1">Model</Label>
+          <Label htmlFor="model" className="pb-2">Model</Label>
           <Select value={formData.model} onValueChange={(value) => handleSelectChange('model', value)} disabled={readOnly}>
             <SelectTrigger id="model" className="h-8 w-full" >
               <SelectValue placeholder="Select a model" />
@@ -235,7 +232,7 @@ export function PromptForm({
           </Select>
         </div>
         <div className='w-[25%]'>
-          <Label htmlFor="runCount" className="text-xs pb-1">Run Count</Label>
+          <Label htmlFor="runCount" className="pb-2">Run Count</Label>
           <NumberInput
             id="runCount"
             value={formData.runCount}
@@ -253,19 +250,22 @@ export function PromptForm({
 
       {/* LoRAs */}
       <div>
-        <div className="flex items-center"><Label className="text-xs pb-1">LoRAs</Label></div>
+        <div className='flex gap-2'>
+          <div className="flex items-center"><Label className="pb-2">LoRAs</Label></div>
 
-        <div className="mb-2">
-          <Select onValueChange={handleLoraSelect} value="" disabled={readOnly}><SelectTrigger className={"h-8"}>
-            <SelectValue placeholder="Add a LoRA..." />
-          </SelectTrigger>
-            <SelectContent>
-              {availableLoras.filter((lora) => !formData.loras?.some(existingLora => existingLora.name === lora.name)).map((lora) => (
-                <SelectItem key={lora.name} value={lora.name} title={lora.name}>{lora.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="mb-2">
+            <Select onValueChange={handleLoraSelect} value="" disabled={readOnly}><SelectTrigger className={"h-8"}>
+              <SelectValue placeholder="Add a LoRA..." />
+            </SelectTrigger>
+              <SelectContent>
+                {availableLoras.filter((lora) => !formData.loras?.some(existingLora => existingLora.name === lora.name)).map((lora) => (
+                  <SelectItem key={lora.name} value={lora.name} title={lora.name}>{lora.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+
 
         {formData.loras && formData.loras.length > 0 && (
           <div className="space-y-1">
@@ -276,7 +276,7 @@ export function PromptForm({
                   <NumberInput
                     value={lora.weight}
                     onChange={(value) => updateLoraWeight(lora.name, value)}
-                    min={0} max={2} step={0.1} className={"h-7 w-16 text-sm"}
+                    min={0} max={2} step={0.1} className={"h-7 w-16 text-sm border-0 !bg-transparent text-right"}
                     disabled={readOnly}
                   />
 
@@ -310,7 +310,7 @@ export function PromptForm({
 
       {/* Tags */}
       <div>
-        <Label htmlFor="tags" className="text-xs pb-1">Tags</Label>
+        <Label htmlFor="tags" className="pb-2">Tags</Label>
         <div className="flex justify-between gap-2 mb-3">
           <Input
             id="tags"
@@ -318,7 +318,7 @@ export function PromptForm({
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={handleTagKeyDown}
             placeholder="Add tags (press Enter to add)"
-            className={cn("h-8 flex-1", readOnly && readOnlyCss)}
+            className={"h-8 flex-1"}
             readOnly={readOnly}
             disabled={readOnly}
           />

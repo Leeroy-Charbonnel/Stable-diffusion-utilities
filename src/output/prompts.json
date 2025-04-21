@@ -3,7 +3,7 @@
     "id": "e5acb118-ee8d-4919-b22e-247cd5383273",
     "isOpen": false,
     "name": "PRSNL4 Style, very aesthetic,...",
-    "text": "PRSNL4 Style, very aesthetic, digital drawing, 1girl, flower, mole, solo, portrait, rose, glowing, mole under eye, parted lips, looking at viewer, simple background, black background, purple theme, glowing eyes, white eyes, short hair",
+    "text": "PRSNL4 Style, very aesthetic, digital drawing, 1girl, flower, mole, solo, portrait, rose, glowing, mole under eye, parted lips, looking at viewer, simple background, black background, purple theme, glowing eyes, white eyes, short hairfff",
     "negativePrompt": "score_5, score_4, score_3, ugly, fat",
     "steps": 26,
     "sampler": "DPM++ 2M",
@@ -35,10 +35,10 @@
     "loras": [
       {
         "name": "All Disney Princess XL LoRA Model from Ralph Breaks the Internet",
-        "weight": 1
+        "weight": 2
       }
     ],
-    "currentRun": 1,
+    "currentRun": 0,
     "status": "idle",
     "cfgScale": 15.8
   },
@@ -65,7 +65,7 @@
     "loras": [
       {
         "name": "MoriiMee Gothic Niji  LoRA Style",
-        "weight": 0.283331298828125
+        "weight": 0.4
       },
       {
         "name": "Neurocore Anime Shadow Circuit by ChronoKight - [FLUX & IL]",
@@ -142,6 +142,25 @@
     "isOpen": false,
     "name": "New Prompt",
     "text": "",
+    "negativePrompt": "",
+    "cfgScale": 7,
+    "seed": -1,
+    "steps": 20,
+    "sampler": "DPM++ 2M",
+    "model": "Flux.1-Dev Hyper NF4 + Flux.1-Dev BNB NF4 + Flux.1-Schnell BNB NF4.safetensors [fef37763b8]",
+    "width": 512,
+    "height": 512,
+    "runCount": 1,
+    "tags": [],
+    "loras": [],
+    "currentRun": 0,
+    "status": "idle"
+  },
+  {
+    "id": "9f9e3a43-c1e8-424b-888b-c9723879d1b1",
+    "isOpen": false,
+    "name": "New Prompt",
+    "text": "d",
     "negativePrompt": "",
     "cfgScale": 7,
     "seed": -1,

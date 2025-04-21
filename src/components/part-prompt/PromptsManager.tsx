@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { PlusCircle, AlertCircle } from 'lucide-react';
+import { PlusCircle} from 'lucide-react';
 import { ExecutionStatus, Prompt } from '@/types';
 import { PromptCard } from './PromptCard';
 import { useApi } from '@/contexts/contextSD';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { generateUUID } from '@/lib/utils';
 import { usePrompt } from '@/contexts/contextPrompts';
 import { toast } from 'sonner';
@@ -21,7 +20,6 @@ export function PromptsManager() {
 
   const [executingPromptId, setExecutingPromptId] = useState<string | null>(null);
   const [executedPromptIds, setExecutedPromptIds] = useState<Set<string>>(new Set());
-  const [executionError, setExecutionError] = useState<string | null>(null);
 
   const [successCount, setSuccessCount] = useState(0);
   const [failureCount, setFailureCount] = useState(0);
@@ -32,7 +30,10 @@ export function PromptsManager() {
   const [isCancelling, setIsCancelling] = useState(false);
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  //Load prompts again if they might have been updated elsewhere
+
+  const [showTags, setShowTags] = useState(false);
+  const [showModels, setShowModels] = useState(false);
+
   useEffect(() => {
     loadPrompts();
   }, []);
@@ -82,7 +83,6 @@ export function PromptsManager() {
       setStatus('completed');
     } catch (err) {
       console.error('Error during prompt execution:', err);
-      setExecutionError(`Error during execution: ${err instanceof Error ? err.message : String(err)}`);
       toast("Execution failed ", {
         description: err instanceof Error ? err.message : String(err)
       });
@@ -120,7 +120,6 @@ export function PromptsManager() {
       }
     } catch (err) {
       console.error('Error during batch execution:', err);
-      setExecutionError(`Error during execution: ${err instanceof Error ? err.message : String(err)}`);
       toast("Execution failed ", {
         description: err instanceof Error ? err.message : String(err)
       });
@@ -135,7 +134,7 @@ export function PromptsManager() {
     //Reset all prompts to idle state in a sequential manner
     const promptsToReset = prompts.filter(p => p.currentRun > 0);
     for (const p of promptsToReset) {
-      await updatePrompt({...p,currentRun: 0,status: 'idle'});
+      await updatePrompt({ ...p, currentRun: 0, status: 'idle' });
     }
 
     //Clear execution state
@@ -211,35 +210,27 @@ export function PromptsManager() {
       {/* Main Content - Left Side */}
       <ResizablePanel defaultSize={75} minSize={30}>
         <div className="h-full flex flex-col p-4 relative overflow-hidden">
-          {/* Gradient background */}
-          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/5 via-background/10 to-secondary/5"></div>
-
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 z-1">
             <h2 className="text-xl font-semibold">Prompt List</h2>
-            <Button
-              onClick={handleAddPrompt}
-              disabled={isPromptLoading || status === 'execution'}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Prompt
-            </Button>
+
+            <div className="flex gap-2">
+              <Button variant={'outline'} onClick={() => setShowTags(!showTags)} ><span className={`${showTags ? 'text-white' : 'text-gray-500'}`}>Tags</span></Button>
+              <Button variant={'outline'} onClick={() => setShowModels(!showModels)}><span className={`${showModels ? 'text-white' : 'text-gray-500'}`}>Models</span></Button>
+              <Button
+                onClick={handleAddPrompt}
+                disabled={isPromptLoading || status === 'execution'}>
+                <PlusCircle />Add Prompt</Button>
+            </div>
           </div>
 
-          {executionError && (
-            <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>
-                {executionError}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className="flex-1 overflow-auto space-y-3">
+          <div className="flex-1 overflow-auto space-y-3 z-1">
             {prompts.map((prompt, idx) => (
               <PromptCard
                 key={prompt.id}
                 prompt={prompt}
                 index={idx + 1}
+                showTags={showTags}
+                showModels={showModels}
                 onDelete={() => deletePrompt(prompt.id)}
                 onMove={reorderPrompt}
                 onRunPrompt={handleExecutePrompt}

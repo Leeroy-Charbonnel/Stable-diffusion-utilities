@@ -8,7 +8,7 @@ interface NumberInputProps extends Omit<React.InputHTMLAttributes<HTMLInputEleme
     min?: number;
     max?: number;
     step?: number;
-    containerClassName?: string;
+    className?: string;
 }
 
 export function NumberInput({
@@ -17,7 +17,7 @@ export function NumberInput({
     min,
     max,
     step = 1,
-    containerClassName,
+    className,
     disabled = false,
     ...props
 }: NumberInputProps) {
@@ -93,16 +93,15 @@ export function NumberInput({
     };
 
     return (
-        <div className={containerClassName}>
-            <Input
-                type="text"
-                inputMode="numeric"
-                value={localValue}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                disabled={disabled}
-                {...props}
-            />
-        </div>
+        <Input
+            type="text"
+            inputMode="numeric"
+            value={localValue}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            disabled={disabled}
+            className={className}
+            {...props}
+        />
     );
 }
