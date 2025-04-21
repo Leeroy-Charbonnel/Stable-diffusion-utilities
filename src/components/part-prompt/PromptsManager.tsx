@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { PlusCircle} from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { ExecutionStatus, Prompt } from '@/types';
 import { PromptCard } from './PromptCard';
 import { useApi } from '@/contexts/contextSD';
@@ -10,7 +10,7 @@ import { usePrompt } from '@/contexts/contextPrompts';
 import { toast } from 'sonner';
 import { ExecutionPanel } from './ExecutionPanel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { DEBOUNCE_DELAY } from '@/lib/constants';
+import { DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH } from '@/lib/constants';
 
 export function PromptsManager() {
   const { isConnected, generateImage, availableSamplers, availableModels, availableLoras } = useApi();
@@ -185,16 +185,16 @@ export function PromptsManager() {
     const newPrompt: Prompt = {
       id: generateUUID(),
       isOpen: true,
-      name: 'New Prompt',
+      name: DEFAULT_PROMPT_NAME,
       text: '',
       negativePrompt: '',
-      cfgScale: 7,
+      cfgScale: DEFAULT_PROMPT_CFG_SCALE,
       seed: -1,
-      steps: 20,
+      steps: DEFAULT_PROMPT_STEP,
       sampler: availableSamplers.length > 0 ? availableSamplers[0] : '',
       model: availableModels.length > 0 ? availableModels[0] : '',
-      width: 512,
-      height: 512,
+      width: DEFAULT_PROMPT_HEIGHT,
+      height: DEFAULT_PROMPT_WIDTH,
       runCount: 1,
       tags: [],
       loras: [],

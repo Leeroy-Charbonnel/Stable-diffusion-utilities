@@ -7,3 +7,10 @@ export const FILE_API_BASE_URL = 'http://localhost:3001/api';
 export const SD_API_BASE_URL = 'http://localhost:7860';
 
 export const DEBOUNCE_DELAY = 300; 
+
+
+export const DEFAULT_PROMPT_NAME = "New Prompt";
+export const DEFAULT_PROMPT_CFG_SCALE = 7;
+export const DEFAULT_PROMPT_STEP = 20;
+export const DEFAULT_PROMPT_HEIGHT = 512;
+export const DEFAULT_PROMPT_WIDTH = 512;

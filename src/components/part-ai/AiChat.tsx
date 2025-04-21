@@ -95,7 +95,7 @@ export function AiChat() {
         className={`flex mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
         <div className={`max-w-[80%] ${isUser ? 'text-right' : 'text-left'}`}>
           <div className={`rounded-lg p-3 ${isUser ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`} >
-            <div className="text-sm whitespace-pre-wrap break-words">{message.content}</div>
+            <div className="text-sm whitespace-pre-wrap break-words">{isUser ? message.content : JSON.parse(message.content).message}</div>
           </div>
         </div>
       </div>

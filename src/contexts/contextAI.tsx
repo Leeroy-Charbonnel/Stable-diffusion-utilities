@@ -5,6 +5,7 @@ import { DEFAULT_AI_API_KEY } from '@/lib/constantsKeys';
 import { AiChatRole, ChatMessage, Prompt } from '@/types';
 import { useApi } from './contextSD';
 import { CHAT_SYSTEM_EXTRACTION_PROMPT, CHAT_SYSTEM_GENERATION_PROMPT } from '@/lib/constantsAI';
+import { DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH } from '@/lib/constants';
 
 const DEFAULT_AI_SETTINGS: AiSettings = {
   apiKey: DEFAULT_AI_API_KEY,
@@ -144,6 +145,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
 
   const setupSytemPrompt = () => {
+    console.log('setupSytemPrompt');
     if (mode == 'extraction') {
       const systemPrompt = prepareExtractionSystemPrompt();
       const newMessage: ChatMessage = {
@@ -152,7 +154,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         content: systemPrompt,
         timestamp: new Date().toISOString(),
       };
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
+      setMessages([newMessage]);
     } else {
       const newMessage: ChatMessage = {
         id: generateUUID(),
@@ -160,7 +162,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         content: CHAT_SYSTEM_GENERATION_PROMPT,
         timestamp: new Date().toISOString(),
       };
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
+      setMessages([newMessage]);
     }
   }
 
@@ -177,12 +179,13 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       setupSytemPrompt();
     }
 
+    console.log("sendmessage", messages);
     //Treat the message
     if (mode == 'extraction') {
       const civitId = extractCivitaiId(content);
       if (!civitId) return
       const civitData = await fetchCivitaiData(civitId);
-      console.log({civitData});
+      console.log({ civitData });
 
       //Create a new message
       const newMessage: ChatMessage = {
@@ -226,7 +229,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
           content: response,
           timestamp: new Date().toISOString(),
         };
-
+        extractPromptFromResponse(response);
         setMessages((prevMessages) => [...prevMessages, assistantMessage]);
       } catch (err) {
         console.error('Error getting AI response:', err);
@@ -243,7 +246,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
 
   const checkIfExtractionMode = (content: string): boolean => {
-    return content.includes("https://civitai.com/");
+    return content.includes("civitai.com/images");
   }
 
   const extractCivitaiId = (url: string): string | null => {
@@ -265,6 +268,57 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     }
   };
 
+
+  function extractPromptFromResponse(response: string) {
+    const jsonResponse = JSON.parse(response);
+
+    if (mode == 'extraction') {
+      const prompt: Prompt = {
+        id: generateUUID(),
+        isOpen: false,
+        name: jsonResponse.name,
+        text: jsonResponse.text,
+        negativePrompt: jsonResponse.negativePrompt,
+        cfgScale: jsonResponse.cfgScale,
+        seed: jsonResponse.seed,
+        steps: jsonResponse.steps,
+        sampler: jsonResponse.sampler,
+        model: jsonResponse.model,
+        width: jsonResponse.width,
+        height: jsonResponse.height,
+        tags: jsonResponse.tags,
+        loras: jsonResponse.loras,
+        runCount: 1,
+        currentRun: 0,
+        status: 'idle'
+      }
+      setGeneratedPrompt(prompt);
+    } else {
+      const prompt: Prompt = {
+        id: generateUUID(),
+        isOpen: false,
+        name: jsonResponse.name,
+        text: jsonResponse.text,
+        negativePrompt: jsonResponse.negativePrompt,
+        cfgScale: DEFAULT_PROMPT_CFG_SCALE,
+        seed: -1,
+        steps: DEFAULT_PROMPT_STEP,
+        sampler: availableSDSamplers.length > 0 ? availableSDSamplers[0] : '',
+        model: availableModels.length > 0 ? availableModels[0] : '',
+        width: DEFAULT_PROMPT_HEIGHT,
+        height: DEFAULT_PROMPT_WIDTH,
+        tags: jsonResponse.tags,
+        loras: [],
+        runCount: 1,
+        currentRun: 0,
+        status: 'idle'
+      }
+      setGeneratedPrompt(prompt);
+    }
+  }
+
+
+
   const value: AiContextType = {
     messages,
     settings,
@@ -281,6 +335,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setGeneratedPrompt
   };
 
+
   return <AiContext.Provider value={value}>{children}</AiContext.Provider>;
 };
 
@@ -291,3 +346,5 @@ export const useAi = (): AiContextType => {
   }
   return context;
 };
+
+

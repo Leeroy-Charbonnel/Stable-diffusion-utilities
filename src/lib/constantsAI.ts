@@ -25,14 +25,11 @@ ALWAYS include recommendations for:
 You must structure your responses as a valid JSON object with the following exact format:
 {
   "message": "your conversational response text here, including all helpful information about the prompt you're creating, your recommendations, and explanations",
-  "data": {
-    "prompt": "detailed prompt text here",
+  "data":
+  {
+    "name": "prompt's name here";
+    "text": "detailed prompt text here",
     "negativePrompt": "negative prompt here",
-    "steps": 20,
-    "sampler": "Euler a",
-    "width": 512,
-    "height": 512,
-    "model": "recommended model name if known",
     "tags": ["relevant", "tags", "here"]
   }
 }
@@ -50,18 +47,7 @@ Available samplers (ONLY use these):%AVAILABLE_SAMPLERS_PLACEHOLDER%
 
 Available LoRAs (ONLY use these):%AVAILABLE_LORAS_PLACEHOLDER%
 
-Your task is to analyze the input and extract the following information into a JSON format:
-- prompt: The main prompt text
-- negativePrompt: The negative prompt text
-- seed: The random seed value (numeric), default to -1 if not specified
-- steps: The number of steps (numeric), default to 20 if not specified
-- sampler: The sampler name (e.g., "Euler a", "DPM++ 2M Karras"), default to "Euler a" if not specified but MUST be one of the available samplers listed above
-- width: Image width in pixels (numeric), default to 512 if not specified
-- height: Image height in pixels (numeric), default to 512 if not specified
-- model: The model/checkpoint name (MUST be one of the available models listed above)
-- loras: An array of LoRA models used, each with "name" and "weight" properties (MUST only include available LoRAs listed above)
-- tags: An array of tags extracted from the prompt (e.g., style identifiers like "masterpiece", "photorealistic")
-
+Your task is to analyze the input and extract the following information into a JSON format,
 Return ONLY valid JSON with no additional text, comments, or explanations.
 
 Look for patterns like:
@@ -71,18 +57,25 @@ Look for patterns like:
 - "<lora:modelName:0.8>" notation for LoRA models
 - JSON blocks that might already exist in the AI response
 
+If the prompt itself mention the lorawith such notation : <lora:modelName:0.8>, remove it fromt the prompt
+
 Example output format:
 {
-  "prompt": "masterpiece, best quality, 1girl, solo, long hair, outdoors, tree, grass, sunshine",
-  "negativePrompt": "lowres, bad anatomy, bad hands, text, error, missing fingers",
-  "seed": 1234567890,
-  "steps": 20,
-  "sampler": "DPM++ 2M Karras",
-  "width": 512,
-  "height": 768,
-  "model": "realcartoonRealistic_v13",
-  "loras": [{"name": "moreDetail", "weight": 0.8}],
-  "tags": ["masterpiece", "best quality", "1girl", "solo", "portrait"]
+  "message": "your conversational response text here, including all helpful information about the prompt you're creating, your recommendations, and explanations",
+  "data": {
+    "name": "prompt's name here";
+    "text": "detailed prompt text here",
+    "negativePrompt": "negative prompt here",
+    "cfgScale": "Guidance scale";
+    "seed": number;
+    "steps": number;
+    "sampler": string, set to '' if you could not find the sampler in the available samplers;
+    "model": string set to '' if you could not find the model in the available models;
+    "width": number;
+    "height": number;
+    "tags": ["relevant", "tags", "here"]
+    "loras": array of {name: string;weight: number;}, add a loras to the array only if you find it in the availables loras;
+  }
 }
 Return in the JSON, the model, sampler, and loras that are available (the name might differ, try to match).  
 `;
