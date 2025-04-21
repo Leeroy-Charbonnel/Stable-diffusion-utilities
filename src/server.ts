@@ -384,6 +384,32 @@ const server = Bun.serve({
       }
     },
 
+    //Proxy for Civitai API to avoid CORS issues
+    "/api/civitai/image/:id": {
+      GET: async (req: BunRequest) => {
+        try {
+          const imageId = req.params?.id;
+          if (!imageId) {
+            return Response.json({ success: false, error: 'Image ID not provided' },
+              { status: 400, headers: corsHeaders });
+          }
+
+          const response = await fetch(`https://civitai.com/api/trpc/image.getGenerationData?input={"json":{"id":${imageId}}}`);
+
+          if (!response.ok) {
+            return Response.json({ success: false, error: 'Failed to fetch from Civitai API' },
+              { status: response.status, headers: corsHeaders });
+          }
+
+          const data = await response.json();
+          return Response.json({ success: true, data }, { headers: corsHeaders });
+        } catch (error) {
+          return Response.json({ success: false, error: String(error) },
+            { status: 500, headers: corsHeaders });
+        }
+      }
+    },
+
     //Fallback for API routes
     "/api/*": (req: BunRequest) => {
       if (req.method === "OPTIONS") {

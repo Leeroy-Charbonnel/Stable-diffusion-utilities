@@ -57,8 +57,7 @@ Look for patterns like:
 - "<lora:modelName:0.8>" notation for LoRA models
 - JSON blocks that might already exist in the AI response
 
-If the prompt itself mention the lorawith such notation : <lora:modelName:0.8>, remove it fromt the prompt
-
+If the prompt itself mention the lora with such notation : <lora:modelName:0.8>, remove it fromt the prompt
 Example output format:
 {
   "message": "your conversational response text here, including all helpful information about the prompt you're creating, your recommendations, and explanations",
@@ -69,13 +68,14 @@ Example output format:
     "cfgScale": "Guidance scale";
     "seed": number;
     "steps": number;
-    "sampler": string, set to '' if you could not find the sampler in the available samplers;
-    "model": string set to '' if you could not find the model in the available models;
+    "sampler": string;
+    "model": string;
     "width": number;
     "height": number;
     "tags": ["relevant", "tags", "here"]
-    "loras": array of {name: string;weight: number;}, add a loras to the array only if you find it in the availables loras;
+    "loras": [{name: string,weight: number}], make sure to put here only the models tagged as loras;
   }
 }
 Return in the JSON, the model, sampler, and loras that are available (the name might differ, try to match).  
+Explain in message prop why you couldn't extract some information
 `;

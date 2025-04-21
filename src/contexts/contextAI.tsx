@@ -5,7 +5,7 @@ import { DEFAULT_AI_API_KEY } from '@/lib/constantsKeys';
 import { AiChatRole, ChatMessage, Prompt } from '@/types';
 import { useApi } from './contextSD';
 import { CHAT_SYSTEM_EXTRACTION_PROMPT, CHAT_SYSTEM_GENERATION_PROMPT } from '@/lib/constantsAI';
-import { DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH } from '@/lib/constants';
+import { DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, FILE_API_BASE_URL } from '@/lib/constants';
 
 const DEFAULT_AI_SETTINGS: AiSettings = {
   apiKey: DEFAULT_AI_API_KEY,
@@ -104,7 +104,6 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         const chatModels = response.data
           .filter((model: any) =>
             model.id.includes('gpt') &&
-            model.id.includes('turbo') &&
             !model.id.includes('preview')
           )
           .map((model: any) => model.id);
@@ -153,7 +152,6 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
     let newMessage: ChatMessage;
     let updatedMessages: ChatMessage[] = [...messages];
-
     let updatedMode = checkIfExtractionMode(content) ? 'extraction' : 'generation';
 
     //Setup system prompt
@@ -164,6 +162,8 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         content: updatedMode === 'extraction' ? prepareExtractionSystemPrompt() : CHAT_SYSTEM_GENERATION_PROMPT,
         timestamp: new Date().toISOString(),
       };
+
+      console.log("send system message", systemMessage);
       updatedMessages = [systemMessage];
     }
 
@@ -172,29 +172,30 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       const civitId = extractCivitaiId(content);
       if (!civitId) return
       const civitData = await fetchCivitaiData(civitId);
-      console.log({ civitData });
 
       //Create a new message
       newMessage = {
         id: generateUUID(),
         role: role,
-        content: JSON.stringify(civitData),
+        content: JSON.stringify({ message: content, data: civitData }),
         timestamp: new Date().toISOString(),
       };
+      console.log("send message", newMessage);
       updatedMessages = [...updatedMessages, newMessage];
       setMessages(updatedMessages);
+      setMode(updatedMode);
 
     } else {
       //Create a new message
       newMessage = {
         id: generateUUID(),
         role: role,
-        content: content,
+        content: JSON.stringify({ message: 'message', data: content }),
         timestamp: new Date().toISOString(),
       };
+      console.log("send message", newMessage);
       updatedMessages = [...updatedMessages, newMessage];
 
-      console.log("answer, ", updatedMessages);
       setMessages(updatedMessages);
 
     }
@@ -208,7 +209,6 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
           settings.temperature,
           settings.maxTokens
         );
-
         if (!response) {
           throw new Error('Failed to get a response from the AI.');
         }
@@ -220,6 +220,8 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
           content: response,
           timestamp: new Date().toISOString(),
         };
+
+        console.log("assistant message", assistantMessage);
 
         setMessages((prevMessages) => [...prevMessages, assistantMessage]);
         extractPromptFromResponse(response);
@@ -247,12 +249,15 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   const fetchCivitaiData = async (imageId: string): Promise<any> => {
     try {
-      const response = await fetch(`https://civitai.com/api/trpc/image.getGenerationData?input={"json":{"id":${imageId}}}`);
+      const response = await fetch(`${FILE_API_BASE_URL}/civitai/image/${imageId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch from Civitai API');
       }
-      const data = await response.json();
-      return data;
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch Civitai data');
+      }
+      return result.data;
     } catch (error) {
       console.error('Error fetching Civitai data:', error);
       return null;
@@ -263,6 +268,9 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   function extractPromptFromResponse(response: string) {
     const jsonResponse = JSON.parse(response).data;
 
+    console.log("data json", jsonResponse);
+
+    console.log(mode);
     if (mode == 'extraction') {
       const prompt: Prompt = {
         id: generateUUID(),
@@ -306,6 +314,8 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       }
       setGeneratedPrompt(prompt);
     }
+
+    console.log("generated prompt", prompt);
   }
 
 
