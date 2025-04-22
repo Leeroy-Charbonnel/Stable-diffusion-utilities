@@ -41,6 +41,7 @@ The input may be either:
 1. A detailed AI response about Stable Diffusion prompt creation
 2. Raw parameter text copied from Stable Diffusion WebUI or Civitai website
 
+Availables resources and names to use :
 Available models (ONLY use these):%AVAILABLE_MODELS_PLACEHOLDER%
 
 Available samplers (ONLY use these):%AVAILABLE_SAMPLERS_PLACEHOLDER%
@@ -65,17 +66,28 @@ Example output format:
     "name": "prompt's name here";
     "text": "detailed prompt text here",
     "negativePrompt": "negative prompt here",
-    "cfgScale": "Guidance scale";
-    "seed": number;
-    "steps": number;
+    "cfgScale": "Guidance scale" | 7;
+    "seed": number | -1;
+    "steps": number | 30;
     "sampler": string;
     "model": string;
-    "width": number;
-    "height": number;
+    "width": number | 512;
+    "height": number | 512;
     "tags": ["relevant", "tags", "here"]
     "loras": [{name: string,weight: number}], make sure to put here only the models tagged as loras;
   }
 }
-Return in the JSON, the model, sampler, and loras that are available (the name might differ, try to match).  
-Explain in message prop why you couldn't extract some information
+
+Only the "message" part will be displayed to the user, while the "data" part will be used by our system.
+
+Return in the JSON, the model, sampler, and loras that are available (the name might differ, try to match). 
+EXTREMELY IMPORTANT, MOST IMPORTANT GUIDELINES:
+When using loras, YOU MUST use the exact same names as in the available LoRAs list, not the one in the data to extract.
+When using models, YOU MUST use the exact same names as in the available models list, not the one in the data to extract.
+ONLY ADD A LORA IN THE JSON IF IT EXISTS IN THE AVAILABLE LORAS LIST
+THE NAMES IN THE JSON MUST EXACTLY MATCH THE AVAILABLE LORAS LIST, EVERY CHARACTER MUST BE EXACTLY THE SAME
+
+If you cant find a lora or model, dont extract it.
+
+Invent tags if you can't find them
 `;

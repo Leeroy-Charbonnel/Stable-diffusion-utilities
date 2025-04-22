@@ -1,179 +1,44 @@
 [
   {
-    "id": "e5acb118-ee8d-4919-b22e-247cd5383273",
+    "id": "billiesn2",
     "isOpen": false,
-    "name": "PRSNL4 Style, very aesthetic,...",
-    "text": "PRSNL4 Style, very aesthetic, digital drawing, 1girl, flower, mole, solo, portrait, rose, glowing, mole under eye, parted lips, looking at viewer, simple background, black background, purple theme, glowing eyes, white eyes, short hair",
-    "negativePrompt": "score_5, score_4, score_3, ugly, fat",
-    "steps": 26,
-    "sampler": "DPM++ 2M",
-    "model": "Flux.1-Dev Hyper NF4 + Flux.1-Dev BNB NF4 + Flux.1-Schnell BNB NF4.safetensors [fef37763b8]",
-    "width": 832,
-    "height": 1216,
-    "runCount": 30,
-    "tags": [
-      "PRSNL4 Style",
-      "very aesthetic",
-      "digital drawing",
-      "1girl",
-      "flower",
-      "mole",
-      "solo",
-      "portrait",
-      "rose",
-      "glowing",
-      "mole under eye",
-      "parted lips",
-      "looking at viewer",
-      "simple background",
-      "black background",
-      "purple theme",
-      "glowing eyes",
-      "white eyes",
-      "short hair"
-    ],
-    "loras": [
-      {
-        "name": "All Disney Princess XL LoRA Model from Ralph Breaks the Internet",
-        "weight": 2
-      }
-    ],
-    "currentRun": 0,
-    "status": "idle",
-    "cfgScale": 8.7
-  },
-  {
-    "id": "a7e52069-86a9-43fe-9766-5a195c27816d",
-    "isOpen": false,
-    "name": "masterpiece, best quality, good...",
-    "text": "masterpiece, best quality, good quality, very aesthetic, absurdres, newest, 8K, depth of field, focused subject, close up, 1girl, demon face, solo, black jedi robe, glowing hair, looking at the viewer, heterochromia eyes, neon color palette, holding neon sword, eerie, dynamic lighting, shadows, silhouette, ghost in armor, dynamic angle, from side",
-    "negativePrompt": "score_6, score_5, score_4, bad quality, worst quality, worst detail, sketch, censorship, furry, window, holding, headphones",
+    "name": "billiesn2",
+    "text": "score_9, score_8_up, Expressiveh, beautiful, sexy, highres image, masterpiece, perfect face, perfect eyes, ultra detailed, gorgeous face, blush, cute slut, focus on face, slim petite body, big perfect breasts, nipples, long hair, freckles, sweat, erotic face, ruined makeup, big penis, fucked silly face, in a bedroom, full_nelson 1girl, full nelson, folded, hetero, anal, penis, reverse suspended congress, sex, sex from behind, testicles, spread legs, torn brown pantyhose, white high stiletto heels, cum drooling out of mouth, flat stomach, wet pussy, wide view, high view, mouth screaming, painted nails, cum-soaked feet, twitching toes, sleazy urban settings, neon-lit strip clubs, gritty, close-ups of pulsing pussy folds, fetishized, juice-drenched toes",
+    "negativePrompt": "score_3, score_4, score_5, score_6, low res, deformed, distorted, disfigured:1.3, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, mutated hands and fingers:1.4, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, monochrome, pubes, 3d, source_cartoon, censored, mutation, disfigured, deformed, bad hand, mutated hand, bad fingers, mutated fingers, ugly eyes, bad toes, mutated eyes, mutated toes, bad face, disfigured face, cross eyed, bad proportions, missing limbs, tan lines, blurry face, bad eyes, author name, bad pupils, pupils deformation, stomach bead, zPDXLxxx",
+    "seed": -1,
     "steps": 30,
     "sampler": "Euler a",
-    "model": "Hassaku XL (Illustrious).safetensors",
-    "width": 832,
-    "height": 1216,
-    "runCount": 50,
+    "model": "Pony Diffusion V6 XL.safetensors [67ab2fd8ec]",
+    "width": 1024,
+    "height": 1024,
+    "runCount": 10,
     "tags": [
-      "demon face",
-      "solo",
-      "neon color palette",
-      "eerie",
-      "dynamic lighting",
-      "silhouette"
+      "blonde",
+      "moody",
+      "pop star",
+      "hardcore",
+      "feet",
+      "toes",
+      "urban",
+      "dripping fluids",
+      "cum-soaked",
+      "fetishized"
     ],
     "loras": [
       {
-        "name": "MoriiMee Gothic Niji  LoRA Style",
-        "weight": 0.4
-      },
-      {
-        "name": "Neurocore Anime Shadow Circuit by ChronoKight - [FLUX & IL]",
-        "weight": 0.78
-      },
-      {
-        "name": "Neurocore Anime Cyberpunk by ChronoKnight - [FLUX & IL]",
-        "weight": 0.4
-      },
-      {
-        "name": "Neon Retrowave by ChronoKnight - [FLUX & IL]",
-        "weight": 0.2
-      },
-      {
-        "name": "RavenScript",
-        "weight": 0.7916625976562499
-      },
-      {
-        "name": "LeIsT0  Shiiro's Styles",
-        "weight": 0.3749938964843746
-      }
-    ],
-    "currentRun": 0,
-    "status": "idle",
-    "cfgScale": 5.2
-  },
-  {
-    "id": "01ac7324-53e3-40b8-b6da-2232ae103d78",
-    "isOpen": false,
-    "name": "AtomicHeartTwinsCosplay in absolute darkness,...",
-    "text": "AtomicHeartTwinsCosplay in absolute darkness, profoundly no light, holding black-pink heart shaped orbstaff, pointed hat, translucent skin. Describe the captivating scene captured in the vintage photograph featuring a Bedouin artist skillfully swallowing a massive sword in the style of Final Fantasy, amidst a mesmerized audience. Provide details about the artist's attire, the sword's intricate design, and the expressions of the onlookers as they witness this extraordinary performance. amazing quality, masterpiece, best quality, hyper detailed, ultra detailed, UHD, perfect anatomy, portrait, dof, hyper-realism, majestic, awesome, inspiring, closeup, an weathered outworn old Fantasy cape, smooth, Closeup, by Dring, rust paint peelz, atmospheric haze, cinematic composition, soft shadows, national geographic style",
-    "negativePrompt": "easynegative, bad proportions, low resolution, bad, ugly, terrible, painting, 3d, render, comic, anime, manga, unrealistic, flat, watermark, signature, worst quality, low quality, normal quality, lowres, simple background, inaccurate limb, extra fingers, fewer fingers, missing fingers, extra arms, inaccurate eyes, bad composition, bad anatomy, error, extra digit, fewer digits, cropped, jpeg artifacts, trademark, artist's name, username, text, words, human",
-    "steps": 45,
-    "sampler": "DPM++ 2M",
-    "model": "WildCardX-XL-Fusion",
-    "width": 832,
-    "height": 1216,
-    "runCount": 30,
-    "tags": [
-      "darkness",
-      "translucent skin",
-      "vintage photograph",
-      "Final Fantasy style",
-      "hyper-realism",
-      "majestic",
-      "national geographic style"
-    ],
-    "loras": [
-      {
-        "name": "extremely detailed (no trigger) - sliders.ntcai.xyz",
-        "weight": 0.65
-      },
-      {
-        "name": "Zavy's Dark Atmospheric Contrast - SDXL",
-        "weight": 0.6
-      },
-      {
-        "name": "Translucent - Subsurface Scattering Test",
-        "weight": 0.9
-      },
-      {
-        "name": "SDXL / Flux.1 D - Matte (Vanta)Black - Experiment",
-        "weight": 0.6
-      },
-      {
-        "name": "Atomic Heart - Twins Cosplay - SDXL",
+        "name": "Billie (SexNote) IllustriousPony",
         "weight": 0.8
+      },
+      {
+        "name": "All Disney Princess XL LoRA Model from Ralph Breaks the Internet",
+        "weight": 1
+      },
+      {
+        "name": "Pressed Missionary (Feet on Chest) Multi-Views, Plus Cowgirl!",
+        "weight": 1.2
       }
     ],
-    "currentRun": 0,
-    "status": "idle"
-  },
-  {
-    "id": "5759e637-d288-40ee-96b6-caeca320146d",
-    "isOpen": false,
-    "name": "New Prompt",
-    "text": "",
-    "negativePrompt": "",
-    "cfgScale": 7,
-    "seed": -1,
-    "steps": 20,
-    "sampler": "DPM++ 2M",
-    "model": "Flux.1-Dev Hyper NF4 + Flux.1-Dev BNB NF4 + Flux.1-Schnell BNB NF4.safetensors [fef37763b8]",
-    "width": 512,
-    "height": 512,
-    "runCount": 1,
-    "tags": [],
-    "loras": [],
-    "currentRun": 0,
-    "status": "idle"
-  },
-  {
-    "id": "9f9e3a43-c1e8-424b-888b-c9723879d1b1",
-    "isOpen": false,
-    "name": "New Prompt",
-    "text": "d",
-    "negativePrompt": "",
-    "cfgScale": 7,
-    "seed": -1,
-    "steps": 20,
-    "sampler": "DPM++ 2M",
-    "model": "Flux.1-Dev Hyper NF4 + Flux.1-Dev BNB NF4 + Flux.1-Schnell BNB NF4.safetensors [fef37763b8]",
-    "width": 512,
-    "height": 512,
-    "runCount": 1,
-    "tags": [],
-    "loras": [],
-    "currentRun": 0,
+    "currentRun": 10,
     "status": "idle"
   }
 ]

@@ -9,7 +9,7 @@ import { DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_STEP, D
 
 const DEFAULT_AI_SETTINGS: AiSettings = {
   apiKey: DEFAULT_AI_API_KEY,
-  model: 'gpt-3.5-turbo',
+  model: 'gpt-4.1',
   temperature: 0.7,
   maxTokens: 1000,
 };
@@ -52,7 +52,6 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [mode, setMode] = useState('generation');
 
   //Setting updaters
   const setModel = (model: string) => { setSettings((prev) => ({ ...prev, model })); };
@@ -183,7 +182,6 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       console.log("send message", newMessage);
       updatedMessages = [...updatedMessages, newMessage];
       setMessages(updatedMessages);
-      setMode(updatedMode);
 
     } else {
       //Create a new message
@@ -224,7 +222,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         console.log("assistant message", assistantMessage);
 
         setMessages((prevMessages) => [...prevMessages, assistantMessage]);
-        extractPromptFromResponse(response);
+        extractPromptFromResponse(response, updatedMode);
       } catch (err) {
         console.error('Error getting AI response:', err);
         setError(err instanceof Error ? err.message : String(err));
@@ -265,7 +263,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   };
 
 
-  function extractPromptFromResponse(response: string) {
+  function extractPromptFromResponse(response: string, mode: string) {
     const jsonResponse = JSON.parse(response).data;
 
     console.log("data json", jsonResponse);
@@ -279,14 +277,14 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         text: jsonResponse.text,
         negativePrompt: jsonResponse.negativePrompt,
         cfgScale: jsonResponse.cfgScale,
-        seed: jsonResponse.seed,
-        steps: jsonResponse.steps,
-        sampler: jsonResponse.sampler,
-        model: jsonResponse.model,
-        width: jsonResponse.width,
-        height: jsonResponse.height,
-        tags: jsonResponse.tags,
-        loras: jsonResponse.loras,
+        seed: jsonResponse.seed || -1,
+        steps: jsonResponse.steps || 30,
+        sampler: jsonResponse.sampler || '',
+        model: jsonResponse.model || availableModels[0],
+        width: jsonResponse.width || 512,
+        height: jsonResponse.height || 512,
+        tags: jsonResponse.tags || [],
+        loras: jsonResponse.loras || [],
         runCount: 1,
         currentRun: 0,
         status: 'idle'
