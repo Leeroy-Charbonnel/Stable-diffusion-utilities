@@ -25,8 +25,9 @@ export const saveGeneratedImage = async (
       id: imageId,
       folder: '',
       prompt: promptData.text,
-      name: promptData.name || `Image ${new Date().toLocaleDateString()}`, // Add default name based on prompt name
+      name: promptData.name,
       negativePrompt: promptData.negativePrompt,
+      cfgScale: promptData.cfgScale,
       seed: promptData.seed,
       steps: promptData.steps,
       width: promptData.width,
