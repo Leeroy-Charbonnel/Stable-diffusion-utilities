@@ -9,14 +9,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Image as ImageIcon, XIcon, Download, TerminalSquare, Folder, Hash, Settings2, ChevronLeft, ChevronRight, Trash2, FolderClosed, Tag, Plus, Edit, Check } from 'lucide-react';
+import { Image as ImageIcon, XIcon, Download, TerminalSquare, Folder, Hash, Settings2, ChevronLeft, ChevronRight, Trash2, FolderClosed } from 'lucide-react';
 import { ImageMetadata } from '@/types';
-
 
 interface ImageDetailsDialogProps {
   open: boolean;
@@ -25,14 +23,11 @@ interface ImageDetailsDialogProps {
   imageUrl: string | null;
   onCreatePrompt: (image: ImageMetadata) => void;
   onDownload: () => void;
-  onAddTag: (tag: string) => Promise<void>;
-  onRemoveTag: (tag: string) => Promise<void>;
   getImageFolder: (image: ImageMetadata) => string;
   onNavigate?: (direction: 'prev' | 'next') => void;
   onDeleteClick: (image: ImageMetadata) => void;
   onMoveToFolder: (imageId: string, folder: string) => void;
   availableFolders: string[];
-  onUpdateName?: (imageId: string, name: string) => Promise<void>;
 }
 
 export function ImageDetailsDialog({
@@ -44,28 +39,13 @@ export function ImageDetailsDialog({
   onDownload,
   getImageFolder,
   onNavigate,
-  onAddTag,
-  onRemoveTag,
   onDeleteClick,
   onMoveToFolder,
-  availableFolders,
-  onUpdateName
+  availableFolders
 }: ImageDetailsDialogProps) {
-  const [newTag, setNewTag] = useState('');
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [targetFolder, setTargetFolder] = useState<string>(getImageFolder(image));
   const dialogRef = useRef<HTMLDivElement>(null);
-
-  //Name editing state
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [nameValue, setNameValue] = useState(image.name || '');
-
-  useEffect(() => {
-    //Reset name value when image changes
-    if (image) {
-      setNameValue(image.name || '');
-    }
-  }, [image]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -98,20 +78,6 @@ export function ImageDetailsDialog({
     };
   }, [open]);
 
-  const handleAddTag = async () => {
-    if (newTag.trim()) {
-      await onAddTag(newTag.trim());
-      setNewTag('');
-    }
-  };
-
-  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && newTag.trim()) {
-      e.preventDefault();
-      handleAddTag();
-    }
-  };
-
   const handleMoveToFolder = async () => {
     await onMoveToFolder(image.id, targetFolder);
     setMoveDialogOpen(false);
@@ -120,23 +86,6 @@ export function ImageDetailsDialog({
   const handleDeleteImage = () => {
     onDeleteClick(image);
     onOpenChange(false);
-  };
-
-  const handleSaveName = async () => {
-    if (nameValue.trim() && onUpdateName) {
-      await onUpdateName(image.id, nameValue.trim());
-      setIsEditingName(false);
-    }
-  };
-
-  const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSaveName();
-    } else if (e.key === 'Escape') {
-      setIsEditingName(false);
-      setNameValue(image.name || '');
-    }
   };
 
   //Don't render anything if the dialog is closed
@@ -173,40 +122,10 @@ export function ImageDetailsDialog({
           {/* Header */}
           <div className="px-4 py-2 border-b bg-black/30 backdrop-blur-md z-10 relative flex items-center justify-between">
             <div className="flex items-center gap-2 text-lg font-medium flex-1">
-              {isEditingName ? (
-                <div className="flex gap-2 items-center flex-1">
-                  <ImageIcon className="h-4 w-4 flex-shrink-0" />
-                  <Input
-                    value={nameValue}
-                    onChange={(e) => setNameValue(e.target.value)}
-                    onKeyDown={handleNameKeyDown}
-                    className="h-8 text-sm flex-1"
-                    placeholder="Enter image name..."
-                    autoFocus
-                  />
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleSaveName}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Check className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 flex-1 truncate">
-                  <ImageIcon className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate">{image.name || 'Untitled Image'}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setIsEditingName(true)}
-                    className="h-6 w-6 p-0 text-foreground/70 hover:text-foreground"
-                  >
-                    <Edit className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              )}
+              <div className="flex items-center gap-2 flex-1 truncate">
+                <ImageIcon className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">{image.name || 'Untitled Image'}</span>
+              </div>
             </div>
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               <XIcon className="h-4 w-4" />
@@ -365,48 +284,18 @@ export function ImageDetailsDialog({
                     </div>
                   </div>
 
-                  {/* Tags Section - With editing capability */}
+                  {/* Tags Section - Read-only */}
                   <div className="space-y-2">
-                    <h3 className="text-sm font-semibold flex items-center gap-1">
-                      <Tag className="h-3 w-3" />
-                      Tags
-                    </h3>
-
-                    {/* Add tag input */}
-                    <div className="flex gap-2 mb-2">
-                      <Input
-                        value={newTag}
-                        onChange={(e) => setNewTag(e.target.value)}
-                        onKeyDown={handleTagKeyDown}
-                        placeholder="Add new tag..."
-                        className="h-8 text-xs"
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 px-2"
-                        onClick={handleAddTag}
-                        disabled={!newTag.trim()}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    </div>
-
+                    <h3 className="text-sm font-semibold">Tags</h3>
                     <div className="flex flex-wrap gap-1 mb-2">
                       {image.tags.length > 0 ? (
                         image.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="px-2 py-1 text-xs flex items-center gap-1">
+                          <Badge key={tag} variant="secondary" className="px-2 py-1 text-xs">
                             {tag}
-                            <button
-                              onClick={() => onRemoveTag(tag)}
-                              className="ml-1 hover:text-destructive rounded-full"
-                            >
-                              <XIcon className="h-3 w-3" />
-                            </button>
                           </Badge>
                         ))
                       ) : (
-                        <p className="text-xs text-muted-foreground">No tags added yet</p>
+                        <p className="text-xs text-muted-foreground">No tags</p>
                       )}
                     </div>
                   </div>

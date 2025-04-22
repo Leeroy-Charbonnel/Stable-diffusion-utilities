@@ -9,7 +9,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { toast } from 'sonner';
-import { generateUUID } from '@/lib/utils';
 
 //Import our component files
 import { FilterPanel } from './FilterPanel';
@@ -316,37 +315,11 @@ export function ImageViewer() {
     }
   };
 
-  const handleUpdateImageName = async (imageId: string, name: string): Promise<void> => {
-    if (!name.trim()) return;
-
-    setIsLoading(true);
-    try {
-      //Update image metadata
-      const success = await apiFS.updateImageMetadata(imageId, { name });
-
-      if (success) {
-        //Update local state if the selected image is the one being updated
-        if (selectedImage && selectedImage.id === imageId) {
-          setSelectedImage({ ...selectedImage, name });
-        }
-
-        //Refresh image list
-        await loadImagesFromServer();
-      } else {
-        console.error('Failed to update image name');
-      }
-    } catch (error) {
-      console.error('Error updating image name:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleCreatePrompt = async (image: ImageMetadata) => {
     try {
       //Create a new prompt from the image
       const newPrompt = {
-        id: generateUUID(),
+        id: crypto.randomUUID(),
         isOpen: false,
         name: image.name || image.prompt.substring(0, 20) + "...",
         text: image.prompt,
@@ -556,43 +529,11 @@ export function ImageViewer() {
             imageUrl={imageUrl}
             onCreatePrompt={handleCreatePrompt}
             onDownload={handleDetailsDownload}
-            onAddTag={async (tag) => {
-              if (!selectedImage) return;
-
-              const updatedImage = {
-                ...selectedImage,
-                tags: [...selectedImage.tags, tag]
-              };
-
-              setSelectedImage(updatedImage);
-              await apiFS.updateImageMetadata(selectedImage.id, {
-                tags: [...selectedImage.tags, tag]
-              });
-              await loadImagesFromServer();
-              return Promise.resolve();
-            }}
-            onRemoveTag={async (tag) => {
-              if (!selectedImage) return;
-
-              const updatedTags = selectedImage.tags.filter(t => t !== tag);
-              const updatedImage = {
-                ...selectedImage,
-                tags: updatedTags
-              };
-
-              setSelectedImage(updatedImage);
-              await apiFS.updateImageMetadata(selectedImage.id, {
-                tags: updatedTags
-              });
-              await loadImagesFromServer();
-              return Promise.resolve();
-            }}
             getImageFolder={getImageFolder}
             onNavigate={handleImageNavigation}
             onDeleteClick={handleDeleteClick}
             onMoveToFolder={handleMoveToFolder}
             availableFolders={availableFolders}
-            onUpdateName={handleUpdateImageName}
           />
         )
       }

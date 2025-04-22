@@ -3,10 +3,10 @@ import { FILE_API_BASE_URL } from '@/lib/constants';
 
 export function getImageUrl(imageId: string | ImageMetadata): string {
   if (!imageId) return '';
-  return `${FILE_API_BASE_URL}/images/${imageId}`;
+  const id = typeof imageId === 'string' ? imageId : imageId.id;
+  return `${FILE_API_BASE_URL}/images/${id}`;
 }
 
-//Helper function to dispatch image saved event
 const dispatchImageSavedEvent = () => {
   const event = new CustomEvent('image-saved');
   window.dispatchEvent(event);
@@ -23,10 +23,11 @@ export const saveGeneratedImage = async (
     const timestamp = new Date().toISOString();
     const metadata: ImageMetadata = {
       id: imageId,
-      folder: '',
+      path: '', //Will be set by the server
+      folder: '', //Will be set by the server
       prompt: promptData.text,
       name: promptData.name,
-      negativePrompt: promptData.negativePrompt,
+      negativePrompt: promptData.negativePrompt || "",
       cfgScale: promptData.cfgScale,
       seed: promptData.seed,
       steps: promptData.steps,
@@ -35,7 +36,7 @@ export const saveGeneratedImage = async (
       sampler: promptData.sampler,
       model: promptData.model,
       loras: promptData.loras || [],
-      tags: promptData.tags,
+      tags: promptData.tags || [],
       createdAt: timestamp,
     };
 
@@ -69,16 +70,10 @@ export const saveGeneratedImage = async (
 export const getAllImageMetadata = async (): Promise<ImageMetadata[]> => {
   try {
     const response = await fetch(`${FILE_API_BASE_URL}/images`);
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
 
     const result = await response.json();
-
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to get images');
-    }
+    if (!result.success) throw new Error(result.error || 'Failed to get images');
 
     return result.data;
   } catch (error) {
@@ -87,65 +82,40 @@ export const getAllImageMetadata = async (): Promise<ImageMetadata[]> => {
   }
 };
 
-export const updateImageMetadata = async (
-  imageId: string,
-  updates: Partial<ImageMetadata>
-): Promise<boolean> => {
+export const deleteImagesByPaths = async (imagePaths: string[]): Promise<boolean> => {
   try {
-    const response = await fetch(`${FILE_API_BASE_URL}/images/${imageId}/update`, {
+    if (imagePaths.length === 0) {
+      throw new Error('No paths provided for deletion');
+    }
+    const response = await fetch(`${FILE_API_BASE_URL}/images/delete-batch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
+      body: JSON.stringify({ paths: imagePaths }),
     });
 
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
     const result = await response.json();
 
-    //Trigger image saved event for metadata updates
-    if (result.success) {
-      dispatchImageSavedEvent();
-    }
+    if (result.success) dispatchImageSavedEvent();
 
     return result.success;
   } catch (error) {
-    console.error('Error updating image metadata:', error);
+    console.error('Error deleting images:', error);
     return false;
   }
 };
 
-export const deleteImage = async (imageId: string): Promise<boolean> => {
+export const moveImages = async (moves: Array<{ oldPath: string, newPath: string }>): Promise<boolean> => {
   try {
-    const response = await fetch(`${FILE_API_BASE_URL}/images/${imageId}`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+    if (moves.length === 0) {
+      throw new Error('No move operations provided');
     }
 
-    const result = await response.json();
-
-    //Trigger image saved event for deletions
-    if (result.success) {
-      dispatchImageSavedEvent();
-    }
-
-    return result.success;
-  } catch (error) {
-    console.error('Error deleting image:', error);
-    return false;
-  }
-};
-
-export const moveImageToFolder = async (imageId: string, folder: string): Promise<boolean> => {
-  try {
-    const response = await fetch(`${FILE_API_BASE_URL}/images/${imageId}/move`, {
+    //Use the batch move endpoint
+    const response = await fetch(`${FILE_API_BASE_URL}/images/move-batch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ folder }),
+      body: JSON.stringify({ moves }),
     });
 
     if (!response.ok) {
@@ -153,15 +123,12 @@ export const moveImageToFolder = async (imageId: string, folder: string): Promis
     }
 
     const result = await response.json();
+    if (result.success) dispatchImageSavedEvent();
 
-    //Trigger image saved event for moves
-    if (result.success) {
-      dispatchImageSavedEvent();
-    }
 
     return result.success;
   } catch (error) {
-    console.error('Error moving image:', error);
+    console.error('Error moving images:', error);
     return false;
   }
 };
@@ -183,7 +150,6 @@ export const openOutputFolder = async (): Promise<boolean> => {
     return false;
   }
 };
-
 
 export const getFolders = async (): Promise<string[]> => {
   try {

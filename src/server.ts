@@ -1,4 +1,4 @@
-import { join, dirname } from "path";
+import { join } from "path";
 import { mkdir, unlink, readdir } from "node:fs/promises";
 import { existsSync, copyFileSync, unlinkSync } from "node:fs";
 import { exec } from "child_process";
@@ -8,28 +8,35 @@ import sharp from 'sharp';
 
 //Constants
 const OUTPUT_DIR: string = join(import.meta.dir, DEFAULT_OUTPUT_FOLDER);
-const PROMPTS_FILE: string = join(OUTPUT_DIR, PROMPTS_FILE_NAME);
+const PROMPTS_FILE: string = join(import.meta.dir, PROMPTS_FILE_NAME);
 
 async function ensureDirectories(path: string): Promise<void> {
   const dirPath = path.includes('.') ? path.substring(0, path.lastIndexOf('/')) : path;
   await mkdir(dirPath, { recursive: true });
 }
 
-//Scan directories recursively and find all image files
 async function scanDirectoriesForImages(basePath: string = OUTPUT_DIR): Promise<string[]> {
   const result: string[] = [];
-  const entries = await readdir(basePath, { withFileTypes: true });
 
-  for (const entry of entries) {
-    const fullPath = join(basePath, entry.name);
+  const baseEntries = await readdir(basePath, { withFileTypes: true });
 
-    if (entry.isDirectory()) {
-      if (!entry.name.startsWith('.')) {
-        const subDirImages = await scanDirectoriesForImages(fullPath);
-        result.push(...subDirImages);
+  for (const entry of baseEntries) {
+    if (entry.isFile() && entry.name.endsWith('.png')) {
+      result.push(join(basePath, entry.name));
+    }
+  }
+
+  //Check for PNG files in direct subfolders only
+  for (const entry of baseEntries) {
+    if (entry.isDirectory() && !entry.name.startsWith('.')) {
+      const folderPath = join(basePath, entry.name);
+      const subEntries = await readdir(folderPath, { withFileTypes: true });
+
+      for (const subEntry of subEntries) {
+        if (subEntry.isFile() && subEntry.name.endsWith('.png')) {
+          result.push(join(folderPath, subEntry.name));
+        }
       }
-    } else if (entry.isFile() && entry.name.endsWith('.png')) {
-      result.push(fullPath);
     }
   }
 
@@ -49,9 +56,8 @@ async function extractMetadataFromImage(imagePath: string): Promise<ImageMetadat
 
     try {
       //Extract JSON metadata from XPComment tag
-      const metadataStr = metadata.exif.toString('utf8');
+      const metadataStr = metadata.exif.toString('utf16le');
 
-      console.log(`metadataStr: ${metadataStr}`);
       const jsonStartIndex = metadataStr.indexOf('{');
       const jsonEndIndex = metadataStr.lastIndexOf('}') + 1;
 
@@ -59,21 +65,7 @@ async function extractMetadataFromImage(imagePath: string): Promise<ImageMetadat
         const jsonStr = metadataStr.substring(jsonStartIndex, jsonEndIndex);
         const parsedMetadata = JSON.parse(jsonStr) as ImageMetadata;
 
-        //Set the path to the actual image path
         parsedMetadata.path = imagePath;
-
-        //Extract folder from path (relative to OUTPUT_DIR)
-        const relPath = imagePath.replace(OUTPUT_DIR, '').slice(1);
-        let folder = DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER;
-
-        if (relPath.includes('/')) {
-          folder = relPath.substring(0, relPath.lastIndexOf('/'));
-        } else if (relPath.includes('\\')) {
-          folder = relPath.substring(0, relPath.lastIndexOf('\\'));
-        }
-
-        parsedMetadata.folder = folder;
-
         return parsedMetadata;
       }
     } catch (error) {
@@ -95,9 +87,7 @@ async function getAllImagesWithMetadata(): Promise<ImageMetadata[]> {
 
     for (const imagePath of imagePaths) {
       const metadata = await extractMetadataFromImage(imagePath);
-      if (metadata) {
-        imagesMetadata.push(metadata);
-      }
+      if (metadata) imagesMetadata.push(metadata);
     }
 
     return imagesMetadata;
@@ -120,7 +110,6 @@ async function readPrompts(): Promise<Prompt[]> {
 
 async function savePrompts(prompts: Prompt[]): Promise<boolean> {
   try {
-    console.log("Saving prompts");
     await ensureDirectories(OUTPUT_DIR);
     await Bun.write(PROMPTS_FILE, JSON.stringify(prompts, null, 2));
     return true;
@@ -132,35 +121,22 @@ async function savePrompts(prompts: Prompt[]): Promise<boolean> {
 
 async function getAllFolders(): Promise<string[]> {
   try {
-    //Helper function to scan directories recursively
-    async function scanDirs(dir: string, basePath: string = ''): Promise<string[]> {
-      const result: string[] = [];
-      const entries = await readdir(dir, { withFileTypes: true });
+    const result: string[] = [];
+    const entries = await readdir(OUTPUT_DIR, { withFileTypes: true });
 
-      for (const entry of entries) {
-        if (entry.isDirectory()) {
-          if (!entry.name.startsWith('.')) {
-            const relativePath = basePath ? `${basePath}/${entry.name}` : entry.name;
-            result.push(relativePath);
-
-            const subfolders = await scanDirs(join(dir, entry.name), relativePath);
-            result.push(...subfolders);
-          }
-        }
+    //Only include direct subfolders
+    for (const entry of entries) {
+      if (entry.isDirectory() && !entry.name.startsWith('.')) {
+        result.push(entry.name);
       }
-
-      return result;
     }
-
-    //Get all subfolders
-    const folders = await scanDirs(OUTPUT_DIR);
 
     //Ensure default folder is always included
-    if (!folders.includes(DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER)) {
-      folders.push(DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER);
+    if (!result.includes(DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER)) {
+      result.push(DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER);
     }
 
-    return folders.sort();
+    return result.sort();
   } catch (error) {
     console.error('Error reading folders:', error);
     return [DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER];
@@ -275,7 +251,7 @@ const server = Bun.serve({
 
 
       //Delete multiple images
-      "/api/images/delete": {
+      "/api/images/delete-batch": {
         POST: async (req: BunRequest) => {
           try {
             const { paths } = await req.json() as {
@@ -419,7 +395,6 @@ const server = Bun.serve({
         }
       },
 
-      //Proxy for Civitai API to avoid CORS issues
       "/api/civitai/image/:id": {
         GET: async (req: BunRequest) => {
           try {

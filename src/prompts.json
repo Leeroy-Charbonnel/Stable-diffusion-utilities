@@ -1,0 +1,21 @@
+[
+  {
+    "id": "09abde12-7b00-432a-9848-b36e915451e4",
+    "isOpen": false,
+    "name": "New Prompt",
+    "text": "",
+    "negativePrompt": "",
+    "cfgScale": 7,
+    "seed": -1,
+    "steps": 20,
+    "sampler": "DPM++ 2M",
+    "model": "Flux.1-Dev Hyper NF4 + Flux.1-Dev BNB NF4 + Flux.1-Schnell BNB NF4.safetensors [fef37763b8]",
+    "width": 512,
+    "height": 512,
+    "runCount": 1,
+    "tags": [],
+    "loras": [],
+    "currentRun": 0,
+    "status": "idle"
+  }
+]

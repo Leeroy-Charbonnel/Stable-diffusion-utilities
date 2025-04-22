@@ -13,9 +13,7 @@ import {
 } from 'lucide-react';
 import { ImageMetadata } from '@/types';
 import { getImageUrl } from '@/services/apiFs';
-import { usePrompt } from '@/contexts/contextPrompts';
 import { toast } from 'sonner';
-import { generateUUID } from '@/lib/utils';
 
 interface ImageCardProps {
   image: ImageMetadata;
@@ -38,8 +36,6 @@ export function ImageCard({
   onDeleteClick,
   availableFolders,
 }: ImageCardProps) {
-  const { addPrompt } = usePrompt();
-
   const imageFolder = image.folder;
   const imageUrl = getImageUrl(image.id);
   const formattedDate = new Date(image.createdAt).toLocaleDateString();
@@ -48,28 +44,8 @@ export function ImageCard({
 
   const handleCreatePrompt = async (e: React.MouseEvent) => {
     e.stopPropagation();
-
     try {
-      const newPrompt = {
-        id: generateUUID(),
-        isOpen: false,
-        name: image.name || image.prompt.substring(0, 20) + "...",
-        text: image.prompt,
-        negativePrompt: image.negativePrompt || "",
-        seed: image.seed,
-        steps: image.steps,
-        sampler: image.sampler,
-        model: image.model,
-        width: image.width,
-        height: image.height,
-        runCount: 1,
-        tags: [...image.tags],
-        loras: image.loras || [],
-        currentRun: 0,
-        status: "idle",
-      };
-
-      await addPrompt(newPrompt);
+      onCreatePrompt(image);
     } catch (error) {
       console.error('Error creating prompt:', error);
       toast("Error creating prompt", {
