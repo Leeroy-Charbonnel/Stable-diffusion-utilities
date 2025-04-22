@@ -1,14 +1,13 @@
 import { join, dirname } from "path";
-import { mkdir, unlink } from "node:fs/promises";
+import { mkdir, unlink, readdir } from "node:fs/promises";
 import { existsSync, copyFileSync, unlinkSync } from "node:fs";
 import { exec } from "child_process";
 import { ImageMetadata, Prompt } from "./types";
-import { DEFAULT_OUTPUT_FOLDER, DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER, METADATA_FILE_NAME, PROMPTS_FILE_NAME } from "./lib/constants";
+import { DEFAULT_OUTPUT_FOLDER, DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER, PROMPTS_FILE_NAME } from "./lib/constants";
 import sharp from 'sharp';
 
 //Constants
 const OUTPUT_DIR: string = join(import.meta.dir, DEFAULT_OUTPUT_FOLDER);
-const METADATA_FILE: string = join(OUTPUT_DIR, METADATA_FILE_NAME);
 const PROMPTS_FILE: string = join(OUTPUT_DIR, PROMPTS_FILE_NAME);
 
 async function ensureDirectories(path: string): Promise<void> {
@@ -16,13 +15,94 @@ async function ensureDirectories(path: string): Promise<void> {
   await mkdir(dirPath, { recursive: true });
 }
 
-async function readMetadata(): Promise<ImageMetadata[]> {
+//Scan directories recursively and find all image files
+async function scanDirectoriesForImages(basePath: string = OUTPUT_DIR): Promise<string[]> {
+  const result: string[] = [];
+  const entries = await readdir(basePath, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = join(basePath, entry.name);
+
+    if (entry.isDirectory()) {
+      if (!entry.name.startsWith('.')) {
+        const subDirImages = await scanDirectoriesForImages(fullPath);
+        result.push(...subDirImages);
+      }
+    } else if (entry.isFile() && entry.name.endsWith('.png')) {
+      result.push(fullPath);
+    }
+  }
+
+  return result;
+}
+
+//Extract metadata from image file
+async function extractMetadataFromImage(imagePath: string): Promise<ImageMetadata | null> {
   try {
-    const metadataFile = Bun.file(METADATA_FILE);
-    if (!await metadataFile.exists()) return [];
-    return JSON.parse(await metadataFile.text());
+    const image = sharp(imagePath);
+    const metadata = await image.metadata();
+
+    if (!metadata.exif) {
+      console.log(`No EXIF data found in image: ${imagePath}`);
+      return null;
+    }
+
+    try {
+      //Extract JSON metadata from XPComment tag
+      const metadataStr = metadata.exif.toString('utf8');
+
+      console.log(`metadataStr: ${metadataStr}`);
+      const jsonStartIndex = metadataStr.indexOf('{');
+      const jsonEndIndex = metadataStr.lastIndexOf('}') + 1;
+
+      if (jsonStartIndex >= 0 && jsonEndIndex > jsonStartIndex) {
+        const jsonStr = metadataStr.substring(jsonStartIndex, jsonEndIndex);
+        const parsedMetadata = JSON.parse(jsonStr) as ImageMetadata;
+
+        //Set the path to the actual image path
+        parsedMetadata.path = imagePath;
+
+        //Extract folder from path (relative to OUTPUT_DIR)
+        const relPath = imagePath.replace(OUTPUT_DIR, '').slice(1);
+        let folder = DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER;
+
+        if (relPath.includes('/')) {
+          folder = relPath.substring(0, relPath.lastIndexOf('/'));
+        } else if (relPath.includes('\\')) {
+          folder = relPath.substring(0, relPath.lastIndexOf('\\'));
+        }
+
+        parsedMetadata.folder = folder;
+
+        return parsedMetadata;
+      }
+    } catch (error) {
+      console.error(`Error parsing metadata from image: ${imagePath}`, error);
+    }
+
+    return null;
   } catch (error) {
-    console.error('Error reading metadata:', error);
+    console.error(`Error extracting metadata from image: ${imagePath}`, error);
+    return null;
+  }
+}
+
+//Get all images with metadata
+async function getAllImagesWithMetadata(): Promise<ImageMetadata[]> {
+  try {
+    const imagePaths = await scanDirectoriesForImages();
+    const imagesMetadata: ImageMetadata[] = [];
+
+    for (const imagePath of imagePaths) {
+      const metadata = await extractMetadataFromImage(imagePath);
+      if (metadata) {
+        imagesMetadata.push(metadata);
+      }
+    }
+
+    return imagesMetadata;
+  } catch (error) {
+    console.error('Error getting all images with metadata:', error);
     return [];
   }
 }
@@ -35,18 +115,6 @@ async function readPrompts(): Promise<Prompt[]> {
   } catch (error) {
     console.error('Error reading prompts:', error);
     return [];
-  }
-}
-
-async function saveMetadata(metadata: ImageMetadata[]): Promise<boolean> {
-  try {
-    console.log("Saving metadata");
-    await ensureDirectories(OUTPUT_DIR);
-    await Bun.write(METADATA_FILE, JSON.stringify(metadata, null, 2));
-    return true;
-  } catch (error) {
-    console.error('Error saving metadata:', error);
-    return false;
   }
 }
 
@@ -64,11 +132,35 @@ async function savePrompts(prompts: Prompt[]): Promise<boolean> {
 
 async function getAllFolders(): Promise<string[]> {
   try {
-    const { readdir } = require('fs/promises');
+    //Helper function to scan directories recursively
+    async function scanDirs(dir: string, basePath: string = ''): Promise<string[]> {
+      const result: string[] = [];
+      const entries = await readdir(dir, { withFileTypes: true });
 
-    const entries = await readdir(OUTPUT_DIR, { withFileTypes: true });
-    const folders = entries.filter((entry: any) => entry.isDirectory()).map((dir: any) => dir.name);
-    return folders;
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          if (!entry.name.startsWith('.')) {
+            const relativePath = basePath ? `${basePath}/${entry.name}` : entry.name;
+            result.push(relativePath);
+
+            const subfolders = await scanDirs(join(dir, entry.name), relativePath);
+            result.push(...subfolders);
+          }
+        }
+      }
+
+      return result;
+    }
+
+    //Get all subfolders
+    const folders = await scanDirs(OUTPUT_DIR);
+
+    //Ensure default folder is always included
+    if (!folders.includes(DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER)) {
+      folders.push(DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER);
+    }
+
+    return folders.sort();
   } catch (error) {
     console.error('Error reading folders:', error);
     return [DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER];
@@ -110,12 +202,13 @@ const server = Bun.serve({
     "/api/prompts": {
       //Get all prompts
       GET: async () => {
-        console.log("Getting prompts");
+        console.log("GET: Getting prompts");
         const prompts = await readPrompts();
         return Response.json({ success: true, data: prompts }, { headers: corsHeaders });
       },
       //Save prompts
       POST: async (req: BunRequest) => {
+        console.log("POST: Saving prompts");
         try {
           await savePrompts(await req.json() as Prompt[]);
           return Response.json({ success: true }, { headers: corsHeaders });
@@ -129,21 +222,26 @@ const server = Bun.serve({
     "/api/images": {
       //Get all images metadata
       GET: async () => {
-        console.log("Getting images");
-        const metadata = await readMetadata();
+        console.log("GET: Getting images");
+        const metadata = await getAllImagesWithMetadata();
         return Response.json({ success: true, data: metadata }, { headers: corsHeaders });
       },
 
       //Create new image
       POST: async (req: BunRequest) => {
+        console.log("POST: Saving image");
         try {
           console.log("Saving generated image");
-          const { imageBase64, metadata } = await req.json() as { imageBase64: string, metadata: ImageMetadata }
+          const { imageBase64, metadata } = await req.json() as
+            {
+              imageBase64: string,
+              metadata: ImageMetadata
+            }
           //Save image file
           const filename = `${metadata.id}.png`;
           const folderPath = join(OUTPUT_DIR, metadata.folder || DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER);
           const filePath = join(folderPath, filename);
-          await ensureDirectories(dirname(filePath));
+          await ensureDirectories(folderPath);
           console.log(`Saving image to: ${filePath}`);
 
           //Extract the base64 data
@@ -163,6 +261,10 @@ const server = Bun.serve({
               }
             })
             .toFile(filePath);
+
+          //Set path in metadata for response
+          metadata.path = filePath;
+
           return Response.json({ success: true, data: metadata }, { headers: corsHeaders });
         } catch (error) {
           console.error("Error saving image with metadata:", error);
@@ -171,173 +273,44 @@ const server = Bun.serve({
         }
       },
 
-      //Get image by ID
-      "/api/images/:id": {
-        GET: async (req: BunRequest) => {
-          try {
-            const imageId = req.params?.id;
-            console.log(`Getting image by ID: ${imageId}`);
 
-            if (!imageId) {
-              return Response.json({ success: false, error: 'Image ID not provided' },
-                { status: 400, headers: corsHeaders });
-            }
-
-            const metadata = await readMetadata();
-            const imageMetadata = metadata.find(img => img.id === imageId);
-
-            if (!imageMetadata) {
-              return Response.json({ success: false, error: 'Image not found' },
-                { status: 404, headers: corsHeaders });
-            }
-
-            const file = Bun.file(imageMetadata.path);
-            if (!await file.exists()) {
-              return Response.json({ success: false, error: 'Image file not found' },
-                { status: 404, headers: corsHeaders });
-            }
-
-            return new Response(await file.arrayBuffer(), {
-              headers: {
-                ...corsHeaders,
-                "Content-Type": "image/png"
-              }
-            });
-          } catch (error) {
-            return Response.json({ success: false, error: String(error) },
-              { status: 500, headers: corsHeaders });
-          }
-        },
-
-        //Delete image
-        DELETE: async (req: BunRequest) => {
-          try {
-            const imageId = req.params?.id;
-            if (!imageId) {
-              return Response.json({ success: false, error: 'Image ID not provided' },
-                { status: 400, headers: corsHeaders });
-            }
-
-            const metadata = await readMetadata();
-            const imageIndex = metadata.findIndex(img => img.id === imageId);
-
-            if (imageIndex === -1) {
-              return Response.json({ success: false, error: 'Image not found in metadata' },
-                { status: 404, headers: corsHeaders });
-            }
-
-            //Delete the file
-            const imagePath = metadata[imageIndex].path;
-            try {
-              await unlink(imagePath);
-            } catch (err) {
-              console.error(`Failed to delete file at ${imagePath}:`, err);
-            }
-
-            //Update metadata
-            metadata.splice(imageIndex, 1);
-            await saveMetadata(metadata);
-
-            return Response.json({ success: true }, { headers: corsHeaders });
-          } catch (error) {
-            return Response.json({ success: false, error: String(error) },
-              { status: 500, headers: corsHeaders });
-          }
-        }
-      },
-
-      //Update image metadata
-      "/api/images/:id/update": {
+      //Delete multiple images
+      "/api/images/delete": {
         POST: async (req: BunRequest) => {
           try {
-            const imageId = req.params?.id;
-            if (!imageId) {
-              return Response.json({ success: false, error: 'Image ID not provided' },
-                { status: 400, headers: corsHeaders });
-            }
-
-            const updates = await req.json() as Partial<ImageMetadata>;
-            const metadata = await readMetadata();
-            const imageIndex = metadata.findIndex(img => img.id === imageId);
-
-            if (imageIndex === -1) {
-              return Response.json({ success: false, error: 'Image not found in metadata' },
-                { status: 404, headers: corsHeaders });
-            }
-
-            //Update metadata fields
-            metadata[imageIndex] = {
-              ...metadata[imageIndex],
-              ...updates
+            const { paths } = await req.json() as {
+              paths: string[]
             };
 
-            //Save updated metadata
-            await saveMetadata(metadata);
-
-            return Response.json({ success: true, data: metadata[imageIndex] }, { headers: corsHeaders });
-          } catch (error) {
-            return Response.json({ success: false, error: String(error) },
-              { status: 500, headers: corsHeaders });
-          }
-        }
-      },
-
-      //Move image to folder
-      "/api/images/:id/move": {
-        POST: async (req: BunRequest) => {
-          try {
-            const imageId = req.params?.id;
-            if (!imageId) {
-              return Response.json({ success: false, error: 'Image ID not provided' },
+            if (!paths || !Array.isArray(paths) || paths.length === 0) {
+              return Response.json({ success: false, error: 'No paths provided' },
                 { status: 400, headers: corsHeaders });
             }
 
-            const { folder } = await req.json() as { folder: string };
-            if (!folder) {
-              return Response.json({ success: false, error: 'Folder not provided' },
-                { status: 400, headers: corsHeaders });
-            }
+            const results = [];
+            const errors = [];
 
-            //Create folder if it doesn't exist
-            const folderPath = join(OUTPUT_DIR, folder);
-            await ensureDirectories(folderPath);
-
-            const metadata = await readMetadata();
-            const imageIndex = metadata.findIndex(img => img.id === imageId);
-
-            if (imageIndex === -1) {
-              return Response.json({ success: false, error: 'Image not found' },
-                { status: 404, headers: corsHeaders });
-            }
-
-            const image = metadata[imageIndex];
-            const oldPath = image.path;
-
-            const filename = `${imageId}.png`;
-            const newPath = join(folderPath, filename);
-
-            try {
-              if (existsSync(oldPath)) {
-                copyFileSync(oldPath, newPath);
-                unlinkSync(oldPath);
+            //Process each file deletion
+            for (const path of paths) {
+              try {
+                //Check if file exists before deleting
+                if (existsSync(path)) {
+                  await unlink(path);
+                  results.push({ path, deleted: true });
+                } else {
+                  errors.push({ path, error: 'File not found' });
+                }
+              } catch (error) {
+                errors.push({ path, error: String(error) });
               }
-            } catch (err) {
-              console.error(`Failed to move file from ${oldPath} to ${newPath}:`, err);
-              return Response.json({ success: false, error: `Failed to move file: ${err}` },
-                { status: 500, headers: corsHeaders });
-            }
-
-            metadata[imageIndex] = { ...image, path: newPath, folder };
-
-            const metadataSaved = await saveMetadata(metadata);
-            if (!metadataSaved) {
-              return Response.json({ success: false, error: 'Failed to update metadata' },
-                { status: 500, headers: corsHeaders });
             }
 
             return Response.json({
-              success: true,
-              data: metadata[imageIndex]
+              success: errors.length === 0,
+              data: {
+                deleted: results,
+                errors: errors
+              }
             }, { headers: corsHeaders });
           } catch (error) {
             return Response.json({ success: false, error: String(error) },
@@ -346,6 +319,70 @@ const server = Bun.serve({
         }
       },
 
+      //Move multiple images to new folders
+      "/api/images/move-batch": {
+        POST: async (req: BunRequest) => {
+          try {
+            const { moves } = await req.json() as {
+              moves: Array<{
+                oldPath: string,
+                newPath: string
+              }>
+            };
+
+            if (!moves || !Array.isArray(moves) || moves.length === 0) {
+              return Response.json({ success: false, error: 'No move operations provided' },
+                { status: 400, headers: corsHeaders });
+            }
+
+            const results = [];
+            const errors = [];
+
+            //Process each move operation
+            for (const move of moves) {
+              try {
+                const { oldPath, newPath } = move;
+
+                if (!oldPath || !newPath) {
+                  errors.push({ ...move, error: 'Missing required parameters' });
+                  continue;
+                }
+
+                //Check if source file exists
+                if (!existsSync(oldPath)) {
+                  errors.push({ ...move, error: 'Source file not found' });
+                  continue;
+                }
+
+                //Create destination directory if it doesn't exist
+                await ensureDirectories(newPath);
+
+                //Move file to new location
+                copyFileSync(oldPath, newPath);
+                unlinkSync(oldPath);
+
+                results.push({
+                  oldPath,
+                  newPath
+                });
+              } catch (error) {
+                errors.push({ ...move, error: String(error) });
+              }
+            }
+
+            return Response.json({
+              success: errors.length === 0,
+              data: {
+                moved: results,
+                errors: errors
+              }
+            }, { headers: corsHeaders });
+          } catch (error) {
+            return Response.json({ success: false, error: String(error) },
+              { status: 500, headers: corsHeaders });
+          }
+        }
+      },
       //Open folder route
       "/api/open-folder": {
         POST: async () => {

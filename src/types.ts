@@ -38,6 +38,7 @@ export interface Prompt {
 export interface ImageMetadata {
   id: string;
   name: string;
+  path: string;
   folder: string;
   prompt: string;
   negativePrompt?: string;

@@ -2,8 +2,10 @@ add time elasped
 Secutiry on lora names
 security on tag
 no module 'xformers'. Processing without…
-random on lora wieght
+random on lora wieght, double slider
 run nb run on every selelect model
 +x notif tab images
 current progress bar ?
 Get seed ?, write meta in image thzmselves instdea of json
+
+When in sngle execution, stop btn on card, if gloabal execution, skip button
