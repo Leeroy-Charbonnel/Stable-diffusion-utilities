@@ -18,10 +18,22 @@ function App() {
       return 'prompts';
     }
   );
+  const [newImageNumber, setNewImageNumber] = useState(0);
 
   useEffect(() => {
     localStorage.setItem('sd-utilities-activeTab', activeTab);
   }, [activeTab]);
+
+
+  //Listen for image-saved events to refresh the image list (for automatic refresh after execution)
+  useEffect(() => {
+    const handleImageSaved = () => {
+      if (activeTab != 'images') setNewImageNumber(newImageNumber + 1);
+    };
+
+    window.addEventListener('image-saved', handleImageSaved);
+    return () => { window.removeEventListener('image-saved', handleImageSaved); };
+  }, []);
 
   return (
     <SdProvider>
@@ -29,12 +41,12 @@ function App() {
         <AiProvider>
 
           <div className="min-h-screen bg-background text-foreground dark flex overflow-hidden">
-            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} newImageNumber={newImageNumber} />
 
             <div className="w-full h-screen">
               <div className="p-6 h-full">
                 <div className="h-full" style={{ display: activeTab === 'prompts' ? 'block' : 'none' }}><PromptsManager /></div>
-                <div className="h-full" style={{ display: activeTab === 'images' ? 'block' : 'none' }}><ImageViewer /></div>
+                <div className="h-full" style={{ display: activeTab === 'images' ? 'block' : 'none' }}><ImageViewer isActiveTab={activeTab === 'images'} /></div>
                 <div className="h-full" style={{ display: activeTab === 'ai' ? 'block' : 'none' }}><AiChat /></div>
               </div>
             </div>

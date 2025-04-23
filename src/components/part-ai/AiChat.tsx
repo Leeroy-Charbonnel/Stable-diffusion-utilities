@@ -34,7 +34,6 @@ export function AiChat() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const { availableSamplers, availableModels, availableLoras, isLoading: isApiLoading } = useApi();
-  console.log(generatedPrompt);
   //Scroll to bottom when messages update
   useEffect(() => {
     if (messagesEndRef.current) {

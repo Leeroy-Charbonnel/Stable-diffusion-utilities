@@ -12,7 +12,7 @@ import {
   MoreVertical
 } from 'lucide-react';
 import { ImageMetadata } from '@/types';
-import { getImageUrl } from '@/services/apiFs';
+import { getImageUrl } from '@/services/apiFS';
 import { toast } from 'sonner';
 
 interface ImageCardProps {

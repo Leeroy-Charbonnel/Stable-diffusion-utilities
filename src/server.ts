@@ -247,190 +247,192 @@ const server = Bun.serve({
           return Response.json({ success: false, error: String(error) },
             { status: 500, headers: corsHeaders });
         }
-      },
+      }
+    },
 
 
-      //Delete multiple images
-      "/api/images/delete-batch": {
-        POST: async (req: BunRequest) => {
-          try {
-            const { paths } = await req.json() as {
-              paths: string[]
-            };
+    //Delete multiple images
+    "/api/images/delete-batch": {
+      POST: async (req: BunRequest) => {
+        try {
+          const { paths } = await req.json() as {
+            paths: string[]
+          };
 
-            if (!paths || !Array.isArray(paths) || paths.length === 0) {
-              return Response.json({ success: false, error: 'No paths provided' },
-                { status: 400, headers: corsHeaders });
-            }
+          if (!paths || !Array.isArray(paths) || paths.length === 0) {
+            return Response.json({ success: false, error: 'No paths provided' },
+              { status: 400, headers: corsHeaders });
+          }
 
-            const results = [];
-            const errors = [];
+          const results = [];
+          const errors = [];
 
-            //Process each file deletion
-            for (const path of paths) {
-              try {
-                //Check if file exists before deleting
-                if (existsSync(path)) {
-                  await unlink(path);
-                  results.push({ path, deleted: true });
-                } else {
-                  errors.push({ path, error: 'File not found' });
-                }
-              } catch (error) {
-                errors.push({ path, error: String(error) });
+          //Process each file deletion
+          for (const path of paths) {
+            try {
+              //Check if file exists before deleting
+              if (existsSync(path)) {
+                await unlink(path);
+                results.push({ path, deleted: true });
+              } else {
+                errors.push({ path, error: 'File not found' });
               }
+            } catch (error) {
+              errors.push({ path, error: String(error) });
             }
+          }
 
-            return Response.json({
-              success: errors.length === 0,
-              data: {
-                deleted: results,
-                errors: errors
+          return Response.json({
+            success: errors.length === 0,
+            data: {
+              deleted: results,
+              errors: errors
+            }
+          }, { headers: corsHeaders });
+        } catch (error) {
+          return Response.json({ success: false, error: String(error) },
+            { status: 500, headers: corsHeaders });
+        }
+      }
+    },
+
+    //Move multiple images to new folders
+    "/api/images/move-batch": {
+      POST: async (req: BunRequest) => {
+        try {
+          const { moves } = await req.json() as {
+            moves: Array<{
+              oldPath: string,
+              newPath: string
+            }>
+          };
+
+          if (!moves || !Array.isArray(moves) || moves.length === 0) {
+            return Response.json({ success: false, error: 'No move operations provided' },
+              { status: 400, headers: corsHeaders });
+          }
+
+          const results = [];
+          const errors = [];
+
+          //Process each move operation
+          for (const move of moves) {
+            try {
+              const { oldPath, newPath } = move;
+
+              if (!oldPath || !newPath) {
+                errors.push({ ...move, error: 'Missing required parameters' });
+                continue;
               }
-            }, { headers: corsHeaders });
-          } catch (error) {
-            return Response.json({ success: false, error: String(error) },
-              { status: 500, headers: corsHeaders });
-          }
-        }
-      },
 
-      //Move multiple images to new folders
-      "/api/images/move-batch": {
-        POST: async (req: BunRequest) => {
-          try {
-            const { moves } = await req.json() as {
-              moves: Array<{
-                oldPath: string,
-                newPath: string
-              }>
-            };
-
-            if (!moves || !Array.isArray(moves) || moves.length === 0) {
-              return Response.json({ success: false, error: 'No move operations provided' },
-                { status: 400, headers: corsHeaders });
-            }
-
-            const results = [];
-            const errors = [];
-
-            //Process each move operation
-            for (const move of moves) {
-              try {
-                const { oldPath, newPath } = move;
-
-                if (!oldPath || !newPath) {
-                  errors.push({ ...move, error: 'Missing required parameters' });
-                  continue;
-                }
-
-                //Check if source file exists
-                if (!existsSync(oldPath)) {
-                  errors.push({ ...move, error: 'Source file not found' });
-                  continue;
-                }
-
-                //Create destination directory if it doesn't exist
-                await ensureDirectories(newPath);
-
-                //Move file to new location
-                copyFileSync(oldPath, newPath);
-                unlinkSync(oldPath);
-
-                results.push({
-                  oldPath,
-                  newPath
-                });
-              } catch (error) {
-                errors.push({ ...move, error: String(error) });
+              //Check if source file exists
+              if (!existsSync(oldPath)) {
+                errors.push({ ...move, error: 'Source file not found' });
+                continue;
               }
+
+              //Create destination directory if it doesn't exist
+              await ensureDirectories(newPath);
+
+              //Move file to new location
+              copyFileSync(oldPath, newPath);
+              unlinkSync(oldPath);
+
+              results.push({
+                oldPath,
+                newPath
+              });
+            } catch (error) {
+              errors.push({ ...move, error: String(error) });
             }
-
-            return Response.json({
-              success: errors.length === 0,
-              data: {
-                moved: results,
-                errors: errors
-              }
-            }, { headers: corsHeaders });
-          } catch (error) {
-            return Response.json({ success: false, error: String(error) },
-              { status: 500, headers: corsHeaders });
           }
-        }
-      },
-      //Open folder route
-      "/api/open-folder": {
-        POST: async () => {
-          try {
-            //Platform-specific command to open folder
-            const command = process.platform === 'win32'
-              ? `explorer "${OUTPUT_DIR}"`
-              : process.platform === 'darwin'
-                ? `open "${OUTPUT_DIR}"`
-                : `xdg-open "${OUTPUT_DIR}"`;
 
-            exec(command, (error) => {
-              if (error) console.error('Error opening folder:', error);
-            });
-
-            return Response.json({ success: true }, { headers: corsHeaders });
-          } catch (error) {
-            return Response.json({ success: false, error: String(error) },
-              { status: 500, headers: corsHeaders });
-          }
-        }
-      },
-
-      //Get all folders
-      "/api/folders": {
-        GET: async () => {
-          try {
-            const folders = await getAllFolders();
-            return Response.json({ success: true, data: folders }, { headers: corsHeaders });
-          } catch (error) {
-            return Response.json({ success: false, error: String(error) },
-              { status: 500, headers: corsHeaders });
-          }
-        }
-      },
-
-      "/api/civitai/image/:id": {
-        GET: async (req: BunRequest) => {
-          try {
-            const imageId = req.params?.id;
-            if (!imageId) {
-              return Response.json({ success: false, error: 'Image ID not provided' },
-                { status: 400, headers: corsHeaders });
+          return Response.json({
+            success: errors.length === 0,
+            data: {
+              moved: results,
+              errors: errors
             }
+          }, { headers: corsHeaders });
+        } catch (error) {
+          return Response.json({ success: false, error: String(error) },
+            { status: 500, headers: corsHeaders });
+        }
+      }
+    },
+    //Open folder route
+    "/api/open-folder": {
+      POST: async () => {
+        try {
+          //Platform-specific command to open folder
+          const command = process.platform === 'win32'
+            ? `explorer "${OUTPUT_DIR}"`
+            : process.platform === 'darwin'
+              ? `open "${OUTPUT_DIR}"`
+              : `xdg-open "${OUTPUT_DIR}"`;
 
-            const response = await fetch(`https://civitai.com/api/trpc/image.getGenerationData?input={"json":{"id":${imageId}}}`);
+          exec(command, (error) => {
+            if (error) console.error('Error opening folder:', error);
+          });
 
-            if (!response.ok) {
-              return Response.json({ success: false, error: 'Failed to fetch from Civitai API' },
-                { status: response.status, headers: corsHeaders });
-            }
+          return Response.json({ success: true }, { headers: corsHeaders });
+        } catch (error) {
+          return Response.json({ success: false, error: String(error) },
+            { status: 500, headers: corsHeaders });
+        }
+      }
+    },
 
-            const data = await response.json();
-            return Response.json({ success: true, data }, { headers: corsHeaders });
-          } catch (error) {
-            return Response.json({ success: false, error: String(error) },
-              { status: 500, headers: corsHeaders });
+    //Get all folders
+    "/api/folders": {
+      GET: async () => {
+        console.log("GET: Folders");
+        try {
+          const folders = await getAllFolders();
+          return Response.json({ success: true, data: folders }, { headers: corsHeaders });
+        } catch (error) {
+          return Response.json({ success: false, error: String(error) },
+            { status: 500, headers: corsHeaders });
+        }
+      }
+    },
+
+    "/api/civitai/image/:id": {
+      GET: async (req: BunRequest) => {
+        try {
+          const imageId = req.params?.id;
+          if (!imageId) {
+            return Response.json({ success: false, error: 'Image ID not provided' },
+              { status: 400, headers: corsHeaders });
           }
-        }
-      },
 
-      //Fallback for API routes
-      "/api/*": (req: BunRequest) => {
-        if (req.method === "OPTIONS") {
-          return handleOptions();
+          const response = await fetch(`https://civitai.com/api/trpc/image.getGenerationData?input={"json":{"id":${imageId}}}`);
+
+          if (!response.ok) {
+            return Response.json({ success: false, error: 'Failed to fetch from Civitai API' },
+              { status: response.status, headers: corsHeaders });
+          }
+
+          const data = await response.json();
+          return Response.json({ success: true, data }, { headers: corsHeaders });
+        } catch (error) {
+          return Response.json({ success: false, error: String(error) },
+            { status: 500, headers: corsHeaders });
         }
-        return Response.json({ success: false, error: 'API endpoint not found' },
-          { status: 404, headers: corsHeaders });
-      },
-    }
+      }
+    },
+
+    //Fallback for API routes
+    "/api/*": (req: BunRequest) => {
+      if (req.method === "OPTIONS") {
+        return handleOptions();
+      }
+      return Response.json({ success: false, error: 'API endpoint not found' },
+        { status: 404, headers: corsHeaders });
+    },
   }
-});
+}
+);
 
 //Initialize server
 ensureDirectories(OUTPUT_DIR).then(() => {

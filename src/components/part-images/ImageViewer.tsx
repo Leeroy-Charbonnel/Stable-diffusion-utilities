@@ -15,8 +15,13 @@ import { FilterPanel } from './FilterPanel';
 import { ImageCard } from './ImageCard';
 import { ImageDetailsDialog } from './ImageDetailsDialog';
 import { usePrompt } from '@/contexts/contextPrompts';
+import { generateUUID } from '@/lib/utils';
 
-export function ImageViewer() {
+interface ImageViewerProps {
+  isActiveTab: boolean,
+}
+
+export function ImageViewer({ isActiveTab }: ImageViewerProps) {
   const { apiFS, isLoading: isApiLoading } = useApi();
   const { addPrompt } = usePrompt();
 
@@ -39,8 +44,8 @@ export function ImageViewer() {
 
   //Image details dialog state
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(-1);
-  const [selectedImage, setSelectedImage] = useState<ImageMetadata | null>(null);
+  const [selectedImageIndex, setFocusedImageIndex] = useState<number>(-1);
+  const [selectedImage, setFocusedImage] = useState<ImageMetadata | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   //Delete confirmation dialog state
@@ -57,6 +62,7 @@ export function ImageViewer() {
     try {
       const loadedImages = await apiFS.getAllImageMetadata();
       setGeneratedImages(loadedImages);
+      console.log(`ImageViewer - Loaded ${loadedImages.length} images`);
     } catch (error) {
       console.error('Failed to load images from server:', error);
     }
@@ -67,30 +73,19 @@ export function ImageViewer() {
     try {
       const folders = await apiFS.getFolders();
       setAvailableFolders(folders.sort());
+      console.log(`ImageViewer - Loaded ${folders.length} folders`);
     } catch (error) {
       console.error('Failed to load folders:', error);
       setAvailableFolders(['default']);
     }
   };
 
-  //Load images on mount
   useEffect(() => {
     loadImagesFromServer();
     loadFolders();
   }, []);
 
-  //Listen for image-saved events to refresh the image list (for automatic refresh after execution)
-  useEffect(() => {
-    const handleImageSaved = () => {
-      loadImagesFromServer();
-    };
 
-    window.addEventListener('image-saved', handleImageSaved);
-
-    return () => {
-      window.removeEventListener('image-saved', handleImageSaved);
-    };
-  }, []);
 
   //Refresh images and folders
   const handleRefresh = async () => {
@@ -142,9 +137,9 @@ export function ImageViewer() {
     }
 
     const image = filteredImages[newIndex];
-    setSelectedImageIndex(newIndex);
-    setSelectedImage(image);
-    setImageUrl(apiFS.getImageUrl(image.id));
+    setFocusedImageIndex(newIndex);
+    setFocusedImage(image);
+    //setImageUrl(apiFS.getImageUrl(image.id));
   };
 
   //Extract all unique tags, models, and loras from images
@@ -156,9 +151,7 @@ export function ImageViewer() {
     generatedImages.forEach(img => {
       img.tags?.forEach(tag => tags.add(tag));
       if (img.model) { models.add(img.model); }
-      if (img.loras && img.loras.length > 0) {
-        img.loras.forEach(lora => loras.add(lora.name));
-      }
+      if (img.loras && img.loras.length > 0) { img.loras.forEach(lora => loras.add(lora.name)); }
     });
 
     setAvailableTags(Array.from(tags).sort());
@@ -233,40 +226,84 @@ export function ImageViewer() {
 
   const handleImageClick = (image: ImageMetadata) => {
     const index = filteredImages.findIndex(img => img.id === image.id);
-    setSelectedImageIndex(index);
-    setSelectedImage(image);
+    setFocusedImageIndex(index);
+    setFocusedImage(image);
     setImageUrl(apiFS.getImageUrl(image.id));
     setDetailsDialogOpen(true);
   };
 
+  //Updated to use batch move API
   const handleMoveToFolder = async (imageId: string, folder: string) => {
     setIsLoading(true);
     try {
-      const success = await apiFS.moveImageToFolder(imageId, folder);
+      //Find the image in our state to get its path
+      const imageToMove = generatedImages.find(img => img.id === imageId);
+
+      if (!imageToMove) {
+        toast.error("Image not found");
+        return;
+      }
+
+      //Get filename from path
+      const oldPath = imageToMove.path;
+      const fileName = oldPath.split('/').pop() || `${imageId}.png`;
+
+      //Create moves array with a single item
+      const moves = [{
+        oldPath,
+        newPath: `${folder}/${fileName}`
+      }];
+
+      const success = await apiFS.moveImages(moves);
       if (success) {
         await loadImagesFromServer();
+        toast.success(`Image moved to ${folder}`);
+      } else {
+        toast.error("Failed to move image");
       }
     } catch (error) {
       console.error('Error moving image to folder:', error);
+      toast.error("Error moving image");
     } finally {
       setIsLoading(false);
     }
   };
 
+  //Updated to use batch move API
   const handleMoveSelectedToFolder = async () => {
     if (selectedImages.length === 0 || !targetFolder) return;
 
     setIsLoading(true);
     try {
-      // Process each image move sequentially
-      for (const imageId of selectedImages) {
-        await apiFS.moveImageToFolder(imageId, targetFolder);
+      //Create array of move operations
+      const moves = selectedImages.map(imageId => {
+        const image = generatedImages.find(img => img.id === imageId);
+        if (!image) return null;
+
+        const oldPath = image.path;
+        const fileName = oldPath.split('/').pop() || `${imageId}.png`;
+
+        return {
+          oldPath,
+          newPath: `${targetFolder}/${fileName}`
+        };
+      }).filter(Boolean) as { oldPath: string, newPath: string }[];
+
+      if (moves.length === 0) {
+        toast.error("No valid images to move");
+        return;
       }
 
-      setSelectedImages([]);
-      await loadImagesFromServer();
-      setMoveFolderDialogOpen(false);
-      toast.success(`Moved ${selectedImages.length} images to ${targetFolder}`);
+      const success = await apiFS.moveImages(moves);
+
+      if (success) {
+        setSelectedImages([]);
+        await loadImagesFromServer();
+        setMoveFolderDialogOpen(false);
+        toast.success(`Moved ${moves.length} images to ${targetFolder}`);
+      } else {
+        toast.error("Failed to move images");
+      }
     } catch (error) {
       console.error('Error moving images to folder:', error);
       toast.error("Failed to move images");
@@ -287,24 +324,41 @@ export function ImageViewer() {
     setDeleteDialogOpen(true);
   };
 
+  //Updated to use batch delete API
   const confirmDelete = async () => {
     setIsLoading(true);
     try {
+      let paths: string[] = [];
+
       if (isMultiDelete) {
-        // Delete multiple images sequentially
-        for (const imageId of selectedImages) {
-          await apiFS.deleteImage(imageId);
+        //Get paths of all selected images
+        paths = selectedImages
+          .map(id => generatedImages.find(img => img.id === id)?.path)
+          .filter(Boolean) as string[];
+
+        if (paths.length === 0) {
+          toast.error("No valid images to delete");
+          return;
         }
-        toast.success(`Deleted ${selectedImages.length} images`);
-        setSelectedImages([]);
       } else if (imageToDelete) {
-        // Delete a single image
-        await apiFS.deleteImage(imageToDelete.id);
-        toast.success("Image deleted");
+        //Single image delete
+        paths = [imageToDelete.path];
       }
 
-      // Refresh the image list
-      await loadImagesFromServer();
+      const success = await apiFS.deleteImagesByPaths(paths);
+
+      if (success) {
+        if (isMultiDelete) {
+          toast.success(`Deleted ${paths.length} images`);
+          setSelectedImages([]);
+        } else {
+          toast.success("Image deleted");
+        }
+
+        await loadImagesFromServer();
+      } else {
+        toast.error("Failed to delete image(s)");
+      }
     } catch (error) {
       console.error('Error deleting image(s):', error);
       toast.error("Failed to delete image(s)");
@@ -319,12 +373,14 @@ export function ImageViewer() {
     try {
       //Create a new prompt from the image
       const newPrompt = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         isOpen: false,
+        folder: getImageFolder(image),
         name: image.name || image.prompt.substring(0, 20) + "...",
         text: image.prompt,
         negativePrompt: image.negativePrompt || "",
         seed: image.seed,
+        cfgScale: image.cfgScale,
         steps: image.steps,
         sampler: image.sampler,
         model: image.model,

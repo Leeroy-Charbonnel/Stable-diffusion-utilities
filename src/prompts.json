@@ -1,7 +1,7 @@
 [
   {
     "id": "09abde12-7b00-432a-9848-b36e915451e4",
-    "isOpen": false,
+    "isOpen": true,
     "name": "New Prompt",
     "text": "",
     "negativePrompt": "",

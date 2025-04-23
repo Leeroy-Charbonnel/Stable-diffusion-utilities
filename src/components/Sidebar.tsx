@@ -2,13 +2,15 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ListChecks, Image, CheckCircle, AlertCircle, BrainCog, } from "lucide-react";
 import { useApi } from "@/contexts/contextSD";
+import { Badge } from "./ui/badge";
 
 interface SidebarProps {
     activeTab: "prompts" | "ai" | "images";
     setActiveTab: (tab: "prompts" | "ai" | "images") => void;
+    newImageNumber: number;
 }
 
-export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
+export function Sidebar({ activeTab, setActiveTab, newImageNumber }: SidebarProps) {
     const { isConnected } = useApi();
 
     return (
@@ -30,6 +32,7 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
 
                 <Button variant={activeTab === "images" ? "default" : "ghost"} className="justify-start" onClick={() => setActiveTab("images")} data-tab="images" >
                     <Image className="mr-2 h-4 w-4" />Images
+                    {activeTab === "images" && (newImageNumber > 0) && (<Badge>{newImageNumber}</Badge>)}
                 </Button>
 
             </nav>
