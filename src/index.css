@@ -122,7 +122,6 @@ input[type=number] {
   /* Firefox */
 }
 
-
 @layer base {
   * {
     @apply border-border outline-ring/50;

@@ -164,7 +164,7 @@ export function PromptForm({
             id="width"
             value={formData.width}
             onChange={(e) => handleChange('width', e)}
-            min={64} max={2048} className={"h-8"}
+            min={8} max={2048} className={"h-8"}
             disabled={readOnly}
           />
         </div>
@@ -174,7 +174,7 @@ export function PromptForm({
             id="height"
             value={formData.height}
             onChange={(e) => handleChange('height', e)}
-            min={64} max={2048} className={"h-8"}
+            min={8} max={2048} className={"h-8"}
             disabled={readOnly}
           />
         </div>

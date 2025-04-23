@@ -3,19 +3,23 @@
     "id": "09abde12-7b00-432a-9848-b36e915451e4",
     "isOpen": true,
     "name": "New Prompt",
-    "text": "",
-    "negativePrompt": "",
+    "text": "snthwve style nvinkpunk Charlie Bowater realistic Lithography sketch portrait of a woman, flowers, [gears], pipes, dieselpunk, multi-colored ribbons, old paper texture, highly detailed",
+    "negativePrompt": "cartoon, 3d, ((disfigured)), ((bad art)), ((deformed)), ((poorly drawn)), ((extra limbs)), ((close up)), ((b&w)), weird colors, blurry",
     "cfgScale": 7,
     "seed": -1,
     "steps": 20,
     "sampler": "DPM++ 2M",
-    "model": "Flux.1-Dev Hyper NF4 + Flux.1-Dev BNB NF4 + Flux.1-Schnell BNB NF4.safetensors [fef37763b8]",
+    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
     "width": 512,
     "height": 512,
-    "runCount": 1,
-    "tags": [],
+    "runCount": 150,
+    "tags": [
+      "some",
+      "tags",
+      "here"
+    ],
     "loras": [],
-    "currentRun": 0,
+    "currentRun": 96,
     "status": "idle"
   }
 ]

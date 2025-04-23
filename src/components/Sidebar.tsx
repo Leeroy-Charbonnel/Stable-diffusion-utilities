@@ -1,8 +1,21 @@
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ListChecks, Image, CheckCircle, AlertCircle, BrainCog, } from "lucide-react";
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarGroup,
+    SidebarGroupContent,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarProvider,
+    SidebarTrigger,
+    useSidebar,
+} from "@/components/ui/sidebar";
+import { Alert, AlertTitle } from "@/components/ui/alert";
+import { ListChecks, Image, CheckCircle, AlertCircle, BrainCog } from "lucide-react";
 import { useApi } from "@/contexts/contextSD";
-import { Badge } from "./ui/badge";
+import { Badge } from "@/components/ui/badge";
 
 interface SidebarProps {
     activeTab: "prompts" | "ai" | "images";
@@ -10,47 +23,96 @@ interface SidebarProps {
     newImageNumber: number;
 }
 
-export function Sidebar({ activeTab, setActiveTab, newImageNumber }: SidebarProps) {
+function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps) {
     const { isConnected } = useApi();
+    const { open } = useSidebar();
+
+    //Navigation items
+    const navItems = [
+        {
+            title: "Prompts",
+            id: "prompts",
+            icon: ListChecks,
+        },
+        {
+            title: "AI",
+            id: "ai",
+            icon: BrainCog,
+        },
+        {
+            title: "Images",
+            id: "images",
+            icon: Image,
+            badge: activeTab === "images" && newImageNumber > 0 ? newImageNumber : null,
+        },
+    ];
+
 
     return (
-        <div className="w-64 border-r border-border h-screen flex flex-col">
-            <div className="p-4 border-b border-border">
-                <h1 className="text-xl font-bold">SD Utilities</h1>
-                <p className="text-xs text-muted-foreground">Stable Diffusion Tools</p>
-            </div>
+        <>
 
-            <nav className="flex flex-col p-2 gap-1">
-                <Button variant={activeTab === "prompts" ? "default" : "ghost"} className="justify-start" onClick={() => setActiveTab("prompts")} data-tab="prompts" >
-                    <ListChecks className="mr-2 h-4 w-4" /> Prompts
-                </Button>
+            <SidebarHeader className="flex flex-row items-center justify-between">
+                <div className={`p-4 border-b border-border overflow-hidden transition-width text-nowrap ${open ? "block" : "hidden"}`}>
+                    <h1 className="text-xl font-bold">SD Utilities</h1>
+                    <p className="text-xs text-muted-foreground">Stable Diffusion Tools</p>
+                </div>
+                <SidebarTrigger />
+            </SidebarHeader>
+            <SidebarContent>
+                <SidebarGroup>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            {navItems.map((item) => (
+                                <SidebarMenuItem key={item.id}>
+                                    <SidebarMenuButton
+                                        asChild
+                                        className={`w-full justify-start ${activeTab === item.id ? "bg-primary text-primary-foreground" : ""}`}
+                                        onClick={() => setActiveTab(item.id as "prompts" | "ai" | "images")}
+                                        data-tab={item.id}
+                                    >
+                                        <div>
+                                            <item.icon />
+                                            <span>{item.title}</span>
+                                            {item.badge && <Badge className="ml-auto">{item.badge}</Badge>}
+                                        </div>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            ))}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+            </SidebarContent>
 
+            <SidebarFooter>
+                <div className="flex">
+                    {isConnected ? (
+                        <Alert className={`flex p-2 ${open ? '' : 'justify-center b-0'}`}>
+                            <CheckCircle className="h-4 w-4" />
+                            {open && (<AlertTitle>Connected to SD</AlertTitle>)}
+                        </Alert>
+                    ) : (
+                        <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
+                            <AlertCircle className="h-4 w-4" />
+                            {open && (<AlertTitle>Not Connected</AlertTitle>)}
+                        </Alert>
+                    )}
+                </div>
+            </SidebarFooter>
 
-                <Button variant={activeTab === "ai" ? "default" : "ghost"} className="justify-start" onClick={() => setActiveTab("ai")} data-tab="ai">
-                    <BrainCog className="mr-2 h-4 w-4" />AI
-                </Button>
+        </>
+    );
+}
 
-                <Button variant={activeTab === "images" ? "default" : "ghost"} className="justify-start" onClick={() => setActiveTab("images")} data-tab="images" >
-                    <Image className="mr-2 h-4 w-4" />Images
-                    {activeTab === "images" && (newImageNumber > 0) && (<Badge>{newImageNumber}</Badge>)}
-                </Button>
-
-            </nav>
-
-            <div className="mt-auto p-2">
-                {/* Connection Status */}
-                {isConnected ? (
-                    <Alert className="mb-4 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                        <CheckCircle className="h-4 w-4" />
-                        <AlertTitle>Connected to SD</AlertTitle>
-                    </Alert>
-                ) : (
-                    <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Not Connected</AlertTitle>
-                    </Alert>
-                )}
-            </div>
-        </div >
+export function AppSidebar({ activeTab, setActiveTab, newImageNumber }: SidebarProps) {
+    return (
+        <SidebarProvider className="w-fit">
+            <Sidebar collapsible="icon">
+                <SidebarInner
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    newImageNumber={newImageNumber}
+                />
+            </Sidebar>
+        </SidebarProvider>
     );
 }

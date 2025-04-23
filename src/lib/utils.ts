@@ -13,3 +13,9 @@ export function generateUUID(): string {
     return v.toString(16);
   });
 }
+
+
+export function getImageFolder(imagePath: string): string {
+  const parts = imagePath.replace(/\\/g, '/').split('/').filter(Boolean);
+  return parts.length >= 2 ? parts[parts.length - 2] : '';
+}

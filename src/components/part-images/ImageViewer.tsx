@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Image as ImageIcon, RefreshCw, FolderOpen, Trash2, CheckSquare, FolderClosed } from 'lucide-react';
+import { Search, Image as ImageIcon, RefreshCw, FolderOpen, Trash2, CheckSquare, FolderClosed, X } from 'lucide-react';
 import { useApi } from '@/contexts/contextSD';
 import { ImageMetadata } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -16,46 +16,54 @@ import { ImageCard } from './ImageCard';
 import { ImageDetailsDialog } from './ImageDetailsDialog';
 import { usePrompt } from '@/contexts/contextPrompts';
 import { generateUUID } from '@/lib/utils';
+import { getImageFromPath } from '@/services/apiFS';
 
-interface ImageViewerProps {
-  isActiveTab: boolean,
-}
+// interface ImageViewerProps {
+//   isActiveTab: boolean,
+// }
 
-export function ImageViewer({ isActiveTab }: ImageViewerProps) {
+export function ImageViewer() {
   const { apiFS, isLoading: isApiLoading } = useApi();
   const { addPrompt } = usePrompt();
 
+  //Images arrays
   const [generatedImages, setGeneratedImages] = useState<ImageMetadata[]>([]);
   const [filteredImages, setFilteredImages] = useState<ImageMetadata[]>([]);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
 
+  //Filter arrays
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [availableLoras, setAvailableLoras] = useState<string[]>([]);
   const [availableFolders, setAvailableFolders] = useState<string[]>(['default']);
-
-  const [searchQuery, setSearchQuery] = useState('');
+  //Filter
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [selectedLoras, setSelectedLoras] = useState<string[]>([]);
   const [selectedFolders, setSelectedFolders] = useState<string[]>([]);
 
+
+  //Query
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeSearchQuery, setActiveSearchQuery] = useState('');
+
+
   const [isLoading, setIsLoading] = useState(false);
+  const isCtrlPressedRef = useRef(false);
+  const isShiftPressedRef = useRef(false);
+  const lastSelectedImageIndexRef = useRef(-1);
 
   //Image details dialog state
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [selectedImageIndex, setFocusedImageIndex] = useState<number>(-1);
-  const [selectedImage, setFocusedImage] = useState<ImageMetadata | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [focusedImageIndex, setFocusedImageIndex] = useState<number>(-1);
+  const [focusedImage, setFocusedImage] = useState<ImageMetadata | null>(null);
+  const [focusedImageUrl, setFocusedImageUrl] = useState<string | null>(null);
 
-  //Delete confirmation dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [imageToDelete, setImageToDelete] = useState<ImageMetadata | null>(null);
-  const [isMultiDelete, setIsMultiDelete] = useState(false);
-
-  //Move to folder dialog state
   const [moveFolderDialogOpen, setMoveFolderDialogOpen] = useState(false);
   const [targetFolder, setTargetFolder] = useState<string>('default');
+
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
 
   //Function to load images from server
   async function loadImagesFromServer() {
@@ -83,8 +91,25 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
   useEffect(() => {
     loadImagesFromServer();
     loadFolders();
-  }, []);
 
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey) isCtrlPressedRef.current = true;
+      if (e.shiftKey) isShiftPressedRef.current = true;
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (!e.ctrlKey) isCtrlPressedRef.current = false;
+      if (!e.shiftKey) isShiftPressedRef.current = false;
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
 
 
   //Refresh images and folders
@@ -113,7 +138,18 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
 
   //Toggle image selection
   const toggleImageSelection = (imageId: string) => {
-    setSelectedImages(prev => prev.includes(imageId) ? prev.filter(id => id !== imageId) : [...prev, imageId]);
+    const toUnselect = selectedImages.includes(imageId);
+    const index = getImageIndex(imageId);
+
+    if (isShiftPressedRef.current && lastSelectedImageIndexRef.current !== -1) {
+      const startIndex = Math.min(lastSelectedImageIndexRef.current, index);
+      const endIndex = Math.max(lastSelectedImageIndexRef.current, index);
+      setSelectedImages(prev => [...prev, ...filteredImages.slice(startIndex, endIndex + 1).map(x => x.id)]);
+      setSelectedImages(prev => [...new Set(prev)]);
+    } else {
+      setSelectedImages(prev => toUnselect ? prev.filter(id => id !== imageId) : [...prev, imageId]);
+    }
+    lastSelectedImageIndexRef.current = !toUnselect ? index : -1;
   };
 
   //Select all images
@@ -126,20 +162,28 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
   };
 
   //Navigate between images
-  const handleImageNavigation = (direction: 'prev' | 'next') => {
-    if (selectedImageIndex === -1 || filteredImages.length <= 1) return;
+  const handleImageNavigation = async (direction: 'prev' | 'next') => {
+    if (focusedImageIndex === -1 || filteredImages.length <= 1) return;
 
     let newIndex: number;
     if (direction === 'prev') {
-      newIndex = selectedImageIndex > 0 ? selectedImageIndex - 1 : filteredImages.length - 1;
+      newIndex = focusedImageIndex > 0 ? focusedImageIndex - 1 : filteredImages.length - 1;
     } else {
-      newIndex = selectedImageIndex < filteredImages.length - 1 ? selectedImageIndex + 1 : 0;
+      newIndex = focusedImageIndex < filteredImages.length - 1 ? focusedImageIndex + 1 : 0;
     }
 
     const image = filteredImages[newIndex];
     setFocusedImageIndex(newIndex);
     setFocusedImage(image);
-    //setImageUrl(apiFS.getImageUrl(image.id));
+
+    if (image.path) {
+      const pathUrl = await getImageFromPath(image.path);
+      if (pathUrl) {
+        setFocusedImageUrl(pathUrl);
+        setIsLoading(false);
+        return;
+      }
+    }
   };
 
   //Extract all unique tags, models, and loras from images
@@ -162,7 +206,7 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
   //Filter images
   useEffect(() => {
     let filtered = [...generatedImages];
-
+    console.log({ filtered });
     //Search by prompt, tags, or name
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -194,10 +238,17 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
     filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     setFilteredImages(filtered);
-  }, [generatedImages, searchQuery, selectedTags, selectedModels, selectedLoras, selectedFolders]);
+  }, [generatedImages, activeSearchQuery, selectedTags, selectedModels, selectedLoras, selectedFolders]);
+
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      setActiveSearchQuery(searchQuery);
+    }
   };
 
   const toggleTagFilter = (tag: string) => {
@@ -222,85 +273,77 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
     setSelectedLoras([]);
     setSelectedFolders([]);
     setSearchQuery('');
+    setActiveSearchQuery('');
   };
 
-  const handleImageClick = (image: ImageMetadata) => {
-    const index = filteredImages.findIndex(img => img.id === image.id);
+  const handleImageClick = async (image: ImageMetadata) => {
+
+    if (isCtrlPressedRef.current) {
+      toggleImageSelection(image.id);
+      return;
+    }
+
+    const index = getImageIndex(image.id);
+
     setFocusedImageIndex(index);
     setFocusedImage(image);
-    setImageUrl(apiFS.getImageUrl(image.id));
+
+    if (image.path) {
+      const pathUrl = await getImageFromPath(image.path);
+      if (pathUrl) {
+        setFocusedImageUrl(pathUrl);
+      }
+    }
     setDetailsDialogOpen(true);
   };
 
+  const getImageIndex = (imageId: string): number => {
+    return filteredImages.findIndex(img => img.id === imageId);
+  }
+
+
   //Updated to use batch move API
   const handleMoveToFolder = async (imageId: string, folder: string) => {
-    setIsLoading(true);
-    try {
-      //Find the image in our state to get its path
-      const imageToMove = generatedImages.find(img => img.id === imageId);
-
-      if (!imageToMove) {
-        toast.error("Image not found");
-        return;
-      }
-
-      //Get filename from path
-      const oldPath = imageToMove.path;
-      const fileName = oldPath.split('/').pop() || `${imageId}.png`;
-
-      //Create moves array with a single item
-      const moves = [{
-        oldPath,
-        newPath: `${folder}/${fileName}`
-      }];
-
-      const success = await apiFS.moveImages(moves);
-      if (success) {
-        await loadImagesFromServer();
-        toast.success(`Image moved to ${folder}`);
-      } else {
-        toast.error("Failed to move image");
-      }
-    } catch (error) {
-      console.error('Error moving image to folder:', error);
-      toast.error("Error moving image");
-    } finally {
-      setIsLoading(false);
-    }
+    handleMovesImagesToFolder([imageId], folder);
   };
 
   //Updated to use batch move API
   const handleMoveSelectedToFolder = async () => {
-    if (selectedImages.length === 0 || !targetFolder) return;
+    handleMovesImagesToFolder(selectedImages, targetFolder);
+  };
+
+
+  const updateImage = (imageid: string, image: ImageMetadata) => {
+    setGeneratedImages(prev => prev.map(img => img.id === imageid ? image : img));
+  }
+
+  const handleMovesImagesToFolder = async (imagesId: string[], folder: string) => {
+
+    if (imagesId.length === 0 || !targetFolder) return;
+    const moves = filteredImages.filter(img => imagesId.includes(img.id)).map(x => ({
+      imageId: x.id,
+      oldPath: `${x.folder}/${x.id}.png`,
+      newPath: `${folder}/${x.id}.png`
+    }));
 
     setIsLoading(true);
     try {
-      //Create array of move operations
-      const moves = selectedImages.map(imageId => {
-        const image = generatedImages.find(img => img.id === imageId);
-        if (!image) return null;
+      const data = await apiFS.moveImages(moves);
 
-        const oldPath = image.path;
-        const fileName = oldPath.split('/').pop() || `${imageId}.png`;
 
-        return {
-          oldPath,
-          newPath: `${targetFolder}/${fileName}`
-        };
-      }).filter(Boolean) as { oldPath: string, newPath: string }[];
+      imagesId.forEach(imageId => {
+        const succeed = data.data.moved.includes(imageId);
+        if (succeed) {
+          const image = generatedImages.find(img => img.id === imageId);
+          if (image) updateImage(imageId, { ...image, folder: folder });
+        }
+      })
 
-      if (moves.length === 0) {
-        toast.error("No valid images to move");
-        return;
-      }
+      setSelectedImages([]);
+      setMoveFolderDialogOpen(false);
 
-      const success = await apiFS.moveImages(moves);
-
-      if (success) {
-        setSelectedImages([]);
-        await loadImagesFromServer();
-        setMoveFolderDialogOpen(false);
-        toast.success(`Moved ${moves.length} images to ${targetFolder}`);
+      if (data.success) {
+        toast.success(`Moved ${moves.length == data.data.moved.length ? moves.length : `${data.data.moved.length}/${moves.length}`} images to ${targetFolder}`);
       } else {
         toast.error("Failed to move images");
       }
@@ -310,52 +353,31 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
+
+
+
+
+
+
 
   const handleDeleteClick = (image: ImageMetadata) => {
-    setImageToDelete(image);
-    setIsMultiDelete(false);
+    setImagesToDelete([image.path]);
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteSelected = () => {
-    if (selectedImages.length === 0) return;
-    setIsMultiDelete(true);
+    setImagesToDelete(generatedImages.filter(img => selectedImages.includes(img.id)).map(img => img.path));
     setDeleteDialogOpen(true);
   };
 
-  //Updated to use batch delete API
   const confirmDelete = async () => {
     setIsLoading(true);
     try {
-      let paths: string[] = [];
-
-      if (isMultiDelete) {
-        //Get paths of all selected images
-        paths = selectedImages
-          .map(id => generatedImages.find(img => img.id === id)?.path)
-          .filter(Boolean) as string[];
-
-        if (paths.length === 0) {
-          toast.error("No valid images to delete");
-          return;
-        }
-      } else if (imageToDelete) {
-        //Single image delete
-        paths = [imageToDelete.path];
-      }
-
-      const success = await apiFS.deleteImagesByPaths(paths);
-
+      const success = await apiFS.deleteImagesByPaths(imagesToDelete);
       if (success) {
-        if (isMultiDelete) {
-          toast.success(`Deleted ${paths.length} images`);
-          setSelectedImages([]);
-        } else {
-          toast.success("Image deleted");
-        }
-
-        await loadImagesFromServer();
+        toast.success(`Deleted ${imagesToDelete.length} images`);
+        setGeneratedImages(generatedImages.filter(img => !imagesToDelete.includes(img.path)));
       } else {
         toast.error("Failed to delete image(s)");
       }
@@ -365,7 +387,8 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
     } finally {
       setIsLoading(false);
       setDeleteDialogOpen(false);
-      setImageToDelete(null);
+      setImagesToDelete([]);
+      setSelectedImages([]);
     }
   };
 
@@ -375,10 +398,10 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
       const newPrompt = {
         id: generateUUID(),
         isOpen: false,
-        folder: getImageFolder(image),
-        name: image.name || image.prompt.substring(0, 20) + "...",
+        folder: image.folder,
+        name: image.name,
         text: image.prompt,
-        negativePrompt: image.negativePrompt || "",
+        negativePrompt: image.negativePrompt,
         seed: image.seed,
         cfgScale: image.cfgScale,
         steps: image.steps,
@@ -404,20 +427,18 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
     }
   };
 
-  const getImageFolder = (image: ImageMetadata) => {
-    return image.folder || 'default';
-  };
+
 
   const handleDetailsDownload = () => {
-    if (!selectedImage || !imageUrl) return;
+    if (!focusedImage || !focusedImageUrl) return;
 
-    fetch(imageUrl)
+    fetch(focusedImageUrl)
       .then(response => response.blob())
       .then(blob => {
         const blobUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = blobUrl;
-        link.download = `${selectedImage.id}.png`;
+        link.download = `${focusedImage.id}.png`;
 
         document.body.appendChild(link);
         link.click();
@@ -430,41 +451,16 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
       });
   };
 
-  //If there are no images
-  if (generatedImages.length === 0) {
-    return (
-      <div className="w-full max-w-[1600px] mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex gap-2">
-            <Button onClick={handleRefresh} variant="outline" disabled={isLoading || isApiLoading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading || isApiLoading ? 'animate-spin' : ''}`} />
-              {isLoading || isApiLoading ? 'Refreshing...' : 'Refresh'}
-            </Button>
-            <Button onClick={openOutputFolder} variant="outline">
-              <FolderOpen className="mr-2 h-4 w-4" />
-              Open Folder
-            </Button>
-          </div>
-        </div>
 
-        <Card>
-          <CardContent className="p-6 text-center">
-            <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Images Found</h3>
-            <p className="text-muted-foreground">
-              Generate some images using the Prompts tab to see them here.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  function handleClearSearch(): void {
+    setSearchQuery('');
+    setActiveSearchQuery('');
   }
 
   return (
     <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-8rem)]">
-      {/* Main Content - Left Side */}
       <ResizablePanel defaultSize={75} minSize={30}>
-        <div className="h-full flex flex-col">
+        <div className="h-full flex flex-col p-3">
           <div className="flex items-center justify-between mb-4">
             <div className="flex gap-2">
               <Button onClick={handleRefresh} variant="outline" disabled={isLoading || isApiLoading}>
@@ -475,40 +471,48 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
                 <FolderOpen className="mr-2 h-4 w-4" />
                 Open Folder
               </Button>
-              <div className="relative">
+
+              <div className="relative flex items-center">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input type="search" placeholder="Search images..." className="pl-8 w-64" value={searchQuery} onChange={handleSearchChange} />
+                <Input
+                  type="search"
+                  placeholder="Search images..."
+                  className="pl-8 pr-8"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  onKeyDown={handleSearchKeyDown}
+                />
+
+                {searchQuery && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+                    onClick={handleClearSearch}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
+
             </div>
 
             {selectedImages.length > 0 && (
               <div className="flex gap-2">
-                <Button
-                  onClick={selectAllImages}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center"
-                >
+                <Button onClick={selectAllImages} variant="outline" size="sm" className="flex items-center" >
                   <CheckSquare className="mr-2 h-4 w-4" />
                   {selectedImages.length === filteredImages.length ? 'Deselect All' : 'Select All'}
                 </Button>
 
                 <Button
-                  onClick={() => setMoveFolderDialogOpen(true)}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center"
-                >
+                  onClick={() => setMoveFolderDialogOpen(true)} variant="outline" size="sm" className="flex items-center" >
                   <FolderClosed className="mr-2 h-4 w-4" />
                   Move ({selectedImages.length})
                 </Button>
 
                 <Button
-                  onClick={handleDeleteSelected}
-                  variant="destructive"
-                  size="sm"
-                  className="flex items-center"
-                >
+                  onClick={handleDeleteSelected} variant="destructive" size="sm" className="flex items-center" >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete ({selectedImages.length})
                 </Button>
@@ -516,7 +520,7 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
             )}
           </div>
 
-          <div className="flex-1 overflow-auto pr-2">
+          <div className="flex-1 overflow-auto pr-4">
             {filteredImages.length === 0 ? (
               <Card>
                 <CardContent className="p-6 text-center">
@@ -529,11 +533,12 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-auto gap-4">
-                {filteredImages.map((image) => (
+                {filteredImages.map((image, index) => (
                   <div key={image.id} className="h-auto">
                     <ImageCard
                       image={image}
                       isSelected={selectedImages.includes(image.id)}
+                      isActive={lastSelectedImageIndexRef.current === index}
                       toggleSelection={toggleImageSelection}
                       onImageClick={handleImageClick}
                       onMoveToFolder={handleMoveToFolder}
@@ -577,15 +582,14 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
       </ResizablePanel>
 
       {
-        selectedImage && (
+        focusedImage && (
           <ImageDetailsDialog
             open={detailsDialogOpen}
             onOpenChange={setDetailsDialogOpen}
-            image={selectedImage}
-            imageUrl={imageUrl}
+            image={focusedImage}
+            imageUrl={focusedImageUrl}
             onCreatePrompt={handleCreatePrompt}
             onDownload={handleDetailsDownload}
-            getImageFolder={getImageFolder}
             onNavigate={handleImageNavigation}
             onDeleteClick={handleDeleteClick}
             onMoveToFolder={handleMoveToFolder}
@@ -599,11 +603,7 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {isMultiDelete
-                ? `This will permanently delete ${selectedImages.length} selected images. This action cannot be undone.`
-                : "This will permanently delete the image. This action cannot be undone."}
-            </AlertDialogDescription>
+            <AlertDialogDescription>This action cannot be undone, are you sure you want to proceed?</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>

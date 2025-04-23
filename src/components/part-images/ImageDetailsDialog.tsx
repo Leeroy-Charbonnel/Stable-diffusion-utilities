@@ -9,12 +9,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@/components/ui/alert-dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Image as ImageIcon, XIcon, Download, TerminalSquare, Folder, Hash, Settings2, ChevronLeft, ChevronRight, Trash2, FolderClosed } from 'lucide-react';
 import { ImageMetadata } from '@/types';
+import { getImageFromPath } from '@/services/apiFS';
 
 interface ImageDetailsDialogProps {
   open: boolean;
@@ -23,7 +24,6 @@ interface ImageDetailsDialogProps {
   imageUrl: string | null;
   onCreatePrompt: (image: ImageMetadata) => void;
   onDownload: () => void;
-  getImageFolder: (image: ImageMetadata) => string;
   onNavigate?: (direction: 'prev' | 'next') => void;
   onDeleteClick: (image: ImageMetadata) => void;
   onMoveToFolder: (imageId: string, folder: string) => void;
@@ -37,15 +37,56 @@ export function ImageDetailsDialog({
   imageUrl,
   onCreatePrompt,
   onDownload,
-  getImageFolder,
   onNavigate,
   onDeleteClick,
   onMoveToFolder,
   availableFolders
 }: ImageDetailsDialogProps) {
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
-  const [targetFolder, setTargetFolder] = useState<string>(getImageFolder(image));
+  const [targetFolder, setTargetFolder] = useState<string>(image.folder);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const [localImageUrl, setLocalImageUrl] = useState<string | null>(imageUrl);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    setTargetFolder(image.folder);
+  }, [image]);
+
+  useEffect(() => {
+    //If we already have an image URL from props, use it
+    if (imageUrl) {
+      setLocalImageUrl(imageUrl);
+      return;
+    }
+
+    //Otherwise load from path if available
+    const loadImage = async () => {
+      if (!image?.path) return;
+
+      setIsLoading(true);
+      try {
+        const imageUrl = await getImageFromPath(image.path);
+        if (imageUrl) {
+          setLocalImageUrl(imageUrl);
+        }
+      } catch (error) {
+        console.error('Error loading image:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (open && image) {
+      loadImage();
+    }
+
+    return () => {
+      //Clean up blob URL when component unmounts
+      if (localImageUrl && localImageUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(localImageUrl);
+      }
+    };
+  }, [image, open, imageUrl]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -88,27 +129,26 @@ export function ImageDetailsDialog({
     onOpenChange(false);
   };
 
-  //Don't render anything if the dialog is closed
+  //Don't render anything if dialog is closed
   if (!open) return null;
 
   return (
     <>
-      {/* Custom dialog without animations */}
       <div
         className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
       >
         <div
           ref={dialogRef}
-          className="dark text-foreground flex flex-col p-0 gap-0 overflow-hidden fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-[1200px] h-[90vh]"
+          className="flex flex-col fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-[1200px] h-[90vh] z-50"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Background blur effect using the image itself */}
-          {imageUrl && (
+          {/* Background blur effect */}
+          {localImageUrl && (
             <div
               className="absolute inset-0 z-0"
               style={{
-                backgroundImage: `url(${imageUrl})`,
+                backgroundImage: `url(${localImageUrl})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 filter: 'blur(60px) brightness(0.4)',
@@ -117,15 +157,13 @@ export function ImageDetailsDialog({
               }}
             />
           )}
-          <div className="absolute inset-0 z-0 bg-black/50" /> {/* Additional overlay for better contrast */}
+          <div className="absolute inset-0 z-0 bg-black/50" /> {/* Additional overlay */}
 
           {/* Header */}
           <div className="px-4 py-2 border-b bg-black/30 backdrop-blur-md z-10 relative flex items-center justify-between">
             <div className="flex items-center gap-2 text-lg font-medium flex-1">
-              <div className="flex items-center gap-2 flex-1 truncate">
-                <ImageIcon className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{image.name || 'Untitled Image'}</span>
-              </div>
+              <ImageIcon className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">{image.name || 'Untitled Image'}</span>
             </div>
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               <XIcon className="h-4 w-4" />
@@ -135,17 +173,23 @@ export function ImageDetailsDialog({
           <div className="flex flex-1 overflow-hidden relative z-10 h-full">
             {/* Image Preview Section */}
             <div className="relative bg-black/10 h-full flex-1 backdrop-blur-sm flex items-center justify-center">
-              {/* Square image container */}
-              <div className="relative w-full h-full">
-                {imageUrl && (
-                  <img
-                    src={imageUrl}
-                    alt={image.prompt}
-                    className="object-contain w-full h-full"
-                    loading="lazy"
-                  />
-                )}
-              </div>
+              {isLoading ? (
+                <div className="flex items-center justify-center w-full h-full">
+                  <div className="h-12 w-12 rounded-full border-2 border-primary/50 border-t-primary animate-spin" />
+                </div>
+              ) : localImageUrl ? (
+                <img
+                  src={localImageUrl}
+                  alt={image.prompt}
+                  className="object-contain w-full h-full"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-muted-foreground">
+                  <ImageIcon className="h-16 w-16 mb-2 opacity-50" />
+                  <p>Image not available</p>
+                </div>
+              )}
 
               {/* Navigation Arrows */}
               {onNavigate && (
@@ -200,7 +244,7 @@ export function ImageDetailsDialog({
                         <Folder className="h-3 w-3 text-muted-foreground" />
                         <span>Folder</span>
                       </div>
-                      <p className="text-sm font-semibold truncate">{getImageFolder(image)}</p>
+                      <p className="text-sm font-semibold truncate">{image.folder}</p>
                     </div>
                   </div>
 
@@ -284,11 +328,11 @@ export function ImageDetailsDialog({
                     </div>
                   </div>
 
-                  {/* Tags Section - Read-only */}
+                  {/* Tags Section */}
                   <div className="space-y-2">
                     <h3 className="text-sm font-semibold">Tags</h3>
                     <div className="flex flex-wrap gap-1 mb-2">
-                      {image.tags.length > 0 ? (
+                      {image.tags && image.tags.length > 0 ? (
                         image.tags.map((tag) => (
                           <Badge key={tag} variant="secondary" className="px-2 py-1 text-xs">
                             {tag}
@@ -302,7 +346,7 @@ export function ImageDetailsDialog({
                 </div>
               </ScrollArea>
 
-              {/* Footer stays at bottom of the detail section */}
+              {/* Footer */}
               <div className="p-3 border-t border-white/10 bg-black/50 backdrop-blur-md">
                 <div className="grid grid-cols-2 gap-2">
                   <Button

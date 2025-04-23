@@ -5,15 +5,27 @@ import { exec } from "child_process";
 import { ImageMetadata, Prompt } from "./types";
 import { DEFAULT_OUTPUT_FOLDER, DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER, PROMPTS_FILE_NAME } from "./lib/constants";
 import sharp from 'sharp';
+import { getImageFolder } from "./lib/utils";
 
 //Constants
 const OUTPUT_DIR: string = join(import.meta.dir, DEFAULT_OUTPUT_FOLDER);
 const PROMPTS_FILE: string = join(import.meta.dir, PROMPTS_FILE_NAME);
 
 async function ensureDirectories(path: string): Promise<void> {
-  const dirPath = path.includes('.') ? path.substring(0, path.lastIndexOf('/')) : path;
+  let dirPath = path;
+
+  const parts = path.split(/[/\\]/); // handles both / and \
+  const lastPart = parts[parts.length - 1];
+  if (lastPart.includes('.')) {
+    parts.pop(); // remove the filename
+    dirPath = parts.join('/');
+  }
+
+  if (!dirPath) return;
+
   await mkdir(dirPath, { recursive: true });
 }
+
 
 async function scanDirectoriesForImages(basePath: string = OUTPUT_DIR): Promise<string[]> {
   const result: string[] = [];
@@ -66,6 +78,7 @@ async function extractMetadataFromImage(imagePath: string): Promise<ImageMetadat
         const parsedMetadata = JSON.parse(jsonStr) as ImageMetadata;
 
         parsedMetadata.path = imagePath;
+        parsedMetadata.folder = getImageFolder(imagePath);
         return parsedMetadata;
       }
     } catch (error) {
@@ -250,6 +263,32 @@ const server = Bun.serve({
       }
     },
 
+    "/api/static-images": {
+      POST: async (req: BunRequest) => {
+        try {
+          const { path } = await req.json() as {
+            path: string
+          };
+          console.log(`POST: Serving static image: ${path}`);
+          const file = Bun.file(path);
+          if (!await file.exists()) {
+            return new Response("File not found", { status: 404, headers: corsHeaders });
+          }
+
+          const contentType = 'image/png';
+
+          return new Response(await file.arrayBuffer(), {
+            headers: {
+              ...corsHeaders,
+              "Content-Type": contentType,
+              "Cache-Control": "public, max-age=31536000" //Cache for a year
+            }
+          });
+        } catch (error) {
+          return new Response(`Error: ${error}`, { status: 500, headers: corsHeaders });
+        }
+      }
+    },
 
     //Delete multiple images
     "/api/images/delete-batch": {
@@ -258,6 +297,7 @@ const server = Bun.serve({
           const { paths } = await req.json() as {
             paths: string[]
           };
+          console.log(`POST: Deleting ${paths.length} images`);
 
           if (!paths || !Array.isArray(paths) || paths.length === 0) {
             return Response.json({ success: false, error: 'No paths provided' },
@@ -302,10 +342,13 @@ const server = Bun.serve({
         try {
           const { moves } = await req.json() as {
             moves: Array<{
+              imageId: string,
               oldPath: string,
               newPath: string
             }>
           };
+
+          console.log(`POST: Moving ${moves.length} images`);
 
           if (!moves || !Array.isArray(moves) || moves.length === 0) {
             return Response.json({ success: false, error: 'No move operations provided' },
@@ -315,19 +358,32 @@ const server = Bun.serve({
           const results = [];
           const errors = [];
 
+          const absoluteMoves = moves.map(move => {
+            return {
+              imageId: move.imageId,
+              oldPath: join(OUTPUT_DIR, move.oldPath),
+              newPath: join(OUTPUT_DIR, move.newPath)
+            }
+          });
+
           //Process each move operation
-          for (const move of moves) {
+          for (const move of absoluteMoves) {
             try {
-              const { oldPath, newPath } = move;
+              const { imageId, oldPath, newPath } = move;
 
               if (!oldPath || !newPath) {
-                errors.push({ ...move, error: 'Missing required parameters' });
+                errors.push({ id: imageId, error: 'Missing parameters' });
                 continue;
               }
 
               //Check if source file exists
               if (!existsSync(oldPath)) {
-                errors.push({ ...move, error: 'Source file not found' });
+                errors.push({ id: imageId, error: 'File not found' });
+                continue;
+              }
+
+              if (newPath === oldPath) {
+                results.push(imageId);
                 continue;
               }
 
@@ -338,12 +394,9 @@ const server = Bun.serve({
               copyFileSync(oldPath, newPath);
               unlinkSync(oldPath);
 
-              results.push({
-                oldPath,
-                newPath
-              });
+              results.push(imageId);
             } catch (error) {
-              errors.push({ ...move, error: String(error) });
+              errors.push({ id: move.imageId, error: String(error) });
             }
           }
 

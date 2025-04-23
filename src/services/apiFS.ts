@@ -1,16 +1,37 @@
 import { ImageMetadata, Prompt } from '@/types';
 import { FILE_API_BASE_URL } from '@/lib/constants';
 
-export function getImageUrl(imageId: string | ImageMetadata): string {
-  if (!imageId) return '';
-  const id = typeof imageId === 'string' ? imageId : imageId.id;
-  return `${FILE_API_BASE_URL}/images/${id}`;
-}
 
 const dispatchImageSavedEvent = () => {
   const event = new CustomEvent('image-saved');
   window.dispatchEvent(event);
 };
+
+
+export const getImageFromPath = async (imagePath: string): Promise<string> => {
+  try {
+    if (!imagePath) return '';
+
+    const response = await fetch(`${FILE_API_BASE_URL}/static-images`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: imagePath }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
+  } catch (error) {
+    console.error('Error getting image from path:', error);
+    return '';
+  }
+};
+
+
+
 
 export const saveGeneratedImage = async (
   imageId: string,
@@ -105,7 +126,16 @@ export const deleteImagesByPaths = async (imagePaths: string[]): Promise<boolean
   }
 };
 
-export const moveImages = async (moves: Array<{ oldPath: string, newPath: string }>): Promise<boolean> => {
+export const moveImages = async (moves: Array<{ oldPath: string, newPath: string }>): Promise<{
+  success: boolean,
+  data: {
+    moved: string[],
+    errors: {
+      id: string,
+      error: string
+    }[]
+  }
+}> => {
   try {
     if (moves.length === 0) {
       throw new Error('No move operations provided');
@@ -123,13 +153,10 @@ export const moveImages = async (moves: Array<{ oldPath: string, newPath: string
     }
 
     const result = await response.json();
-    if (result.success) dispatchImageSavedEvent();
-
-
-    return result.success;
+    return result;
   } catch (error) {
     console.error('Error moving images:', error);
-    return false;
+    return { success: false, data: { moved: [], errors: [{ id: '', error: '' } ]} };
   }
 };
 

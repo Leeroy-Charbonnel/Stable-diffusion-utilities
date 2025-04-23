@@ -1,19 +1,40 @@
+
+
+
+
+
+
+
+part prompt
+execution id
 add time elasped
-Secutiry on lora names
 security on tag
-no module 'xformers'. Processing without…
-random on lora wieght, double slider
+random on lora wieght
 run nb run on every selelect model
-+x notif tab images
 current progress bar ?
-Get seed ?, write meta in image thzmselves instdea of json
-helper function to get folder from path
 When in sngle execution, stop btn on card, if gloabal execution, skip button
 
 
 
+part image
+imageviewer fix newImageNumber
++x notif tab images
+fix skeleton
+select on control
+
+
+part ai
+Secutiry on lora names
+
+
+
+other
+no module 'xformers'. Processing without…
 
 https://ui.shadcn.com/docs/components/toggle-group
 https://ui.shadcn.com/docs/components/combobox
 https://ui.shadcn.com/docs/components/context-menu
 https://ui.shadcn.com/docs/components/skeleton
+
+
+
