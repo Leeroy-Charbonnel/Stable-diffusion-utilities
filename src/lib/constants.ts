@@ -14,3 +14,7 @@ export const DEFAULT_PROMPT_CFG_SCALE = 7;
 export const DEFAULT_PROMPT_STEP = 20;
 export const DEFAULT_PROMPT_HEIGHT = 512;
 export const DEFAULT_PROMPT_WIDTH = 512;
+
+
+
+export const RANDOM_LORAS_MAX_COUNT = 5;

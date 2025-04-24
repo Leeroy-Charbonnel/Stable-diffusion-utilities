@@ -2,15 +2,15 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PlusCircle } from 'lucide-react';
-import { ExecutionStatus, Prompt } from '@/types';
+import { ExecutionStatus, Prompt, PromptEditor } from '@/types';
 import { PromptCard } from './PromptCard';
 import { useApi } from '@/contexts/contextSD';
-import { generateUUID } from '@/lib/utils';
+import { generateUUID, randomBetween, randomIntBetween } from '@/lib/utils';
 import { usePrompt } from '@/contexts/contextPrompts';
 import { toast } from 'sonner';
 import { ExecutionPanel } from './ExecutionPanel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH } from '@/lib/constants';
+import { DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDOM_LORAS_MAX_COUNT } from '@/lib/constants';
 
 export function PromptsManager() {
   const { isConnected, generateImage, availableSamplers, availableModels, availableLoras } = useApi();
@@ -48,7 +48,7 @@ export function PromptsManager() {
   }, []);
 
   //Handle prompt update with debounce
-  const handlePromptUpdate = (updatedPrompt: Prompt) => {
+  const handlePromptUpdate = (updatedPrompt: PromptEditor) => {
     //Clear any pending updates
     if (updateTimeoutRef.current) {
       clearTimeout(updateTimeoutRef.current);
@@ -67,7 +67,7 @@ export function PromptsManager() {
   };
 
   //Handle execution of a single prompt
-  const handleExecutePrompt = async (promptToExecute: Prompt) => {
+  const handleExecutePrompt = async (promptToExecute: PromptEditor) => {
     setStatus('execution');
     setSuccessCount(0);
     setFailureCount(0);
@@ -101,7 +101,8 @@ export function PromptsManager() {
     setExecutedPromptIds(new Set());
 
     //Calculate total runs across all prompts
-    const totalRuns = prompts.map(p => p.runCount).reduce((a, b) => a + b, 0);
+    const totalModels = prompts.map(p => p.models.length).reduce((a, b) => a + b, 0);
+    const totalRuns = prompts.map(p => p.runCount).reduce((a, b) => a + b, 0) * totalModels;
     setPromptsToRunCount(totalRuns);
 
     //Reset cancellation flag
@@ -148,41 +149,75 @@ export function PromptsManager() {
     setPromptsToRunCount(0);
   }
 
-  const executePrompt = async (prompt: Prompt): Promise<void> => {
+  const executePrompt = async (prompt: PromptEditor): Promise<void> => {
     setExecutingPromptId(prompt.id);
 
-    let currentPromptObj = { ...prompt, currentRun: 0 };
-    for (let i = 0; i < prompt.runCount; i++) {
-      //Check if execution has been cancelled
-      if (cancelExecutionRef.current) {
-        console.log(`Execution cancelled for prompt ${prompt.id}`);
-        break;
+    for (let k = 0; k < prompt.models.length; k++) {
+      const model = prompt.models[k];
+
+      const promptData: Prompt = {
+        name: prompt.name,
+        text: prompt.text,
+        negativePrompt: prompt.negativePrompt,
+        cfgScale: prompt.cfgScale,
+        seed: prompt.seed,
+        steps: prompt.steps,
+        sampler: prompt.sampler,
+        model: model,
+        loras: (() => {
+          if (prompt.lorasRandom) {
+            const lorasNumber = randomIntBetween(1, RANDOM_LORAS_MAX_COUNT);
+            const shuffled = [...availableLoras].sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, lorasNumber).map(lora => { return { name: lora.name, weight: randomBetween(-2, 2) } });
+          } else {
+            return prompt.loras.map(lora => {
+              return {
+                name: lora.name,
+                weight: lora.random ? randomBetween(-2, 2) : lora.weight
+              }
+            })
+          }
+        })(),
+        width: prompt.width,
+        height: prompt.height,
+        tags: prompt.tags
       }
 
-      try {
-        const result = await generateImage(prompt);
+      for (let i = 0; i < prompt.runCount; i++) {
+        //Check if execution has been cancelled
+        if (cancelExecutionRef.current) {
+          console.log(`Execution cancelled for prompt ${prompt.id}`);
+          break;
+        }
 
-        if (result) { setSuccessCount(prev => prev + 1); }
-        else { setFailureCount(prev => prev + 1); }
-        setCurrentPromptIndex(prev => prev + 1);
-      } catch (err) {
-        console.error(`Error running prompt ${prompt.id} (${currentPromptObj.currentRun}/${prompt.runCount}):`, err);
-        setFailureCount(prev => prev + 1);
+        try {
+          const result = await generateImage(promptData);
+
+          if (result) { setSuccessCount(prev => prev + 1); }
+          else { setFailureCount(prev => prev + 1); }
+          setCurrentPromptIndex(prev => prev + 1);
+        } catch (err) {
+          console.error(`Error running prompt ${prompt.id} (${prompt.currentRun}/${prompt.runCount}):`, err);
+          setFailureCount(prev => prev + 1);
+        }
+
+        prompt.currentRun = i + 1;
+        await updatePrompt({
+          ...prompt
+        });
       }
 
-      //Update prompt current run count
-      currentPromptObj.currentRun = i + 1;
-      await updatePrompt({
-        ...currentPromptObj
-      });
     }
+
+
+
 
     setExecutingPromptId(null);
     return;
   };
 
   const handleAddPrompt = async () => {
-    const newPrompt: Prompt = {
+    const newPrompt: PromptEditor = {
       id: generateUUID(),
       isOpen: true,
       name: DEFAULT_PROMPT_NAME,
@@ -192,9 +227,10 @@ export function PromptsManager() {
       seed: -1,
       steps: DEFAULT_PROMPT_STEP,
       sampler: availableSamplers.length > 0 ? availableSamplers[0] : '',
-      model: availableModels.length > 0 ? availableModels[0] : '',
+      models: availableModels.length > 0 ? [availableModels[0]] : [],
       width: DEFAULT_PROMPT_HEIGHT,
       height: DEFAULT_PROMPT_WIDTH,
+      lorasRandom: false,
       runCount: 1,
       tags: [],
       loras: [],

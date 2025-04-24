@@ -2,15 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2, Check, X, Play, ChevronDown, ChevronUp, StopCircle } from 'lucide-react';
-import { Prompt } from '@/types';
+import { PromptEditor } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Progress } from '@/components/ui/progress';
 import { PromptForm } from './PromptForm';
+import { getPromptModel } from '@/lib/utils';
 // Removed DEBOUNCE_DELAY import
 
 type PromptCardProps = {
-  prompt: Prompt;
+  prompt: PromptEditor;
   index: number;
 
   showTags?: boolean;
@@ -18,8 +19,8 @@ type PromptCardProps = {
 
   onDelete: () => void;
   onMove: (id: string, direction: 'up' | 'down') => void;
-  onPromptUpdate: (updatedPrompt: Prompt) => void;
-  onRunPrompt: (prompt: Prompt) => void;
+  onPromptUpdate: (updatedPrompt: PromptEditor) => void;
+  onRunPrompt: (prompt: PromptEditor) => void;
   onCancelExecution?: () => void;
   isExecuted?: boolean;
   isExecuting?: boolean;
@@ -86,7 +87,7 @@ export function PromptCard({
     }
   };
 
-  const handlePromptUpdate = (updatedPrompt: Prompt) => {
+  const handlePromptUpdate = (updatedPrompt: PromptEditor) => {
     onPromptUpdate(updatedPrompt);
   };
 
@@ -182,15 +183,21 @@ export function PromptCard({
         <div className={`p-2`}>
           <div className="flex flex-wrap gap-1.5">
             {/*Model Badge - Primary*/}
-            {prompt.model && showModels && (
-              <div key="model" className="flex items-center px-2 py-0.5 h-5 rounded-md bg-primary/30" title={prompt.model}>
+            {prompt.models[0] && showModels && (
+              <div key="model" className="flex items-center px-2 py-0.5 h-5 rounded-md bg-primary/30">
                 <div className="text-xs max-w-[100px] truncate">
-                  {prompt.model}
+                  {prompt.models[0] + (prompt.models.length > 1 ? ` (+${prompt.models.length - 1})` : '')}
                 </div>
               </div>
             )}
             {/*LoRA Badges*/}
-            {prompt.loras && showModels && prompt.loras.map(lora => (
+            {prompt.lorasRandom && (
+              <div key='random-lora' className="flex items-center px-2 py-0.5 h-5 rounded-md border-primary border-1">
+                <div className="text-xs max-w-[100px] truncate text-primary">Random</div>
+              </div>
+            )}
+
+            {!prompt.lorasRandom && prompt.loras && showModels && prompt.loras.map(lora => (
               <div key={lora.name} className="flex items-center px-2 py-0.5 h-5 rounded-md border-primary border-1" title={lora.name}>
                 <div className="text-xs max-w-[100px] truncate text-primary">
                   {lora.name}

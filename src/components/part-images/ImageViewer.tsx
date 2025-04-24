@@ -159,6 +159,7 @@ export function ImageViewer() {
     } else {
       setSelectedImages(filteredImages.map(img => img.id));
     }
+    lastSelectedImageIndexRef.current = -1;
   };
 
   //Navigate between images

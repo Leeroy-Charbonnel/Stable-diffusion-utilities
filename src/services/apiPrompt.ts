@@ -1,8 +1,8 @@
-import { Prompt } from '@/types';
+import { PromptEditor } from '@/types';
 import { FILE_API_BASE_URL } from '@/lib/constants';
 
 //Get all prompts from the server
-export const getAllPrompts = async (): Promise<Prompt[]> => {
+export const getAllPrompts = async (): Promise<PromptEditor[]> => {
   try {
     const response = await fetch(`${FILE_API_BASE_URL}/prompts`);
     if (!response.ok) {
@@ -21,7 +21,7 @@ export const getAllPrompts = async (): Promise<Prompt[]> => {
 };
 
 //Save all prompts to the server
-export const saveAllPrompts = async (prompts: Prompt[]): Promise<boolean> => {
+export const saveAllPrompts = async (prompts: PromptEditor[]): Promise<boolean> => {
   try {
     const response = await fetch(`${FILE_API_BASE_URL}/prompts`, {
       method: 'POST',

@@ -43,10 +43,9 @@ function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps)
             title: "Images",
             id: "images",
             icon: Image,
-            badge: activeTab === "images" && newImageNumber > 0 ? newImageNumber : null,
+            badge: newImageNumber > 0 ? newImageNumber : null,
         },
     ];
-
 
     return (
         <>
@@ -85,17 +84,22 @@ function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps)
 
             <SidebarFooter>
                 <div className="flex">
-                    {isConnected ? (
-                        <Alert className={`flex p-2 ${open ? '' : 'justify-center b-0'}`}>
-                            <CheckCircle className="h-4 w-4" />
-                            {open && (<AlertTitle>Connected to SD</AlertTitle>)}
-                        </Alert>
-                    ) : (
-                        <Alert className="mb-4 bg-destructive/10 text-destructive dark:bg-destructive/20">
-                            <AlertCircle className="h-4 w-4" />
-                            {open && (<AlertTitle>Not Connected</AlertTitle>)}
-                        </Alert>
-                    )}
+                    {isConnected ?
+                        (open && (
+                            <Alert className={`flex p-2 ${open ? '' : 'justify-center b-0'}`}>
+                                <CheckCircle className="h-4 w-4" />
+                                <AlertTitle>Connected to SD</AlertTitle>
+                            </Alert>
+                        ))
+                        : (
+                            (open && (
+                                <Alert className={`flex p-2 bg-destructive/20 ${open ? '' : 'justify-center b-0'}`}>
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle>Not Connected</AlertTitle>
+                                </Alert>
+                            )
+                            ))
+                    }
                 </div>
             </SidebarFooter>
 

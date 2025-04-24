@@ -1,11 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Play, StopCircle, CheckCircle, XCircle } from 'lucide-react';
-import { ExecutionStatus, Prompt } from '@/types';
+import { ExecutionStatus, PromptEditor } from '@/types';
 import { Separator } from '@/components/ui/separator';
 
 interface ExecutionPanelProps {
-  prompts: Prompt[];
+  prompts: PromptEditor[];
   status: ExecutionStatus;
   successCount: number;
   failureCount: number;

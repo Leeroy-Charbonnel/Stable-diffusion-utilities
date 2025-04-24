@@ -1,7 +1,4 @@
-
-
-
-
+dice-6
 
 
 
@@ -17,10 +14,7 @@ When in sngle execution, stop btn on card, if gloabal execution, skip button
 
 
 part image
-imageviewer fix newImageNumber
-+x notif tab images
-fix skeleton
-select on control
+fix dialog
 
 
 part ai

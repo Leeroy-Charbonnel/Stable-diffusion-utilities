@@ -1,25 +1,37 @@
 [
   {
-    "id": "09abde12-7b00-432a-9848-b36e915451e4",
+    "id": "b3cd436f-cef0-455c-9d85-2649707cd84f",
     "isOpen": true,
     "name": "New Prompt",
-    "text": "snthwve style nvinkpunk Charlie Bowater realistic Lithography sketch portrait of a woman, flowers, [gears], pipes, dieselpunk, multi-colored ribbons, old paper texture, highly detailed",
-    "negativePrompt": "cartoon, 3d, ((disfigured)), ((bad art)), ((deformed)), ((poorly drawn)), ((extra limbs)), ((close up)), ((b&w)), weird colors, blurry",
+    "text": "",
+    "negativePrompt": "",
     "cfgScale": 7,
     "seed": -1,
     "steps": 20,
     "sampler": "DPM++ 2M",
-    "model": "synthwavepunk_v2.ckpt [dc4c67171e]",
+    "models": [
+      "flux_dev.safetensors [2eda627c8a]",
+      "Hassaku XL (Illustrious).safetensors [d9edf21821]"
+    ],
     "width": 512,
     "height": 512,
-    "runCount": 150,
-    "tags": [
-      "some",
-      "tags",
-      "here"
+    "lorasRandom": true,
+    "runCount": 1,
+    "tags": [],
+    "loras": [
+      {
+        "name": "lpc_v10",
+        "weight": 0.9,
+        "random": true
+      },
+      {
+        "name": "noobai_ep11_stabilizer_v0.138_fp16",
+        "weight": 1,
+        "random": false
+      }
     ],
-    "loras": [],
-    "currentRun": 96,
-    "status": "idle"
+    "currentRun": 0,
+    "status": "idle",
+    "model": "Flux.1-Dev Hyper NF4 + Flux.1-Dev BNB NF4 + Flux.1-Schnell BNB NF4.safetensors [fef37763b8]"
   }
 ]

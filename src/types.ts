@@ -1,3 +1,10 @@
+
+export interface LoraEditorConfig {
+  name: string;
+  weight: number;
+  random: boolean;
+}
+
 export interface LoraConfig {
   name: string;
   weight: number;
@@ -14,44 +21,52 @@ export interface ChatMessage {
 }
 
 
-
-export interface Prompt {
+export interface PromptEditor {
   id: string;
   isOpen: boolean;
+  runCount: number;
+  currentRun: number;
+  status: string;
+
   name: string;
   text: string;
-  negativePrompt?: string;
+  negativePrompt: string;
+  cfgScale: number;
+  seed: number;
+  steps: number;
+  sampler: string;
+  width: number;
+  height: number;
+  tags: string[];
+
+  models: string[];
+  lorasRandom: boolean;
+  loras: LoraEditorConfig[];
+
+}
+
+export interface Prompt {
+  name: string;
+  text: string;
+  negativePrompt: string;
   cfgScale: number;
   seed: number;
   steps: number;
   sampler: string;
   model: string;
+  loras: LoraConfig[];
   width: number;
   height: number;
   tags: string[];
-  loras?: LoraConfig[];
-  runCount: number;
-  currentRun: number;
-  status: string;
+
 }
 
 export interface ImageMetadata {
   id: string;
-  name: string;
   path: string;
   folder: string;
-  prompt: string;
-  negativePrompt?: string;
-  cfgScale: number;
-  seed: number;
-  steps: number;
-  width: number;
-  height: number;
-  sampler: string;
-  model: string;
-  loras: LoraConfig[];
-  tags: string[];
   createdAt: string;
+  promptData: Prompt;
 }
 
 

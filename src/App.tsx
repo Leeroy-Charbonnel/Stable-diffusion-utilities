@@ -18,23 +18,17 @@ function App() {
       return 'prompts';
     }
   );
-  const [newImageNumber, setNewImageNumber] = useState(10);
+  const [newImageNumber, setNewImageNumber] = useState(0);
 
   useEffect(() => {
     localStorage.setItem('sd-utilities-activeTab', activeTab);
-    if (activeTab === 'images') {
-      setNewImageNumber(0);
-    }
+    if (activeTab === 'images') setNewImageNumber(0);
   }, [activeTab]);
 
 
-  //Listen for image-saved events to refresh the image list (for automatic refresh after execution)
-  // Replace the current useEffect for the 'image-saved' event with these two effects
   useEffect(() => {
     const handleImageSaved = () => {
-      if (activeTab !== 'images') {
-        setNewImageNumber(prev => prev + 1);
-      }
+      if (activeTab !== 'images') setNewImageNumber(prev => prev + 1);
     };
 
     window.addEventListener('image-saved', handleImageSaved);

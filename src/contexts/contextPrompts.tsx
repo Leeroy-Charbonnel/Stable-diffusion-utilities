@@ -1,16 +1,16 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
-import { Prompt } from '@/types';
+import { PromptEditor } from '@/types';
 import * as promptsApi from '@/services/apiPrompt';
 import { toast } from 'sonner';
 import { DEBOUNCE_DELAY } from '@/lib/constants';
 
 interface PromptContextType {
-    prompts: Prompt[];
+    prompts: PromptEditor[];
     isLoading: boolean;
     error: string | null;
     loadPrompts: () => Promise<void>;
-    addPrompt: (prompt: Prompt) => Promise<boolean>;
-    updatePrompt: (updatedPrompt: Prompt) => Promise<boolean>;
+    addPrompt: (prompt: PromptEditor) => Promise<boolean>;
+    updatePrompt: (updatedPrompt: PromptEditor) => Promise<boolean>;
     deletePrompt: (promptId: string) => Promise<boolean>;
     reorderPrompt: (promptId: string, direction: 'up' | 'down') => Promise<boolean>;
 }
@@ -18,7 +18,7 @@ interface PromptContextType {
 const PromptContext = createContext<PromptContextType | undefined>(undefined);
 
 export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [prompts, setPrompts] = useState<Prompt[]>([]);
+    const [prompts, setPrompts] = useState<PromptEditor[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -71,7 +71,7 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         loadPrompts();
     }, []);
 
-    const addPrompt = async (prompt: Prompt): Promise<boolean> => {
+    const addPrompt = async (prompt: PromptEditor): Promise<boolean> => {
         setIsLoading(true);
         try {
             const updatedPrompts = [...prompts, prompt];
@@ -92,7 +92,7 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
     };
 
-    const updatePrompt = async (updatedPrompt: Prompt): Promise<boolean> => {
+    const updatePrompt = async (updatedPrompt: PromptEditor): Promise<boolean> => {
         //Update immediately
         setPrompts(prev =>
             prev.map(p => p.id === updatedPrompt.id ? updatedPrompt : p)
