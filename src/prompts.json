@@ -1,13 +1,13 @@
 [
   {
     "id": "225aa2b3-b467-457d-a0fb-962eadcecada",
-    "isOpen": false,
+    "isOpen": true,
     "folder": "default",
     "name": "New Prompt",
     "text": "A fantasy underwater portrait of a mermaid with the face and features of Jar Jar Binks from Star Wars, graceful and majestic, vibrant coral reef background, shimmering scales, flowing aquatic hair, cinematic lighting, ultra-detailed, 4K, fantasy concept art",
     "negativePrompt": "Bad anatomy, extra llimbs",
     "seed": -1,
-    "cfgScale": 1,
+    "cfgScale": 7,
     "steps": 30,
     "sampler": "DPM++ 2M",
     "models": [
@@ -31,7 +31,7 @@
     "loras": [
       {
         "name": "Dissolve Style [FLUX+SDXL+SD1.5]",
-        "weight": -0.5,
+        "weight": -0.4,
         "random": false
       },
       {
