@@ -1,6 +1,7 @@
 // src/components/ui/number-input.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Input } from './input';
+import { cn } from '@/lib/utils';
 
 interface NumberInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
     value: number;

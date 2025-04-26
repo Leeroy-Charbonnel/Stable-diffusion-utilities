@@ -259,7 +259,7 @@ export function PromptsManager() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-auto space-y-3 z-1">
+          <div className="flex-1 overflow-auto space-y-3 z-1 m-auto w-3/4">
             {prompts.map((prompt, idx) => (
               <PromptCard
                 key={prompt.id}

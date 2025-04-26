@@ -1,37 +1,95 @@
 [
   {
-    "id": "b3cd436f-cef0-455c-9d85-2649707cd84f",
-    "isOpen": true,
+    "id": "225aa2b3-b467-457d-a0fb-962eadcecada",
+    "isOpen": false,
+    "folder": "default",
     "name": "New Prompt",
-    "text": "",
-    "negativePrompt": "",
-    "cfgScale": 7,
+    "text": "A fantasy underwater portrait of a mermaid with the face and features of Jar Jar Binks from Star Wars, graceful and majestic, vibrant coral reef background, shimmering scales, flowing aquatic hair, cinematic lighting, ultra-detailed, 4K, fantasy concept art",
+    "negativePrompt": "Bad anatomy, extra llimbs",
     "seed": -1,
-    "steps": 20,
+    "cfgScale": 1,
+    "steps": 30,
     "sampler": "DPM++ 2M",
     "models": [
-      "flux_dev.safetensors [2eda627c8a]",
-      "Hassaku XL (Illustrious).safetensors [d9edf21821]"
+      {
+        "value": "CheckpointYesmix_v16Original.safetensors [3e9211917c]",
+        "label": "CheckpointYesmix_v16Original.safetensors [3e9211917c]"
+      },
+      {
+        "value": "CheckpointYesmix_v16Original.safetensors [3e9211917c]",
+        "label": "CheckpointYesmix_v16Original.safetensors [3e9211917c]"
+      }
     ],
     "width": 512,
     "height": 512,
-    "lorasRandom": true,
-    "runCount": 1,
-    "tags": [],
+    "runCount": 99,
+    "tags": [
+      "revelant",
+      "tags",
+      "here"
+    ],
     "loras": [
       {
-        "name": "lpc_v10",
-        "weight": 0.9,
-        "random": true
+        "name": "Dissolve Style [FLUX+SDXL+SD1.5]",
+        "weight": -0.5,
+        "random": false
       },
       {
-        "name": "noobai_ep11_stabilizer_v0.138_fp16",
+        "name": "Dark_Ghibli",
         "weight": 1,
         "random": false
       }
     ],
     "currentRun": 0,
     "status": "idle",
-    "model": "Flux.1-Dev Hyper NF4 + Flux.1-Dev BNB NF4 + Flux.1-Schnell BNB NF4.safetensors [fef37763b8]"
+    "lorasRandom": false
+  },
+  {
+    "id": "0af5c3f3-f555-4963-8b36-ea2c4367bdc0",
+    "isOpen": false,
+    "folder": "default",
+    "name": "New Prompt",
+    "text": "snthwve style nvinkpunk Charlie Bowater realistic Lithography sketch portrait of a woman, flowers, [gears], pipes, dieselpunk, multi-colored ribbons, old paper texture, highly detailed",
+    "negativePrompt": "cartoon, 3d, ((disfigured)), ((bad art)), ((deformed)), ((poorly drawn)), ((extra limbs)), ((close up)), ((b&w)), weird colors, blurry",
+    "seed": -1,
+    "cfgScale": 7,
+    "steps": 20,
+    "sampler": "DPM++ 2M",
+    "models": [
+      {
+        "value": "CheckpointYesmix_v16Original.safetensors [3e9211917c]",
+        "label": "CheckpointYesmix_v16Original.safetensors [3e9211917c]"
+      },
+      {
+        "value": "plantMilkModelSuite_almond.safetensors [24f68a5155]",
+        "label": "plantMilkModelSuite_almond.safetensors [24f68a5155]"
+      },
+      {
+        "value": "prefectIllustriousXL_v10.safetensors [3a2df45ef8]",
+        "label": "prefectIllustriousXL_v10.safetensors [3a2df45ef8]"
+      }
+    ],
+    "width": 512,
+    "height": 512,
+    "runCount": 1,
+    "tags": [
+      "some",
+      "tags",
+      "here"
+    ],
+    "loras": [
+      {
+        "name": "Translucent - Subsurface Scattering Test",
+        "weight": 1,
+        "random": false
+      },
+      {
+        "name": "Dark_Ghibli",
+        "weight": 1,
+        "random": false
+      }
+    ],
+    "currentRun": 0,
+    "status": "idle"
   }
 ]

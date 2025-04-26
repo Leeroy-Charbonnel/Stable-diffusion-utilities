@@ -10,6 +10,11 @@ export interface LoraConfig {
   weight: number;
 }
 
+export interface ModelConfig {
+  label: string;
+  value: string;
+}
+
 export type ExecutionStatus = 'idle' | 'execution' | 'cancelling' | 'completed';
 export type AiChatRole = 'user' | 'assistant' | 'system'
 
@@ -39,7 +44,7 @@ export interface PromptEditor {
   height: number;
   tags: string[];
 
-  models: string[];
+  models: ModelConfig[];
   lorasRandom: boolean;
   loras: LoraEditorConfig[];
 
@@ -53,7 +58,7 @@ export interface Prompt {
   seed: number;
   steps: number;
   sampler: string;
-  model: string;
+  model: ModelConfig;
   loras: LoraConfig[];
   width: number;
   height: number;

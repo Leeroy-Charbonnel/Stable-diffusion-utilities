@@ -219,7 +219,7 @@ export function ImageCard({
           <div className="p-2">
             <div className="flex flex-wrap gap-1 justify-start items-center">
               <Skeleton className="h-6 w-18 rounded-full bg-primary/30" />
-              {new Array(numberOfTagsToShow).fill(0).map(() => (
+              {new Array(image.tags.length).fill(0).map(() => (
                 <Skeleton className="h-6 w-15 rounded-full" />
               ))}
             </div>

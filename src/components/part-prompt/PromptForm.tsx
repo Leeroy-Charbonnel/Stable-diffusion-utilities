@@ -6,19 +6,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { XIcon, Trash, Dice6 } from 'lucide-react';
-import { PromptEditor } from '@/types';
+import { ModelConfig, PromptEditor } from '@/types';
 import { Slider } from "@/components/ui/slider"
 import { NumberInput } from '@/components/ui/number-input';
-import { getPromptModel } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu-multi';
+import { DropDownOption, SearchableMultiSelect } from '@/components/ui/dropdown-menu-multi';
 
 type PromptFormProps = {
   prompt: PromptEditor;
   onPromptUpdate: (prompt: PromptEditor) => void;
-  availableSamplers?: string[];
-  availableModels?: string[];
-  availableLoras?: any[];
+  availableSamplers: string[];
+  availableModels: string[];
+  availableLoras: any[];
   readOnly?: boolean;
 };
 
@@ -43,7 +42,7 @@ export function PromptForm({
 
     const newFormData = { ...formData, ...updatedData };
     setFormData(newFormData);
-    onPromptUpdate(newFormData); //Parent component should handle debouncing
+    onPromptUpdate(newFormData);
   };
 
   const handleChange = (name: string, value: any) => {
@@ -60,9 +59,9 @@ export function PromptForm({
     }
   };
 
-  const handleModelChange = (model: string) => {
+  const handleModelChange = (models: DropDownOption[]) => {
     if (readOnly) return;
-    handleFormChange({ models: prompt.models.includes(model) ? prompt.models.filter((m) => m !== model) : [...prompt.models, model] });
+    handleFormChange({ models: models as ModelConfig[] });
   };
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -111,16 +110,13 @@ export function PromptForm({
   }
 
   return (
-    <div className={"space-y-3 rounded-lg p-4 relative overflow-hidden"}>
-
-      {/* Read only overlay */}
-      {/* {readOnly && (<div className={"absolute inset-0 z-10 bg-muted/50 border-dashed text-muted-foreground cursor-not-allowed opacity-100"}></div>)} */}
+    <div className={"p-4 relative overflow-hidden"}>
 
       {/* Prompt */}
       <div>
         <Textarea id="text" name="text" value={formData.text} onChange={(e) => handleChange('text', e.target.value)}
           placeholder="Enter prompt text..."
-          className={"min-h-20"}
+          className={"min-h-20 mb-3"}
           disabled={readOnly}
         />
       </div>
@@ -137,10 +133,11 @@ export function PromptForm({
           disabled={readOnly}
         />
       </div>
-      <Separator className='my-2' />
+
+      <Separator className='mb-0 my-3' />
 
       {/* Number settings */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-2 m-0">
         <div>
           <Label htmlFor="seed" className="pb-2">Seed</Label>
           <Input
@@ -186,94 +183,70 @@ export function PromptForm({
       </div>
 
 
+      <Separator className='mb-0 my-3' />
+
+      <div className='flex gap-2 items-center m-0 h-8'>
+        <Label htmlFor="sampler" className="w-20 h-8">Model</Label>
+
+        <div className='border-b w-full h-8'>
+          <SearchableMultiSelect
+            options={availableModels.map(x => { return { value: x, label: x } })}
+            placeholder="Select options..."
+            searchPlaceholder="Type to search..."
+            onChange={handleModelChange}
+          />
+        </div>
+
+      </div>
+
+      <Separator className='mb-0 my-3' />
+
       {/* CFG Scale */}
-      <div>
-        <div className="flex flex-row items-center gap-2 mb-1">
-          <Label htmlFor="cfgScale" className="text-nowrap mr-5">CFG Scale</Label>
-          <NumberInput
-            id="cfgScaleInput"
-            value={formData.cfgScale || 7}
-            onChange={(value) => handleChange('cfgScale', value)}
-            min={1} max={30} step={0.1} className={"h-7 w-16 text-sm border-0 !bg-transparent"}
-            disabled={readOnly}
-          />
-          <Slider
-            id="cfgScale"
-            min={1} max={30} step={0.1} value={[formData.cfgScale || 7]}
-            onValueChange={(values) => handleChange('cfgScale', values[0])}
-            disabled={readOnly}
-          />
-        </div>
-      </div>
+      <div className='flex gap-2 w-full h-8 m-0'>
 
-      <Separator className='my-2' />
+        <Label htmlFor="sampler" className="text-nowrap h-8 min-w-20">Sampler</Label>
 
-      {/* Sampler and Model */}
-      <div className="flex gap-2">
-        <div className='w-[25%]'>
-          <Label htmlFor="sampler" className="pb-2">Sampler</Label>
-          <Select value={formData.sampler} onValueChange={(value) => handleChange('sampler', value)} disabled={readOnly}>
-            <SelectTrigger id="sampler" className={"h-16 w-full"} >
-              <SelectValue placeholder="Select a sampler" className='h-16' />
-            </SelectTrigger>
-            <SelectContent>
-              {availableSamplers.map((sampler) => (
-                <SelectItem key={sampler} value={sampler} title={sampler}>{sampler}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className='w-[50%]'>
-          <Label htmlFor="model" className="pb-2">
-            <div className='w-fit relative'>
-              Model
-              {prompt.models.length > 1 && (<div className='absolute left-full ml-2 top-0 bg-secondary m-0 text-[10px] rounded-sm w-4 h-4 flex items-center justify-center'>{prompt.models.length}</div>)}
-            </div>
-          </Label>
-
-          <DropdownMenu forceValue>
-            <DropdownMenuTrigger asChild disabled={readOnly} className="h-16 w-full">
-              <Button variant="outline">
-                <div className='w-full text-left'>{getPromptModel(prompt)}</div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56">
-              {availableModels.map((model) => (
-                <DropdownMenuCheckboxItem
-                  checked={prompt?.models.includes(model)}
-                  onCheckedChange={() => handleModelChange(model)}
-                >
-                  {model}
-                </DropdownMenuCheckboxItem>
-
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        <div className='w-[25%]'>
-          <Label htmlFor="runCount" className="pb-2">Run Count</Label>
-          <NumberInput
-            id="runCount"
-            value={formData.runCount}
-            onChange={(e) => handleChange('runCount', e)}
-            min={1}
-            max={999}
-            className={"h-16 w-full"}
-            readOnly={readOnly}
-            disabled={readOnly}
-          />
-        </div>
-      </div>
-
-      <Separator className='my-2' />
-
-      {/* LoRAs */}
-      <div>
-        <div className="flex items-center gap-2 "><Label className="pb-2">LoRAs</Label>
-
-          <Select onValueChange={handleLoraSelect} value="" disabled={readOnly || formData.lorasRandom}><SelectTrigger className={"h-8"}>
-            <SelectValue placeholder="Add a LoRA..." />
+        <Select value={formData.sampler} onValueChange={(value) => handleChange('sampler', value)} disabled={readOnly}>
+          <SelectTrigger id="sampler" className={"!h-8 min-w-48"} >
+            <SelectValue placeholder="Select a sampler" className='h-16' />
           </SelectTrigger>
+          <SelectContent>
+            {availableSamplers.map((sampler) => (
+              <SelectItem key={sampler} value={sampler} title={sampler}>{sampler}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+
+        <Label htmlFor="cfgScale" className="text-nowrap h-8 w-20">CFG Scale</Label>
+
+        <Slider
+          id="cfgScale"
+          min={1} max={30} step={0.1} value={[formData.cfgScale || 7]}
+          onValueChange={(values) => handleChange('cfgScale', values[0])}
+          disabled={readOnly}
+          className='h-8'
+        />
+        <NumberInput
+          id="cfgScaleInput"
+          value={formData.cfgScale || 7}
+          onChange={(value) => handleChange('cfgScale', value)}
+          min={1} max={30} step={0.1} className={"h-8 !w-18 text-sm border-0 !bg-transparent border-b"}
+          disabled={readOnly}
+        />
+      </div>
+
+      <Separator className='mb-0 my-3' />
+
+      {/* LoRAs Selector*/}
+      <div className='m-0 h-8 mb-2'>
+
+        <div className="flex items-center gap-2"><Label className="pb-2 min-w-20 h-8">LoRAs</Label>
+
+          <Select onValueChange={handleLoraSelect} value="" disabled={readOnly || formData.lorasRandom}>
+            <SelectTrigger className={"!h-8 !w-38"}>
+              <SelectValue placeholder="Add a LoRA" />
+            </SelectTrigger>
             <SelectContent>
               {availableLoras.filter((lora) => !formData.loras?.some(existingLora => existingLora.name === lora.name)).map((lora) => (
                 <SelectItem key={lora.name} value={lora.name} title={lora.name}>{lora.name}</SelectItem>
@@ -281,71 +254,75 @@ export function PromptForm({
             </SelectContent>
           </Select>
 
-          <Button variant="outline" onClick={() => handleFormChange({ lorasRandom: !formData.lorasRandom })} >
+          <Button variant="outline" onClick={() => handleFormChange({ lorasRandom: !formData.lorasRandom })} className='h-8 w-8'>
             <Dice6
               className={`w-6 h-6 ${formData.lorasRandom ? 'text-primary' : 'text-muted-foreground'}`}
             />
           </Button>
 
+
         </div>
-
-
-        {formData.loras && formData.loras.length > 0 && (
-          <div className="space-y-1">
-            {formData.loras.map((lora) => (
-              <div key={lora.name} className="grid grid-cols-2 gap-2 m-2 items-center">
-                <div className={`font-medium truncate ${formData.lorasRandom ? 'text-muted-foreground' : ''}`} title={lora.name}>{lora.name}</div>
-                <div className="flex items-center gap-1">
-
-                  <Button
-                    disabled={readOnly || formData.lorasRandom} variant="ghost"
-                    onClick={() => toggleLoraRandom(lora.name)}
-                  >
-                    <Dice6
-                      className={`w-6 h-6 ${lora.random ? 'text-primary' : 'text-muted-foreground'}`}
-                    />
-                  </Button>
-
-
-                  <NumberInput
-                    value={lora.weight}
-                    onChange={(value) => updateLoraWeight(lora.name, value)}
-                    min={0} max={2} step={0.1} className={"h-7 w-12 text-sm border-0 !bg-transparent text-right"}
-                    disabled={readOnly || lora.random || formData.lorasRandom}
-                  />
-
-                  <Slider
-                    value={[lora.weight]}
-                    max={2}
-                    step={0.1}
-                    onValueChange={(value: number[]) => updateLoraWeight(lora.name, value[0])}
-                    disabled={readOnly || lora.random || formData.lorasRandom}
-                    className='w-3/4'
-                  />
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeLora(lora.name)}
-                    className="h-6 w-6"
-                    disabled={readOnly || formData.lorasRandom}
-                  >
-                    <Trash className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
-      <Separator className='my-2' />
+
+
+      {formData.loras && formData.loras.length > 0 && (
+        <div>
+          {formData.loras.map((lora) => (
+            <div key={lora.name} className="mb-2 h-8 grid grid-cols-2 gap-2 items-center">
+              <div className={`font-medium truncate ${formData.lorasRandom ? 'text-muted-foreground' : ''}`} title={lora.name}>{lora.name}</div>
+              <div className="flex items-center gap-1">
+
+                <Button
+                  disabled={readOnly || formData.lorasRandom} variant="ghost"
+                  onClick={() => toggleLoraRandom(lora.name)}
+                >
+                  <Dice6
+                    className={`w-6 h-6 ${lora.random ? 'text-primary' : 'text-muted-foreground'}`}
+                  />
+                </Button>
+
+
+
+                <Slider
+                  value={[lora.weight]}
+                  min={-2}
+                  max={2}
+                  step={0.1}
+                  onValueChange={(value: number[]) => updateLoraWeight(lora.name, value[0])}
+                  disabled={readOnly || lora.random || formData.lorasRandom}
+                  className=''
+                />
+                <NumberInput
+                  value={lora.weight}
+                  onChange={(value) => updateLoraWeight(lora.name, value)}
+                  min={-2} max={2} step={0.1} className={"h-7 w-16 text-sm border-0 !bg-transparent border-b"}
+                  disabled={readOnly || lora.random || formData.lorasRandom}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeLora(lora.name)}
+                  className="h-6 w-6"
+                  disabled={readOnly || formData.lorasRandom}
+                >
+                  <Trash className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+
+      <Separator className='mb-0 my-3' />
 
       {/* Tags */}
       <div>
-        <Label htmlFor="tags" className="pb-2">Tags</Label>
-        <div className="flex justify-between gap-2 mb-3">
+        <div className="flex justify-between gap-2 mb-2">
+          <Label htmlFor="tags" className="pb-2">Tags</Label>
+
           <Input
             id="tags"
             value={tagInput}
