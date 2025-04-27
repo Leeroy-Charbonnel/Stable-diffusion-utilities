@@ -1,4 +1,4 @@
-import { ImageMetadata, Prompt } from '@/types';
+import { ImageMetadata, LabelsData, Prompt } from '@/types';
 import { FILE_API_BASE_URL } from '@/lib/constants';
 
 
@@ -44,21 +44,23 @@ export const saveGeneratedImage = async (
     const timestamp = new Date().toISOString();
     const metadata: ImageMetadata = {
       id: imageId,
-      path: '', //Will be set by the server
-      folder: '', //Will be set by the server
-      prompt: promptData.text,
-      name: promptData.name,
-      negativePrompt: promptData.negativePrompt || "",
-      cfgScale: promptData.cfgScale,
-      seed: promptData.seed,
-      steps: promptData.steps,
-      width: promptData.width,
-      height: promptData.height,
-      sampler: promptData.sampler,
-      model: promptData.model,
-      loras: promptData.loras || [],
-      tags: promptData.tags || [],
+      path: '',
+      folder: '',
       createdAt: timestamp,
+      promptData: {
+        name: promptData.name,
+        text: promptData.text,
+        negativePrompt: promptData.negativePrompt || "",
+        cfgScale: promptData.cfgScale,
+        seed: promptData.seed,
+        steps: promptData.steps,
+        sampler: promptData.sampler,
+        model: promptData.model,
+        loras: promptData.loras || [],
+        width: promptData.width,
+        height: promptData.height,
+        tags: promptData.tags || [],
+      }
     };
 
     const response = await fetch(`${FILE_API_BASE_URL}/images`, {
@@ -148,27 +150,21 @@ export const moveImages = async (moves: Array<{ oldPath: string, newPath: string
       body: JSON.stringify({ moves }),
     });
 
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+
 
     const result = await response.json();
     return result;
   } catch (error) {
     console.error('Error moving images:', error);
-    return { success: false, data: { moved: [], errors: [{ id: '', error: '' } ]} };
+    return { success: false, data: { moved: [], errors: [{ id: '', error: '' }] } };
   }
 };
 
 export const openOutputFolder = async (): Promise<boolean> => {
   try {
-    const response = await fetch(`${FILE_API_BASE_URL}/open-folder`, {
-      method: 'POST',
-    });
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
+    const response = await fetch(`${FILE_API_BASE_URL}/open-folder`, { method: 'POST' });
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
 
     const result = await response.json();
     return result.success;
@@ -181,20 +177,48 @@ export const openOutputFolder = async (): Promise<boolean> => {
 export const getFolders = async (): Promise<string[]> => {
   try {
     const response = await fetch(`${FILE_API_BASE_URL}/folders`);
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
 
     const result = await response.json();
-
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to get folders');
-    }
+    if (!result.success) throw new Error(result.error || 'Failed to get folders');
 
     return result.data;
   } catch (error) {
     console.error('Error getting folders:', error);
     return ['default'];
+  }
+};
+
+
+export const getLabelsData = async (): Promise<LabelsData> => {
+  try {
+    const response = await fetch(`${FILE_API_BASE_URL}/labels`);
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+    const result = await response.json();
+    if (!result.success) throw new Error(result.error || 'Failed to get labels data');
+
+    return result.data;
+  } catch (error) {
+    console.error('Error getting labels data:', error);
+    return { modelLabels: [], lorasLabels: [] };
+  }
+};
+
+export const saveLabelsData = async (labelsData: LabelsData): Promise<boolean> => {
+  try {
+    const response = await fetch(`${FILE_API_BASE_URL}/labels`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(labelsData),
+    });
+
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+    const result = await response.json();
+    return result.success;
+  } catch (error) {
+    console.error('Error saving labels data:', error);
+    return false;
   }
 };

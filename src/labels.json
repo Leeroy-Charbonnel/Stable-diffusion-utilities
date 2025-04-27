@@ -1,0 +1,106 @@
+{
+  "modelLabels": [
+    {
+      "name": "CheckpointYesmix_v16Original",
+      "label": "Checkpoint 4"
+    },
+    {
+      "name": "Flux.1-Dev Hyper NF4 + Flux.1-Dev BNB NF4 + Flux.1-Schnell BNB NF4",
+      "label": ""
+    },
+    {
+      "name": "flux_dev",
+      "label": ""
+    },
+    {
+      "name": "Hassaku XL (Illustrious)",
+      "label": ""
+    },
+    {
+      "name": "LunarCherryMix (Illustrious)",
+      "label": ""
+    },
+    {
+      "name": "Nova Anime XL",
+      "label": ""
+    },
+    {
+      "name": "plantMilkModelSuite_almond",
+      "label": ""
+    },
+    {
+      "name": "Pony Diffusion V6 XL",
+      "label": ""
+    },
+    {
+      "name": "prefectIllustriousXL_v10",
+      "label": ""
+    },
+    {
+      "name": "revAnimated_v122EOL",
+      "label": ""
+    },
+    {
+      "name": "Smooth Mix - (NoobAIIllustriousPony)",
+      "label": ""
+    },
+    {
+      "name": "synthwavepunk_v2",
+      "label": ""
+    },
+    {
+      "name": "WildCardX-XL-Fusion",
+      "label": ""
+    }
+  ],
+  "lorasLabels": [
+    {
+      "name": "0010011_style_sharp",
+      "label": ""
+    },
+    {
+      "name": "artilands_v02-000006",
+      "label": ""
+    },
+    {
+      "name": "BeautyInEvilFlux",
+      "label": ""
+    },
+    {
+      "name": "Dark_Ghibli",
+      "label": "TEST DARK GHIBLI 4"
+    },
+    {
+      "name": "Dissolve Style [FLUX+SDXL+SD1.5]",
+      "label": ""
+    },
+    {
+      "name": "extremely detailed (no trigger) - sliders.ntcai.xyz",
+      "label": ""
+    },
+    {
+      "name": "J_Anime",
+      "label": ""
+    },
+    {
+      "name": "SDXL Flux.1 D - Matte (Vanta)Black - Experiment",
+      "label": ""
+    },
+    {
+      "name": "Translucent - Subsurface Scattering Test",
+      "label": ""
+    },
+    {
+      "name": "Vixon's Pony Styles - gothic neon",
+      "label": ""
+    },
+    {
+      "name": "XL Weapon Orbstaff - By HailoKnight",
+      "label": ""
+    },
+    {
+      "name": "Zavy's Dark Atmospheric Contrast - SDXL",
+      "label": ""
+    }
+  ]
+}

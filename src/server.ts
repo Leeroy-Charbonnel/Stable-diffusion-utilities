@@ -2,14 +2,28 @@ import { join } from "path";
 import { mkdir, unlink, readdir } from "node:fs/promises";
 import { existsSync, copyFileSync, unlinkSync } from "node:fs";
 import { exec } from "child_process";
-import { ImageMetadata, Prompt, PromptEditor } from "./types";
-import { DEFAULT_OUTPUT_FOLDER, DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER, PROMPTS_FILE_NAME } from "./lib/constants";
+import { ImageMetadata, LabelsData, Prompt, PromptEditor } from "./types";
+import { DEFAULT_OUTPUT_FOLDER, DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER, LABELS_FILE_NAME, PROMPTS_FILE_NAME, SD_API_BASE_URL } from "./lib/constants";
 import sharp from 'sharp';
 import { getImageFolder } from "./lib/utils";
+
 
 //Constants
 const OUTPUT_DIR: string = join(import.meta.dir, DEFAULT_OUTPUT_FOLDER);
 const PROMPTS_FILE: string = join(import.meta.dir, PROMPTS_FILE_NAME);
+const LABELS_FILE: string = join(import.meta.dir, LABELS_FILE_NAME);
+
+//CORS headers
+const corsHeaders: Record<string, string> = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type"
+};
+
+interface BunRequest extends Request {
+  params?: Record<string, string>;
+}
+
 
 async function ensureDirectories(path: string): Promise<void> {
   let dirPath = path;
@@ -25,7 +39,6 @@ async function ensureDirectories(path: string): Promise<void> {
 
   await mkdir(dirPath, { recursive: true });
 }
-
 
 async function scanDirectoriesForImages(basePath: string = OUTPUT_DIR): Promise<string[]> {
   const result: string[] = [];
@@ -110,6 +123,49 @@ async function getAllImagesWithMetadata(): Promise<ImageMetadata[]> {
   }
 }
 
+
+async function readLabelsData(): Promise<LabelsData> {
+  try {
+    const labelsFile = Bun.file(LABELS_FILE);
+    if (!await labelsFile.exists()) return { modelLabels: [], lorasLabels: [] };
+    return JSON.parse(await labelsFile.text());
+  } catch (error) {
+    console.error('Error reading labels data:', error);
+    return { modelLabels: [], lorasLabels: [] };
+  }
+}
+
+
+async function getLabelsData(req: BunRequest): Promise<Response> {
+  console.log("GET: Getting labels data");
+  const labelsData = await readLabelsData();
+  return Response.json({ success: true, data: labelsData }, { headers: corsHeaders });
+}
+
+
+
+async function saveLabelsData(labelsData: any): Promise<boolean> {
+  try {
+    await ensureDirectories(OUTPUT_DIR);
+    await Bun.write(LABELS_FILE, JSON.stringify(labelsData, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Error saving labels data:', error);
+    return false;
+  }
+}
+
+async function saveLabelsDataRoute(req: BunRequest): Promise<Response> {
+  console.log("POST: Saving labels data");
+  try {
+    await saveLabelsData(await req.json() as PromptEditor[]);
+    return Response.json({ success: true }, { headers: corsHeaders });
+  } catch (error) {
+    return Response.json({ success: false, error: String(error) },
+      { status: 500, headers: corsHeaders });
+  }
+}
+
 async function readPrompts(): Promise<Prompt[]> {
   try {
     const promptsFile = Bun.file(PROMPTS_FILE);
@@ -156,16 +212,6 @@ async function getAllFolders(): Promise<string[]> {
   }
 }
 
-//CORS headers
-const corsHeaders: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type"
-};
-
-interface BunRequest extends Request {
-  params?: Record<string, string>;
-}
 
 //Handle OPTIONS requests for CORS preflight
 function handleOptions() {
@@ -174,6 +220,329 @@ function handleOptions() {
     headers: corsHeaders
   });
 }
+
+//Get all prompts
+async function getPrompts(req: BunRequest): Promise<Response> {
+  console.log("GET: Getting prompts");
+  const prompts = await readPrompts();
+  return Response.json({ success: true, data: prompts }, { headers: corsHeaders });
+}
+
+//Save prompts
+async function savePromptsRoute(req: BunRequest): Promise<Response> {
+  console.log("POST: Saving prompts");
+  try {
+    await savePrompts(await req.json() as PromptEditor[]);
+    return Response.json({ success: true }, { headers: corsHeaders });
+  } catch (error) {
+    return Response.json({ success: false, error: String(error) },
+      { status: 500, headers: corsHeaders });
+  }
+}
+
+//Get all images metadata
+async function getImagesMetadata(req: BunRequest): Promise<Response> {
+  console.log("GET: Getting images");
+  const metadata = await getAllImagesWithMetadata();
+  return Response.json({ success: true, data: metadata }, { headers: corsHeaders });
+}
+
+//Create new image
+async function saveImage(req: BunRequest): Promise<Response> {
+  console.log("POST: Saving image");
+  try {
+    console.log("Saving generated image");
+    const { imageBase64, metadata } = await req.json() as
+      {
+        imageBase64: string,
+        metadata: ImageMetadata
+      }
+    //Save image file
+    const filename = `${metadata.id}.png`;
+    const folderPath = join(OUTPUT_DIR, metadata.folder || DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER);
+    const filePath = join(folderPath, filename);
+    await ensureDirectories(folderPath);
+    console.log(`Saving image to: ${filePath}`);
+
+    //Extract the base64 data
+    const base64Data = imageBase64.replace(/^data:image\/png;base64,/, '');
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+    const metadataString = JSON.stringify(metadata);
+
+    //Store metadata in the PNG using tEXt chunks
+    await sharp(imageBuffer)
+      .withMetadata({
+        //Add custom metadata
+        exif: {
+          IFD0: {
+            XPComment: metadataString
+          }
+        }
+      })
+      .toFile(filePath);
+
+    //Set path in metadata for response
+    metadata.path = filePath;
+
+    return Response.json({ success: true, data: metadata }, { headers: corsHeaders });
+  } catch (error) {
+    console.error("Error saving image with metadata:", error);
+    return Response.json({ success: false, error: String(error) },
+      { status: 500, headers: corsHeaders });
+  }
+}
+
+//Serve static image
+async function serveStaticImage(req: BunRequest): Promise<Response> {
+  try {
+    const { path } = await req.json() as {
+      path: string
+    };
+    console.log(`POST: Serving static image: ${path}`);
+    const file = Bun.file(path);
+    if (!await file.exists()) {
+      return new Response("File not found", { status: 404, headers: corsHeaders });
+    }
+
+    const contentType = 'image/png';
+
+    return new Response(await file.arrayBuffer(), {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=31536000" //Cache for a year
+      }
+    });
+  } catch (error) {
+    return new Response(`Error: ${error}`, { status: 500, headers: corsHeaders });
+  }
+}
+
+//Delete multiple images
+async function deleteImages(req: BunRequest): Promise<Response> {
+  try {
+    const { paths } = await req.json() as {
+      paths: string[]
+    };
+    console.log(`POST: Deleting ${paths.length} images`);
+
+    if (!paths || !Array.isArray(paths) || paths.length === 0) {
+      return Response.json({ success: false, error: 'No paths provided' },
+        { status: 400, headers: corsHeaders });
+    }
+
+    const results = [];
+    const errors = [];
+
+    //Process each file deletion
+    for (const path of paths) {
+      try {
+        //Check if file exists before deleting
+        if (existsSync(path)) {
+          await unlink(path);
+          results.push({ path, deleted: true });
+        } else {
+          errors.push({ path, error: 'File not found' });
+        }
+      } catch (error) {
+        errors.push({ path, error: String(error) });
+      }
+    }
+
+    return Response.json({
+      success: errors.length === 0,
+      data: {
+        deleted: results,
+        errors: errors
+      }
+    }, { headers: corsHeaders });
+  } catch (error) {
+    return Response.json({ success: false, error: String(error) },
+      { status: 500, headers: corsHeaders });
+  }
+}
+
+//Move multiple images to new folders
+async function moveImages(req: BunRequest): Promise<Response> {
+  try {
+    const { moves } = await req.json() as {
+      moves: Array<{
+        imageId: string,
+        oldPath: string,
+        newPath: string
+      }>
+    };
+
+    console.log(`POST: Moving ${moves.length} images`);
+
+    if (!moves || !Array.isArray(moves) || moves.length === 0) {
+      return Response.json({ success: false, error: 'No move operations provided' },
+        { status: 400, headers: corsHeaders });
+    }
+
+    const results = [];
+    const errors = [];
+
+    const absoluteMoves = moves.map(move => {
+      return {
+        imageId: move.imageId,
+        oldPath: join(OUTPUT_DIR, move.oldPath),
+        newPath: join(OUTPUT_DIR, move.newPath)
+      }
+    });
+
+    //Process each move operation
+    for (const move of absoluteMoves) {
+      try {
+        const { imageId, oldPath, newPath } = move;
+
+        if (!oldPath || !newPath) {
+          errors.push({ id: imageId, error: 'Missing parameters' });
+          continue;
+        }
+
+        //Check if source file exists
+        if (!existsSync(oldPath)) {
+          errors.push({ id: imageId, error: 'File not found' });
+          continue;
+        }
+
+        if (newPath === oldPath) {
+          results.push(imageId);
+          continue;
+        }
+
+        //Create destination directory if it doesn't exist
+        await ensureDirectories(newPath);
+
+        //Move file to new location
+        copyFileSync(oldPath, newPath);
+        unlinkSync(oldPath);
+
+        results.push(imageId);
+      } catch (error) {
+        errors.push({ id: move.imageId, error: String(error) });
+      }
+    }
+
+    return Response.json({
+      success: errors.length === 0,
+      data: {
+        moved: results,
+        errors: errors
+      }
+    }, { headers: corsHeaders });
+  } catch (error) {
+    return Response.json({ success: false, error: String(error) },
+      { status: 500, headers: corsHeaders });
+  }
+}
+
+//Open output folder
+async function openFolder(req: BunRequest): Promise<Response> {
+  try {
+    //Platform-specific command to open folder
+    const command = process.platform === 'win32'
+      ? `explorer "${OUTPUT_DIR}"`
+      : process.platform === 'darwin'
+        ? `open "${OUTPUT_DIR}"`
+        : `xdg-open "${OUTPUT_DIR}"`;
+
+    exec(command, (error) => {
+      if (error) console.error('Error opening folder:', error);
+    });
+
+    return Response.json({ success: true }, { headers: corsHeaders });
+  } catch (error) {
+    return Response.json({ success: false, error: String(error) },
+      { status: 500, headers: corsHeaders });
+  }
+}
+
+//Get all folders
+async function getFolders(req: BunRequest): Promise<Response> {
+  console.log("GET: Folders");
+  try {
+    const folders = await getAllFolders();
+    return Response.json({ success: true, data: folders }, { headers: corsHeaders });
+  } catch (error) {
+    return Response.json({ success: false, error: String(error) },
+      { status: 500, headers: corsHeaders });
+  }
+}
+
+//Get Civitai image data
+async function getCivitaiImage(req: BunRequest): Promise<Response> {
+  try {
+    const imageId = req.params?.id;
+    if (!imageId) {
+      return Response.json({ success: false, error: 'Image ID not provided' },
+        { status: 400, headers: corsHeaders });
+    }
+
+    const response = await fetch(`https://civitai.com/api/trpc/image.getGenerationData?input={"json":{"id":${imageId}}}`);
+
+    if (!response.ok) {
+      return Response.json({ success: false, error: 'Failed to fetch from Civitai API' },
+        { status: response.status, headers: corsHeaders });
+    }
+
+    const data = await response.json();
+    return Response.json({ success: true, data }, { headers: corsHeaders });
+  } catch (error) {
+    return Response.json({ success: false, error: String(error) },
+      { status: 500, headers: corsHeaders });
+  }
+}
+
+//Refresh LoRAs from Stable Diffusion
+async function refreshLoras(req: BunRequest): Promise<Response> {
+  console.log("POST: Refreshing LoRAs");
+  try {
+    const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/refresh-loras`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to refresh LoRAs: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return Response.json({ success: true, data: result }, { headers: corsHeaders });
+  } catch (error) {
+    console.error('Error refreshing LoRAs:', error);
+    return Response.json(
+      { success: false, error: String(error) },
+      { status: 500, headers: corsHeaders }
+    );
+  }
+}
+
+//Refresh checkpoints from Stable Diffusion
+async function refreshCheckpoints(req: BunRequest): Promise<Response> {
+  console.log("POST: Refreshing checkpoints");
+  try {
+    const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/refresh-checkpoints`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to refresh checkpoints: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return Response.json({ success: true, data: result }, { headers: corsHeaders });
+  } catch (error) {
+    console.error('Error refreshing checkpoints:', error);
+    return Response.json(
+      { success: false, error: String(error) },
+      { status: 500, headers: corsHeaders }
+    );
+  }
+}
+
 
 const server = Bun.serve({
   port: process.env.PORT || 3001,
@@ -189,290 +558,41 @@ const server = Bun.serve({
   },
   routes: {
     "/api/prompts": {
-      //Get all prompts
-      GET: async () => {
-        console.log("GET: Getting prompts");
-        const prompts = await readPrompts();
-        return Response.json({ success: true, data: prompts }, { headers: corsHeaders });
-      },
-      //Save prompts
-      POST: async (req: BunRequest) => {
-        console.log("POST: Saving prompts");
-        try {
-          await savePrompts(await req.json() as PromptEditor[]);
-          return Response.json({ success: true }, { headers: corsHeaders });
-        } catch (error) {
-          return Response.json({ success: false, error: String(error) },
-            { status: 500, headers: corsHeaders });
-        }
-      }
+      GET: getPrompts,
+      POST: savePromptsRoute
     },
-
     "/api/images": {
-      //Get all images metadata
-      GET: async () => {
-        console.log("GET: Getting images");
-        const metadata = await getAllImagesWithMetadata();
-        return Response.json({ success: true, data: metadata }, { headers: corsHeaders });
-      },
-
-      //Create new image
-      POST: async (req: BunRequest) => {
-        console.log("POST: Saving image");
-        try {
-          console.log("Saving generated image");
-          const { imageBase64, metadata } = await req.json() as
-            {
-              imageBase64: string,
-              metadata: ImageMetadata
-            }
-          //Save image file
-          const filename = `${metadata.id}.png`;
-          const folderPath = join(OUTPUT_DIR, metadata.folder || DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER);
-          const filePath = join(folderPath, filename);
-          await ensureDirectories(folderPath);
-          console.log(`Saving image to: ${filePath}`);
-
-          //Extract the base64 data
-          const base64Data = imageBase64.replace(/^data:image\/png;base64,/, '');
-          const imageBuffer = Buffer.from(base64Data, 'base64');
-          const metadataString = JSON.stringify(metadata);
-
-          //Store metadata in the PNG using tEXt chunks
-          await sharp(imageBuffer)
-            .withMetadata({
-              //Add custom metadata
-              exif: {
-                IFD0: {
-                  ImageDescription: metadata.name,
-                  XPComment: metadataString
-                }
-              }
-            })
-            .toFile(filePath);
-
-          //Set path in metadata for response
-          metadata.path = filePath;
-
-          return Response.json({ success: true, data: metadata }, { headers: corsHeaders });
-        } catch (error) {
-          console.error("Error saving image with metadata:", error);
-          return Response.json({ success: false, error: String(error) },
-            { status: 500, headers: corsHeaders });
-        }
-      }
+      GET: getImagesMetadata,
+      POST: saveImage
     },
-
     "/api/static-images": {
-      POST: async (req: BunRequest) => {
-        try {
-          const { path } = await req.json() as {
-            path: string
-          };
-          console.log(`POST: Serving static image: ${path}`);
-          const file = Bun.file(path);
-          if (!await file.exists()) {
-            return new Response("File not found", { status: 404, headers: corsHeaders });
-          }
-
-          const contentType = 'image/png';
-
-          return new Response(await file.arrayBuffer(), {
-            headers: {
-              ...corsHeaders,
-              "Content-Type": contentType,
-              "Cache-Control": "public, max-age=31536000" //Cache for a year
-            }
-          });
-        } catch (error) {
-          return new Response(`Error: ${error}`, { status: 500, headers: corsHeaders });
-        }
-      }
+      POST: serveStaticImage
     },
-
-    //Delete multiple images
     "/api/images/delete-batch": {
-      POST: async (req: BunRequest) => {
-        try {
-          const { paths } = await req.json() as {
-            paths: string[]
-          };
-          console.log(`POST: Deleting ${paths.length} images`);
-
-          if (!paths || !Array.isArray(paths) || paths.length === 0) {
-            return Response.json({ success: false, error: 'No paths provided' },
-              { status: 400, headers: corsHeaders });
-          }
-
-          const results = [];
-          const errors = [];
-
-          //Process each file deletion
-          for (const path of paths) {
-            try {
-              //Check if file exists before deleting
-              if (existsSync(path)) {
-                await unlink(path);
-                results.push({ path, deleted: true });
-              } else {
-                errors.push({ path, error: 'File not found' });
-              }
-            } catch (error) {
-              errors.push({ path, error: String(error) });
-            }
-          }
-
-          return Response.json({
-            success: errors.length === 0,
-            data: {
-              deleted: results,
-              errors: errors
-            }
-          }, { headers: corsHeaders });
-        } catch (error) {
-          return Response.json({ success: false, error: String(error) },
-            { status: 500, headers: corsHeaders });
-        }
-      }
+      POST: deleteImages
     },
-
-    //Move multiple images to new folders
     "/api/images/move-batch": {
-      POST: async (req: BunRequest) => {
-        try {
-          const { moves } = await req.json() as {
-            moves: Array<{
-              imageId: string,
-              oldPath: string,
-              newPath: string
-            }>
-          };
-
-          console.log(`POST: Moving ${moves.length} images`);
-
-          if (!moves || !Array.isArray(moves) || moves.length === 0) {
-            return Response.json({ success: false, error: 'No move operations provided' },
-              { status: 400, headers: corsHeaders });
-          }
-
-          const results = [];
-          const errors = [];
-
-          const absoluteMoves = moves.map(move => {
-            return {
-              imageId: move.imageId,
-              oldPath: join(OUTPUT_DIR, move.oldPath),
-              newPath: join(OUTPUT_DIR, move.newPath)
-            }
-          });
-
-          //Process each move operation
-          for (const move of absoluteMoves) {
-            try {
-              const { imageId, oldPath, newPath } = move;
-
-              if (!oldPath || !newPath) {
-                errors.push({ id: imageId, error: 'Missing parameters' });
-                continue;
-              }
-
-              //Check if source file exists
-              if (!existsSync(oldPath)) {
-                errors.push({ id: imageId, error: 'File not found' });
-                continue;
-              }
-
-              if (newPath === oldPath) {
-                results.push(imageId);
-                continue;
-              }
-
-              //Create destination directory if it doesn't exist
-              await ensureDirectories(newPath);
-
-              //Move file to new location
-              copyFileSync(oldPath, newPath);
-              unlinkSync(oldPath);
-
-              results.push(imageId);
-            } catch (error) {
-              errors.push({ id: move.imageId, error: String(error) });
-            }
-          }
-
-          return Response.json({
-            success: errors.length === 0,
-            data: {
-              moved: results,
-              errors: errors
-            }
-          }, { headers: corsHeaders });
-        } catch (error) {
-          return Response.json({ success: false, error: String(error) },
-            { status: 500, headers: corsHeaders });
-        }
-      }
+      POST: moveImages
     },
-    //Open folder route
     "/api/open-folder": {
-      POST: async () => {
-        try {
-          //Platform-specific command to open folder
-          const command = process.platform === 'win32'
-            ? `explorer "${OUTPUT_DIR}"`
-            : process.platform === 'darwin'
-              ? `open "${OUTPUT_DIR}"`
-              : `xdg-open "${OUTPUT_DIR}"`;
-
-          exec(command, (error) => {
-            if (error) console.error('Error opening folder:', error);
-          });
-
-          return Response.json({ success: true }, { headers: corsHeaders });
-        } catch (error) {
-          return Response.json({ success: false, error: String(error) },
-            { status: 500, headers: corsHeaders });
-        }
-      }
+      POST: openFolder
     },
-
-    //Get all folders
     "/api/folders": {
-      GET: async () => {
-        console.log("GET: Folders");
-        try {
-          const folders = await getAllFolders();
-          return Response.json({ success: true, data: folders }, { headers: corsHeaders });
-        } catch (error) {
-          return Response.json({ success: false, error: String(error) },
-            { status: 500, headers: corsHeaders });
-        }
-      }
+      GET: getFolders
     },
-
     "/api/civitai/image/:id": {
-      GET: async (req: BunRequest) => {
-        try {
-          const imageId = req.params?.id;
-          if (!imageId) {
-            return Response.json({ success: false, error: 'Image ID not provided' },
-              { status: 400, headers: corsHeaders });
-          }
-
-          const response = await fetch(`https://civitai.com/api/trpc/image.getGenerationData?input={"json":{"id":${imageId}}}`);
-
-          if (!response.ok) {
-            return Response.json({ success: false, error: 'Failed to fetch from Civitai API' },
-              { status: response.status, headers: corsHeaders });
-          }
-
-          const data = await response.json();
-          return Response.json({ success: true, data }, { headers: corsHeaders });
-        } catch (error) {
-          return Response.json({ success: false, error: String(error) },
-            { status: 500, headers: corsHeaders });
-        }
-      }
+      GET: getCivitaiImage
+    },
+    "/api/sdapi/v1/refresh-loras": {
+      POST: refreshLoras
+    },
+    "/api/sdapi/v1/refresh-checkpoints": {
+      POST: refreshCheckpoints
+    },
+    "/api/labels":
+    {
+      GET: getLabelsData,
+      POST: saveLabelsDataRoute
     },
 
     //Fallback for API routes
@@ -484,8 +604,7 @@ const server = Bun.serve({
         { status: 404, headers: corsHeaders });
     },
   }
-}
-);
+});
 
 //Initialize server
 ensureDirectories(OUTPUT_DIR).then(() => {

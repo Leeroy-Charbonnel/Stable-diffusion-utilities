@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     watch: {
-      ignored: ['**/output/**', '**/src/output/**', '**/prompts.json']
+      ignored: ['**/output/**', '**/src/output/**', '**/*.json']
     }
   },
   resolve: {

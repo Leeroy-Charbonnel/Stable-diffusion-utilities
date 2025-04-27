@@ -1,9 +1,10 @@
-dice-6
+
+
+
 
 
 
 part prompt
-execution id
 add time elasped
 security on tag
 random on lora wieght

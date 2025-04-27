@@ -6,18 +6,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { XIcon, Trash, Dice6 } from 'lucide-react';
-import { ModelConfig, PromptEditor } from '@/types';
+import { LabelItem, PromptEditor } from '@/types';
 import { Slider } from "@/components/ui/slider"
 import { NumberInput } from '@/components/ui/number-input';
 import { Separator } from '@/components/ui/separator';
 import { DropDownOption, SearchableMultiSelect } from '@/components/ui/dropdown-menu-multi';
+import { getModelLabel } from '@/lib/utils';
 
 type PromptFormProps = {
   prompt: PromptEditor;
   onPromptUpdate: (prompt: PromptEditor) => void;
   availableSamplers: string[];
-  availableModels: string[];
-  availableLoras: any[];
+  availableModels: LabelItem[];
+  availableLoras: LabelItem[];
   readOnly?: boolean;
 };
 
@@ -61,7 +62,7 @@ export function PromptForm({
 
   const handleModelChange = (models: DropDownOption[]) => {
     if (readOnly) return;
-    handleFormChange({ models: models as ModelConfig[] });
+    handleFormChange({ models: models.map(m => m.value) });
   };
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -87,6 +88,7 @@ export function PromptForm({
   };
 
   const handleLoraSelect = (loraName: string) => {
+    console.log(loraName);
     if (readOnly) return;
 
     if (loraName && !formData.loras?.some(l => l.name === loraName)) {
@@ -190,7 +192,8 @@ export function PromptForm({
 
         <div className='border-b w-full h-8'>
           <SearchableMultiSelect
-            options={availableModels.map(x => { return { value: x, label: x } })}
+            options={availableModels.map(x => { return { value: x.name, label: x.label ? x.label : x.name } })}
+            values={formData.models || []}
             placeholder="Select options..."
             searchPlaceholder="Type to search..."
             onChange={handleModelChange}
@@ -249,7 +252,7 @@ export function PromptForm({
             </SelectTrigger>
             <SelectContent>
               {availableLoras.filter((lora) => !formData.loras?.some(existingLora => existingLora.name === lora.name)).map((lora) => (
-                <SelectItem key={lora.name} value={lora.name} title={lora.name}>{lora.name}</SelectItem>
+                <SelectItem key={lora.name} value={lora.name} title={lora.name}>{getModelLabel(availableLoras, lora.name)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -270,7 +273,7 @@ export function PromptForm({
         <div>
           {formData.loras.map((lora) => (
             <div key={lora.name} className="mb-2 h-8 grid grid-cols-2 gap-2 items-center">
-              <div className={`font-medium truncate ${formData.lorasRandom ? 'text-muted-foreground' : ''}`} title={lora.name}>{lora.name}</div>
+              <div className={`font-medium truncate ${formData.lorasRandom ? 'text-muted-foreground' : ''}`} title={lora.name}>{getModelLabel(availableLoras, lora.name)}</div>
               <div className="flex items-center gap-1">
 
                 <Button

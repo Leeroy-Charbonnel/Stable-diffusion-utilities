@@ -65,20 +65,20 @@ export const getModels = async (): Promise<string[]> => {
     if (!response.ok) throw new Error(`STABLE_DIFFUSION_API : Failed to fetch models, status: ${response.status}`);
 
     const data = await response.json();
-    return data.map((model: any) => model.title);
+    return data.map((model: any) => model.model_name);
   } catch (error) {
     return [];
   }
 }
 
 //Get available LoRAs
-export const getLoras = async (): Promise<any[]> => {
+export const getLoras = async (): Promise<string[]> => {
   try {
     const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/loras`);
     if (!response.ok) throw new Error(`STABLE_DIFFUSION_API : Failed to fetch LoRAs, status: ${response.status}`);
 
     const data = await response.json();
-    return data;
+    return data.map((lora: any) => lora.name);
   } catch (error) {
     return [];
   }
@@ -99,3 +99,44 @@ export const generateImage = async (params: Text2ImageRequest): Promise<Text2Ima
     return null;
   }
 }
+
+
+
+
+export const refreshLoras = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/refresh-loras`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to refresh LoRAs: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.success;
+  } catch (error) {
+    console.error('Error refreshing LoRAs:', error);
+    return false;
+  }
+};
+
+export const refreshModels = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/refresh-checkpoints`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to refresh models: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.success;
+  } catch (error) {
+    console.error('Error refreshing models:', error);
+    return false;
+  }
+};

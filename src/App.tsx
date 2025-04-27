@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { PromptsManager } from '@/components/part-prompt/PromptsManager';
 import { ImageViewer } from '@/components/part-images/ImageViewer';
 import { AiChat } from '@/components/part-ai/AiChat';
+import { ModelsManager } from '@/components/part-models/ModelsManager';
 import { SdProvider } from '@/contexts/contextSD';
 import { AiProvider } from '@/contexts/contextAI';
 import { PromptProvider } from '@/contexts/contextPrompts';
@@ -10,11 +11,12 @@ import { AppSidebar } from '@/components/Sidebar';
 import { Toaster } from 'sonner';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'prompts' | 'images' | 'ai'>(
+  const [activeTab, setActiveTab] = useState<'prompts' | 'images' | 'ai' | 'models'>(
     () => {
       const savedTab = localStorage.getItem('sd-utilities-activeTab');
       if (savedTab === 'images') return 'images';
       if (savedTab === 'ai') return 'ai';
+      if (savedTab === 'models') return 'models';
       return 'prompts';
     }
   );
@@ -47,8 +49,9 @@ function App() {
             <div className="w-full h-screen">
               <div className="h-full">
                 <div className="h-full" style={{ display: activeTab === 'prompts' ? 'block' : 'none' }}><PromptsManager /></div>
-                <div className="h-full" style={{ display: activeTab === 'images' ? 'block' : 'none' }}><ImageViewer /></div>
+                {/* <div className="h-full" style={{ display: activeTab === 'images' ? 'block' : 'none' }}><ImageViewer /></div> */}
                 <div className="h-full" style={{ display: activeTab === 'ai' ? 'block' : 'none' }}><AiChat /></div>
+                <div className="h-full" style={{ display: activeTab === 'models' ? 'block' : 'none' }}><ModelsManager /></div>
               </div>
             </div>
           </div>

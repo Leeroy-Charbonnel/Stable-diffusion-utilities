@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2, Check, X, Play, ChevronDown, ChevronUp, StopCircle } from 'lucide-react';
-import { PromptEditor } from '@/types';
+import { LabelItem, PromptEditor } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Progress } from '@/components/ui/progress';
 import { PromptForm } from './PromptForm';
 import { Separator } from '@/components/ui/separator';
 import { NumberInput } from '../ui/number-input';
+import { getModelLabel } from '@/lib/utils';
 
 
 type PromptCardProps = {
@@ -34,8 +35,8 @@ type PromptCardProps = {
   };
 
   availableSamplers?: string[];
-  availableModels?: string[];
-  availableLoras?: any[];
+  availableModels?: LabelItem[];
+  availableLoras?: LabelItem[];
 };
 
 export function PromptCard({
@@ -211,7 +212,7 @@ export function PromptCard({
               {showModels && prompt.models && prompt.models.map(model => (
                 <div key="model" className="flex items-center px-2 py-0.5 h-5 bg-primary/30">
                   <div className="text-xs max-w-[100px] truncate">
-                    {model.label}
+                    {getModelLabel(availableModels, model)}
                   </div>
                 </div>
               ))}
@@ -225,7 +226,7 @@ export function PromptCard({
               {!prompt.lorasRandom && prompt.loras && showModels && prompt.loras.map(lora => (
                 <div key={lora.name} className="flex items-center px-2 py-0.5 h-5 border-primary border-1" title={lora.name}>
                   <div className="text-xs max-w-[100px] truncate text-primary">
-                    {lora.name}
+                    {getModelLabel(availableLoras, lora.name)}
                   </div>
                 </div>
               ))}

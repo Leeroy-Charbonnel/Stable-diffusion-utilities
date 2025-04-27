@@ -1,19 +1,26 @@
 
+export interface LabelItem {
+  name: string;
+  label: string;
+}
+
+export interface LabelsData {
+  modelLabels: LabelItem[];
+  lorasLabels: LabelItem[];
+}
+
+
+export interface Lora{
+  name: string;
+  weight: number;
+}
+
 export interface LoraEditorConfig {
   name: string;
   weight: number;
   random: boolean;
 }
 
-export interface LoraConfig {
-  name: string;
-  weight: number;
-}
-
-export interface ModelConfig {
-  label: string;
-  value: string;
-}
 
 export type ExecutionStatus = 'idle' | 'execution' | 'cancelling' | 'completed';
 export type AiChatRole = 'user' | 'assistant' | 'system'
@@ -44,7 +51,7 @@ export interface PromptEditor {
   height: number;
   tags: string[];
 
-  models: ModelConfig[];
+  models: string[];
   lorasRandom: boolean;
   loras: LoraEditorConfig[];
 
@@ -59,7 +66,7 @@ export interface Prompt {
   steps: number;
   sampler: string;
   model: string;
-  loras: LoraConfig[];
+  loras: Lora[];
   width: number;
   height: number;
   tags: string[];

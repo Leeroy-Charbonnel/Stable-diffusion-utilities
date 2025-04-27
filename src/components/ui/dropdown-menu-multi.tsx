@@ -10,6 +10,7 @@ export interface DropDownOption {
 
 interface SearchableMultiSelectProps {
   options: DropDownOption[];
+  values: string[];
   placeholder?: string;
   searchPlaceholder?: string;
   onChange: (options: DropDownOption[]) => void;
@@ -18,6 +19,7 @@ interface SearchableMultiSelectProps {
 
 export const SearchableMultiSelect = ({
   options: options = [],
+  values: values = [],
   placeholder = 'Select items...',
   searchPlaceholder = 'Search...',
   onChange
@@ -42,17 +44,28 @@ export const SearchableMultiSelect = ({
     };
   }, []);
 
+  useEffect(() => {
+    setSelected(values.map(value => {
+      const option = options.find(option => option.value === value);
+      return option || { label: value, value };
+    }));
+  }, [values, options]);
+
+
   const filteredOptions = options.filter(option =>
     option.label.toLowerCase().includes(searchValue.toLowerCase())
   );
 
   const handleSelect = (option: DropDownOption) => {
+    //Fixed: Only add the option if it's not already selected, otherwise remove it
+    let updatedSelection;
     if (selected.some(item => item.value === option.value)) {
-      setSelected(selected.filter(item => item.value !== option.value));
+      updatedSelection = selected.filter(item => item.value !== option.value);
     } else {
-      setSelected([...selected, option]);
+      updatedSelection = [...selected, option];
     }
-    onChange([...selected, option]);
+    setSelected(updatedSelection);
+    onChange(updatedSelection);
   };
 
   const removeItem = (option: DropDownOption, e: React.MouseEvent) => {

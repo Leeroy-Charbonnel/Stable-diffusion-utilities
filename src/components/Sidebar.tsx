@@ -13,13 +13,13 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar";
 import { Alert, AlertTitle } from "@/components/ui/alert";
-import { ListChecks, Image, CheckCircle, AlertCircle, BrainCog } from "lucide-react";
+import { ListChecks, Image, CheckCircle, AlertCircle, BrainCog, Database } from "lucide-react";
 import { useApi } from "@/contexts/contextSD";
 import { Badge } from "@/components/ui/badge";
 
 interface SidebarProps {
-    activeTab: "prompts" | "ai" | "images";
-    setActiveTab: (tab: "prompts" | "ai" | "images") => void;
+    activeTab: "prompts" | "ai" | "images" | "models";
+    setActiveTab: (tab: "prompts" | "ai" | "images" | "models") => void;
     newImageNumber: number;
 }
 
@@ -45,6 +45,11 @@ function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps)
             icon: Image,
             badge: newImageNumber > 0 ? newImageNumber : null,
         },
+        {
+            title: "Models",
+            id: "models",
+            icon: Database,
+        },
     ];
 
     return (
@@ -66,7 +71,7 @@ function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps)
                                     <SidebarMenuButton
                                         asChild
                                         className={`w-full justify-start ${activeTab === item.id ? "bg-primary text-primary-foreground" : ""}`}
-                                        onClick={() => setActiveTab(item.id as "prompts" | "ai" | "images")}
+                                        onClick={() => setActiveTab(item.id as "prompts" | "ai" | "images" | "models")}
                                         data-tab={item.id}
                                     >
                                         <div>
@@ -84,21 +89,12 @@ function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps)
 
             <SidebarFooter>
                 <div className="flex">
-                    {isConnected ?
-                        (open && (
-                            <Alert className={`flex p-2 ${open ? '' : 'justify-center b-0'}`}>
-                                <CheckCircle className="h-4 w-4" />
-                                <AlertTitle>Connected to SD</AlertTitle>
-                            </Alert>
-                        ))
-                        : (
-                            (open && (
-                                <Alert className={`flex p-2 bg-destructive/20 ${open ? '' : 'justify-center b-0'}`}>
-                                    <AlertCircle className="h-4 w-4" />
-                                    <AlertTitle>Not Connected</AlertTitle>
-                                </Alert>
-                            )
-                            ))
+                    {!isConnected && open && (
+                        <Alert className={`flex p-2 bg-destructive/20 ${open ? '' : 'justify-center b-0'}`}>
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Not Connected</AlertTitle>
+                        </Alert>
+                    )
                     }
                 </div>
             </SidebarFooter>

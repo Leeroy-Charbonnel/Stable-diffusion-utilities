@@ -1,84 +1,37 @@
 [
   {
-    "id": "225aa2b3-b467-457d-a0fb-962eadcecada",
-    "isOpen": true,
-    "folder": "default",
-    "name": "New Prompt",
-    "text": "A fantasy underwater portrait of a mermaid, graceful and majestic, vibrant coral reef background, shimmering scales, flowing aquatic hair, cinematic lighting, ultra-detailed, 4K, fantasy concept art",
-    "negativePrompt": "Bad anatomy, extra llimbs",
-    "seed": -1,
-    "cfgScale": 7,
-    "steps": 30,
-    "sampler": "DPM++ 2M",
-    "models": [
-      {
-        "value": "CheckpointYesmix_v16Original.safetensors [3e9211917c]",
-        "label": "CheckpointYesmix_v16Original.safetensors [3e9211917c]"
-      },
-      {
-        "value": "CheckpointYesmix_v16Original.safetensors [3e9211917c]",
-        "label": "CheckpointYesmix_v16Original.safetensors [3e9211917c]"
-      }
-    ],
-    "width": 512,
-    "height": 511,
-    "runCount": 1,
-    "tags": [
-      "revelant",
-      "tags",
-      "here"
-    ],
-    "loras": [
-      {
-        "name": "Translucent - Subsurface Scattering Test",
-        "weight": 1,
-        "random": false
-      }
-    ],
-    "currentRun": 0,
-    "status": "idle",
-    "lorasRandom": false
-  },
-  {
-    "id": "0af5c3f3-f555-4963-8b36-ea2c4367bdc0",
+    "id": "fa24fe48-aed5-4425-a00a-407eb49c3c9b",
     "isOpen": false,
-    "folder": "default",
     "name": "New Prompt",
-    "text": "stunning detail, high resolution, cinematic realism, hyperdetailed 8K, visually striking, refined lighting, premium quality, expressive scene, natural tones, lifelike, gritty urban mood, soft haze, BREAK, ash-blonde hair, subtle freckles, defined facial structure, delicate lips, ice-blue eyes, lean figure, shoulder freckles, provocative outfit, full-body frame, ripped fishnet stockings, squatting pose, alley beside bar, moody lighting, leaning on wall, gazing into distance, cigarette in hand, ((eye-level angle)), hands resting on knees, worn-out expression, melancholy eyes, front-facing, BREAK single female focus, emphasis on character, studio-quality lighting, Photorealism, real-world texture, 8K ultra detail, dusk setting, background bokeh, sharp subject focus",
-    "negativePrompt": " bad quality, worst quality, worst detail, censor, bad anatomy",
-    "seed": -1,
+    "text": "test pormpt",
+    "negativePrompt": "test nagative",
     "cfgScale": 7,
+    "seed": -1,
     "steps": 20,
-    "sampler": "DPM++ 2M",
+    "sampler": "LMS",
     "models": [
-      {
-        "value": "Pony Diffusion V6 XL.safetensors [67ab2fd8ec]",
-        "label": "Pony Diffusion V6 XL.safetensors [67ab2fd8ec]"
-      },
-      {
-        "value": "prefectIllustriousXL_v10.safetensors [3a2df45ef8]",
-        "label": "prefectIllustriousXL_v10.safetensors [3a2df45ef8]"
-      },
-      {
-        "value": "Hassaku XL (Illustrious).safetensors [d9edf21821]",
-        "label": "Hassaku XL (Illustrious).safetensors [d9edf21821]"
-      },
-      {
-        "value": "synthwavepunk_v2.ckpt [dc4c67171e]",
-        "label": "synthwavepunk_v2.ckpt [dc4c67171e]"
-      }
+      "CheckpointYesmix_v16Original",
+      "Flux.1-Dev Hyper NF4 + Flux.1-Dev BNB NF4 + Flux.1-Schnell BNB NF4"
     ],
     "width": 512,
     "height": 512,
+    "lorasRandom": false,
     "runCount": 1,
     "tags": [
-      "some",
-      "tags",
-      "here"
+      "eh",
+      "iurui",
+      "giru",
+      "giri",
+      "hr"
     ],
     "loras": [
       {
-        "name": "Translucent - Subsurface Scattering Test",
+        "name": "Dark_Ghibli",
+        "weight": 1,
+        "random": false
+      },
+      {
+        "name": "BeautyInEvilFlux",
         "weight": 1,
         "random": false
       }

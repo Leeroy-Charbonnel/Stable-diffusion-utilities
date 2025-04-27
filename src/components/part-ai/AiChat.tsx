@@ -11,6 +11,7 @@ import { PromptForm } from '../part-prompt/PromptForm';
 import { toast } from 'sonner';
 import { AiSettingsModal } from './AiSettingsModal';
 import { useApi } from '@/contexts/contextSD';
+import { Badge } from '../ui/badge';
 
 export function AiChat() {
   const {
@@ -104,16 +105,11 @@ export function AiChat() {
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-2 border-b">
-        <h2 className="text-xl font-semibold">AI Assistant</h2>
 
-        <Button onClick={() => console.log(messages)}>CLG conv</Button>
+        <Button variant={'ghost'} onClick={() => console.log(messages)}>CLG conv</Button>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSettingsOpen(true)}
-          >
+          <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} >
             <Settings className="h-5 w-5" />
           </Button>
         </div>
@@ -122,11 +118,9 @@ export function AiChat() {
       <div className="flex flex-1 divide-x h-[calc(100vh-8rem)]">
         {/* Left side - Chat */}
         <div className="flex flex-col w-1/2 h-full">
-          <div className="flex items-center justify-between p-2 border-b">
-            <div className="flex items-center">
-              <BrainCog className="h-4 w-4 mr-2" />
-              <span className="font-medium">Chat with {settings.model}</span>
-            </div>
+          <div className="flex items-center justify-between p-2">
+            <Badge variant={"secondary"}>{settings.model}</Badge>
+
             {messages.filter(m => m.role !== 'system').length > 0 && (
               <Button
                 variant="ghost"

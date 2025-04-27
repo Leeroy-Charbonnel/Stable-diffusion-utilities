@@ -70,7 +70,7 @@ export function ImageViewer() {
     try {
       const loadedImages = await apiFS.getAllImageMetadata();
       setGeneratedImages(loadedImages);
-      console.log(`ImageViewer - Loaded ${loadedImages.length} images`);
+      // console.log(`ImageViewer - Loaded ${loadedImages.length} images`);
     } catch (error) {
       console.error('Failed to load images from server:', error);
     }
@@ -81,7 +81,7 @@ export function ImageViewer() {
     try {
       const folders = await apiFS.getFolders();
       setAvailableFolders(folders.sort());
-      console.log(`ImageViewer - Loaded ${folders.length} folders`);
+      // console.log(`ImageViewer - Loaded ${folders.length} folders`);
     } catch (error) {
       console.error('Failed to load folders:', error);
       setAvailableFolders(['default']);
@@ -207,7 +207,6 @@ export function ImageViewer() {
   //Filter images
   useEffect(() => {
     let filtered = [...generatedImages];
-    console.log({ filtered });
     //Search by prompt, tags, or name
     if (searchQuery) {
       const query = searchQuery.toLowerCase();

@@ -10,7 +10,7 @@ import { usePrompt } from '@/contexts/contextPrompts';
 import { toast } from 'sonner';
 import { ExecutionPanel } from './ExecutionPanel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDOM_LORAS_MAX_COUNT } from '@/lib/constants';
+import { DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDOM_LORAS_MAX_COUNT, RANDOM_LORAS_MAX_WEIGHT, RANDOM_LORAS_MIN_WEIGHT } from '@/lib/constants';
 
 export function PromptsManager() {
   const { isConnected, generateImage, availableSamplers, availableModels, availableLoras } = useApi();
@@ -163,17 +163,19 @@ export function PromptsManager() {
         seed: prompt.seed,
         steps: prompt.steps,
         sampler: prompt.sampler,
-        model: model.value,
+        model: model,
         loras: (() => {
           if (prompt.lorasRandom) {
             const lorasNumber = randomIntBetween(1, RANDOM_LORAS_MAX_COUNT);
             const shuffled = [...availableLoras].sort(() => 0.5 - Math.random());
-            return shuffled.slice(0, lorasNumber).map(lora => { return { name: lora.name, weight: randomBetween(-2, 2) } });
+            return shuffled.slice(0, lorasNumber).map(lora => {
+              return { name: lora.name, weight: randomBetween(RANDOM_LORAS_MIN_WEIGHT, RANDOM_LORAS_MAX_WEIGHT) }
+            });
           } else {
             return prompt.loras.map(lora => {
               return {
                 name: lora.name,
-                weight: lora.random ? randomBetween(-2, 2) : lora.weight
+                weight: lora.random ? randomBetween(RANDOM_LORAS_MIN_WEIGHT, RANDOM_LORAS_MAX_WEIGHT) : lora.weight
               }
             })
           }
@@ -228,7 +230,7 @@ export function PromptsManager() {
       seed: -1,
       steps: DEFAULT_PROMPT_STEP,
       sampler: availableSamplers.length > 0 ? availableSamplers[0] : '',
-      models: availableModels.length > 0 ? [availableModels[0]] : [],
+      models: availableModels.length > 0 ? [availableModels[0].name] : [],
       width: DEFAULT_PROMPT_HEIGHT,
       height: DEFAULT_PROMPT_WIDTH,
       lorasRandom: false,
@@ -244,7 +246,6 @@ export function PromptsManager() {
 
   return (
     <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-8rem)]">
-      {/* Main Content - Left Side */}
       <ResizablePanel defaultSize={75} minSize={30}>
         <div className="h-full flex flex-col p-4 relative overflow-hidden">
           <div className="flex items-center justify-between mb-4 z-1">

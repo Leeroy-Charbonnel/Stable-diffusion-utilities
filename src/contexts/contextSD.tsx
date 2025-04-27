@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { ImageMetadata, Prompt } from '@/types';
+import { ImageMetadata, Prompt, LabelItem, LabelsData } from '@/types';
 import * as apiSD from '@/services/apiSD';
 import * as apiFS from '@/services/apiFS';
 import * as apiPrompt from '@/services/apiPrompt';
 import { generateUUID } from '@/lib/utils';
+
 
 interface ApiContextType {
   apiSD: typeof apiSD;
@@ -15,13 +16,16 @@ interface ApiContextType {
   isLoading: boolean;
 
   //Available options from SD API - loaded only once
+  labelsData: LabelsData;
   availableSamplers: string[];
-  availableModels: string[];
-  availableLoras: any[];
+  availableModels: LabelItem[];
+  availableLoras: LabelItem[];
 
   //API methods
   checkConnection: () => Promise<boolean>;
   generateImage: (prompt: Prompt) => Promise<ImageMetadata | null>;
+  updateLabelsData: (labelsData: LabelsData) => void;
+  refreshModelsAndLoras: () => Promise<void>;
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
@@ -30,27 +34,22 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  const [labelsData, setLabelsData] = useState<LabelsData>({ modelLabels: [], lorasLabels: [] });
   const [availableSamplers, setAvailableSamplers] = useState<string[]>([]);
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
-  const [availableLoras, setAvailableLoras] = useState<any[]>([]);
+  const [availableModels, setAvailableModels] = useState<LabelItem[]>([]);
+  const [availableLoras, setAvailableLoras] = useState<LabelItem[]>([]);
 
   useEffect(() => {
     const initializeApi = async () => {
       setIsLoading(true);
       const connected = await checkConnection();
+      await refreshModelsAndLoras();
 
       if (connected) {
         try {
-          const [samplers, models, loras] = await Promise.all([
-            apiSD.getSamplers(),
-            apiSD.getModels(),
-            apiSD.getLoras()
-          ]);
-
+          const samplers = await apiSD.getSamplers()
           setAvailableSamplers(samplers);
-          setAvailableModels(models);
-          setAvailableLoras(loras);
-          console.log(`contextSD - API data loaded successfully (${samplers.length} samplers, ${models.length} models, ${loras.length} loras)`);
+          console.log(`contextSD - API data loaded successfully`);
         } catch (error) {
           console.error('Failed to load API data:', error);
         } finally {
@@ -63,6 +62,34 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
     initializeApi();
   }, []);
+
+
+
+  const refreshModelsAndLoras = async () => {
+    await apiSD.refreshModels();
+    await apiSD.refreshLoras();
+
+    const labelsData = await apiFS.getLabelsData();
+    const updatedLabelsData = { modelLabels: [], lorasLabels: [] } as LabelsData;
+
+    const [models, loras] = await Promise.all([
+      apiSD.getModels(),
+      apiSD.getLoras()
+    ]);
+
+    models.forEach((model: string) => {
+      updatedLabelsData.modelLabels.push({ name: model, label: labelsData.modelLabels.find((x: LabelItem) => x.name === model)?.label || '' });
+    });
+
+    loras.forEach((lora: string) => {
+      updatedLabelsData.lorasLabels.push({ name: lora, label: labelsData.lorasLabels.find((x: LabelItem) => x.name === lora)?.label || '' });
+    });
+
+    setLabelsData(updatedLabelsData);
+    setAvailableModels(updatedLabelsData.modelLabels);
+    setAvailableLoras(updatedLabelsData.lorasLabels);
+  };
+
 
   const checkConnection = async (): Promise<boolean> => {
     setIsLoading(true);
@@ -118,16 +145,26 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     }
   };
 
+
+  const updateLabelsData = async (updatedLabelsData: LabelsData): Promise<boolean> => {
+    setLabelsData(updatedLabelsData);
+    return true;
+  };
+
+
   const value = {
     apiSD: apiSD,
     apiFS,
     apiPrompt,
     isConnected,
     isLoading,
+    labelsData,
     availableSamplers,
     availableModels,
     availableLoras,
     checkConnection,
+    refreshModelsAndLoras,
+    updateLabelsData,
     generateImage
   };
 
