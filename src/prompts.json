@@ -4,7 +4,7 @@
     "isOpen": true,
     "folder": "default",
     "name": "New Prompt",
-    "text": "A fantasy underwater portrait of a mermaid with the face and features of Jar Jar Binks from Star Wars, graceful and majestic, vibrant coral reef background, shimmering scales, flowing aquatic hair, cinematic lighting, ultra-detailed, 4K, fantasy concept art",
+    "text": "A fantasy underwater portrait of a mermaid, graceful and majestic, vibrant coral reef background, shimmering scales, flowing aquatic hair, cinematic lighting, ultra-detailed, 4K, fantasy concept art",
     "negativePrompt": "Bad anatomy, extra llimbs",
     "seed": -1,
     "cfgScale": 7,
@@ -22,7 +22,7 @@
     ],
     "width": 512,
     "height": 512,
-    "runCount": 99,
+    "runCount": 1,
     "tags": [
       "revelant",
       "tags",
@@ -30,12 +30,7 @@
     ],
     "loras": [
       {
-        "name": "Dissolve Style [FLUX+SDXL+SD1.5]",
-        "weight": -0.4,
-        "random": false
-      },
-      {
-        "name": "Dark_Ghibli",
+        "name": "Translucent - Subsurface Scattering Test",
         "weight": 1,
         "random": false
       }
@@ -49,24 +44,28 @@
     "isOpen": false,
     "folder": "default",
     "name": "New Prompt",
-    "text": "snthwve style nvinkpunk Charlie Bowater realistic Lithography sketch portrait of a woman, flowers, [gears], pipes, dieselpunk, multi-colored ribbons, old paper texture, highly detailed",
-    "negativePrompt": "cartoon, 3d, ((disfigured)), ((bad art)), ((deformed)), ((poorly drawn)), ((extra limbs)), ((close up)), ((b&w)), weird colors, blurry",
+    "text": "stunning detail, high resolution, cinematic realism, hyperdetailed 8K, visually striking, refined lighting, premium quality, expressive scene, natural tones, lifelike, gritty urban mood, soft haze, BREAK, ash-blonde hair, subtle freckles, defined facial structure, delicate lips, ice-blue eyes, lean figure, shoulder freckles, provocative outfit, full-body frame, ripped fishnet stockings, squatting pose, alley beside bar, moody lighting, leaning on wall, gazing into distance, cigarette in hand, ((eye-level angle)), hands resting on knees, worn-out expression, melancholy eyes, front-facing, BREAK single female focus, emphasis on character, studio-quality lighting, Photorealism, real-world texture, 8K ultra detail, dusk setting, background bokeh, sharp subject focus",
+    "negativePrompt": " bad quality, worst quality, worst detail, censor, bad anatomy",
     "seed": -1,
     "cfgScale": 7,
     "steps": 20,
     "sampler": "DPM++ 2M",
     "models": [
       {
-        "value": "CheckpointYesmix_v16Original.safetensors [3e9211917c]",
-        "label": "CheckpointYesmix_v16Original.safetensors [3e9211917c]"
-      },
-      {
-        "value": "plantMilkModelSuite_almond.safetensors [24f68a5155]",
-        "label": "plantMilkModelSuite_almond.safetensors [24f68a5155]"
+        "value": "Pony Diffusion V6 XL.safetensors [67ab2fd8ec]",
+        "label": "Pony Diffusion V6 XL.safetensors [67ab2fd8ec]"
       },
       {
         "value": "prefectIllustriousXL_v10.safetensors [3a2df45ef8]",
         "label": "prefectIllustriousXL_v10.safetensors [3a2df45ef8]"
+      },
+      {
+        "value": "Hassaku XL (Illustrious).safetensors [d9edf21821]",
+        "label": "Hassaku XL (Illustrious).safetensors [d9edf21821]"
+      },
+      {
+        "value": "synthwavepunk_v2.ckpt [dc4c67171e]",
+        "label": "synthwavepunk_v2.ckpt [dc4c67171e]"
       }
     ],
     "width": 512,
@@ -80,11 +79,6 @@
     "loras": [
       {
         "name": "Translucent - Subsurface Scattering Test",
-        "weight": 1,
-        "random": false
-      },
-      {
-        "name": "Dark_Ghibli",
         "weight": 1,
         "random": false
       }

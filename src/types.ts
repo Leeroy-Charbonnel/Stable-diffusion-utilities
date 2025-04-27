@@ -58,7 +58,7 @@ export interface Prompt {
   seed: number;
   steps: number;
   sampler: string;
-  model: ModelConfig;
+  model: string;
   loras: LoraConfig[];
   width: number;
   height: number;

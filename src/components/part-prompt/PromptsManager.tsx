@@ -163,7 +163,7 @@ export function PromptsManager() {
         seed: prompt.seed,
         steps: prompt.steps,
         sampler: prompt.sampler,
-        model: model,
+        model: model.value,
         loras: (() => {
           if (prompt.lorasRandom) {
             const lorasNumber = randomIntBetween(1, RANDOM_LORAS_MAX_COUNT);
@@ -191,6 +191,7 @@ export function PromptsManager() {
         }
 
         try {
+          console.log(promptData);
           const result = await generateImage(promptData);
 
           if (result) { setSuccessCount(prev => prev + 1); }

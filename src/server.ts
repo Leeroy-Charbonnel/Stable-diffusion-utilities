@@ -2,7 +2,7 @@ import { join } from "path";
 import { mkdir, unlink, readdir } from "node:fs/promises";
 import { existsSync, copyFileSync, unlinkSync } from "node:fs";
 import { exec } from "child_process";
-import { ImageMetadata, Prompt } from "./types";
+import { ImageMetadata, Prompt, PromptEditor } from "./types";
 import { DEFAULT_OUTPUT_FOLDER, DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER, PROMPTS_FILE_NAME } from "./lib/constants";
 import sharp from 'sharp';
 import { getImageFolder } from "./lib/utils";
@@ -121,7 +121,7 @@ async function readPrompts(): Promise<Prompt[]> {
   }
 }
 
-async function savePrompts(prompts: Prompt[]): Promise<boolean> {
+async function savePrompts(prompts: PromptEditor[]): Promise<boolean> {
   try {
     await ensureDirectories(OUTPUT_DIR);
     await Bun.write(PROMPTS_FILE, JSON.stringify(prompts, null, 2));
@@ -199,7 +199,7 @@ const server = Bun.serve({
       POST: async (req: BunRequest) => {
         console.log("POST: Saving prompts");
         try {
-          await savePrompts(await req.json() as Prompt[]);
+          await savePrompts(await req.json() as PromptEditor[]);
           return Response.json({ success: true }, { headers: corsHeaders });
         } catch (error) {
           return Response.json({ success: false, error: String(error) },
