@@ -42,14 +42,14 @@ export function NumberInput({
             if (min !== undefined && finalValue < min) finalValue = min;
             if (max !== undefined && finalValue > max) finalValue = max;
             onChange(finalValue);
-            setLocalValue(newValue);
+            setLocalValue(finalValue.toString());
         }
     };
 
 
     return (
         <Input
-            type="text"
+            type="number"
             inputMode="numeric"
             value={localValue}
             onChange={handleChange}
