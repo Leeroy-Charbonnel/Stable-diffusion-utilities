@@ -29,7 +29,9 @@ You must structure your responses as a valid JSON object with the following exac
   }
 }
 
-Only the "message" part will be displayed to the user, while the "data" part will be used by our system.`;
+Only the "message" part will be displayed to the user, while the "data" part will be used by our system.
+Try to always fill the "message" but try to be concise
+`;
 
 export const CHAT_SYSTEM_EXTRACTION_PROMPT = `You are an AI assistant specialized in extracting Stable Diffusion generation parameters from text.
 
@@ -71,8 +73,10 @@ Example output format:
   }
 }
 
-Only the "message" part will be displayed to the user, while the "data" part will be used by our system.
 Return in the JSON, the model, sampler, and loras that are available (the name might differ, try to match based on models's name or label). 
 If you cant find a lora or model, dont extract it.
 Invent tags if you can't find them
+
+Only the "message" part will be displayed to the user, while the "data" part will be used by our system.
+Try to always fill the "message" but try to be concise
 `;

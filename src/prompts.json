@@ -1,45 +1,5 @@
 [
   {
-    "id": "fa24fe48-aed5-4425-a00a-407eb49c3c9b",
-    "isOpen": false,
-    "name": "New Prompt",
-    "text": "test pormpt",
-    "negativePrompt": "test nagative",
-    "cfgScale": 7,
-    "seed": -1,
-    "steps": 20,
-    "sampler": "LMS",
-    "models": [
-      "CheckpointYesmix_v16Original",
-      "Flux.1-Dev Hyper NF4 + Flux.1-Dev BNB NF4 + Flux.1-Schnell BNB NF4"
-    ],
-    "width": 512,
-    "height": 512,
-    "lorasRandom": false,
-    "runCount": 1,
-    "tags": [
-      "eh",
-      "iurui",
-      "giru",
-      "giri",
-      "hr"
-    ],
-    "loras": [
-      {
-        "name": "Dark_Ghibli",
-        "weight": 1,
-        "random": false
-      },
-      {
-        "name": "BeautyInEvilFlux",
-        "weight": 1,
-        "random": false
-      }
-    ],
-    "currentRun": 0,
-    "status": "idle"
-  },
-  {
     "id": "15937d08-5ea1-41c3-bf6a-eb47aabfc2d1",
     "isOpen": false,
     "runCount": 1,
@@ -49,7 +9,6 @@
     "text": "stunning detail, high resolution, cinematic realism, hyperdetailed 8K, visually striking, refined lighting, premium quality, expressive scene, natural tones, lifelike, gritty urban mood, soft haze, BREAK, ash-blonde hair, subtle freckles, defined facial structure, delicate lips, ice-blue eyes, lean figure, shoulder freckles, provocative outfit, full-body frame, ripped fishnet stockings, squatting pose, alley beside bar, moody lighting, leaning on wall, gazing into distance, cigarette in hand, ((eye-level angle)), hands resting on knees, worn-out expression, melancholy eyes, front-facing, BREAK single female focus, emphasis on character, studio-quality lighting, Photorealism, real-world texture, 8K ultra detail, dusk setting, background bokeh, sharp subject focus",
     "negativePrompt": "bad quality, worst quality, worst detail, censor, bad anatomy,",
     "cfgScale": 4.5,
-    "seed": 1965321266,
     "steps": 40,
     "sampler": "Euler a",
     "width": 832,

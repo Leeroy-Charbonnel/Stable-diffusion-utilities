@@ -100,44 +100,31 @@ export const generateImage = async (params: Text2ImageRequest): Promise<Text2Ima
   }
 }
 
-
-
-
-export const refreshLoras = async (): Promise<boolean> => {
+export const refreshLoras = async (): Promise<void> => {
   try {
     const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/refresh-loras`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to refresh LoRAs: ${response.status}`);
-    }
-
-    const result = await response.json();
-    return result.success;
+    if (!response.ok) throw new Error(`Failed to refresh LoRAs: ${response.status}`);
+    
   } catch (error) {
     console.error('Error refreshing LoRAs:', error);
-    return false;
   }
 };
 
-export const refreshModels = async (): Promise<boolean> => {
+export const refreshModels = async (): Promise<void> => {
   try {
     const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/refresh-checkpoints`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to refresh models: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`Failed to refresh models: ${response.status}`);
 
-    const result = await response.json();
-    return result.success;
   } catch (error) {
     console.error('Error refreshing models:', error);
-    return false;
   }
 };
 

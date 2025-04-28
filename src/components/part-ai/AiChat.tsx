@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { AiSettingsModal } from './AiSettingsModal';
 import { useApi } from '@/contexts/contextSD';
 import { Badge } from '../ui/badge';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../ui/resizable';
 
 export function AiChat() {
   const {
@@ -30,7 +31,7 @@ export function AiChat() {
 
   const { addPrompt } = usePrompt();
 
-  const [inputMessage, setInputMessage] = useState('https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/76501062-a4f8-4f5f-b2f0-a2930664c673/original=true,quality=90/DTBE3GYVAAZBBHJPSHNJXNFTQ0.jpeg');
+  const [inputMessage, setInputMessage] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -101,20 +102,20 @@ export function AiChat() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-2 border-b">
-
-        <Button variant={'ghost'} onClick={() => console.log(messages)}>CLG conv</Button>
-
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} >
-            <Settings className="h-5 w-5" />
-          </Button>
-        </div>
+      <div className="absolute right-2 items-center gap-2">
+        <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} >
+          <Settings className="h-5 w-5" />
+        </Button>
       </div>
 
-      <div className="flex flex-1 divide-x h-[calc(100vh-8rem)]">
-        {/* Left side - Chat */}
-        <div className="flex flex-col w-1/2 h-full">
+
+
+
+      <ResizablePanelGroup
+        direction="horizontal"
+        className="h-screen border"
+      >
+        <ResizablePanel defaultSize={50} className='flex flex-col'>
           <div className="flex items-center justify-between p-2">
             <Badge variant={"secondary"}>{settings.model}</Badge>
 
@@ -130,7 +131,6 @@ export function AiChat() {
             )}
           </div>
 
-          {/* Message Area - Fixed the scroll implementation */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {messages.filter(m => m.role !== 'system').length === 0 ? (
               <div className="flex-1 flex items-center justify-center text-muted-foreground">
@@ -142,13 +142,11 @@ export function AiChat() {
                 </div>
               </div>
             ) : (
-              <div className="flex-1 overflow-hidden">
-                <ScrollArea className="h-full w-full">
-                  <div className="p-4">
-                    {messages.map(renderMessage)}
-                    <div ref={messagesEndRef} />
-                  </div>
-                </ScrollArea>
+              <div className="flex-1 overflow-auto">
+                <div className="p-4">
+                  {messages.map(renderMessage)}
+                  <div ref={messagesEndRef} />
+                </div>
               </div>
             )}
           </div>
@@ -193,21 +191,17 @@ export function AiChat() {
               </Button>
             </div>
           </div>
-        </div>
 
-        {/* Right side - Prompt Form */}
-        <div className="flex flex-col w-1/2 h-full">
-    
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel defaultSize={50}>
 
-          <div className="flex-1 overflow-auto p-2">
+
+
+          <div className="flex-1 h-screen p-2 overflow-auto">
             {generatedPrompt ? (
               <div className="space-y-4">
-                <Alert className="bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  <AlertDescription>
-                    Prompt ready! Review and customize it before saving.
-                  </AlertDescription>
-                </Alert>
+
 
                 <div className="border-b pb-2">
                   <PromptForm
@@ -228,22 +222,36 @@ export function AiChat() {
                 </p>
               </div>
             )}
+
+            {generatedPrompt && (
+              <div className="p-2 border-t">
+                <Button
+                  onClick={savePromptToList}
+                  className="w-full"
+                  disabled={isApiLoading}
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Save to Prompt List
+                </Button>
+              </div>
+            )}
           </div>
 
-          {generatedPrompt && (
-            <div className="p-2 border-t">
-              <Button
-                onClick={savePromptToList}
-                className="w-full"
-                disabled={isApiLoading}
-              >
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Save to Prompt List
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
+
+
+        </ResizablePanel>
+      </ResizablePanelGroup>
+
+
+
+
+
+
+
+
+
+
+
 
       {/* Error Alert */}
       {error && (

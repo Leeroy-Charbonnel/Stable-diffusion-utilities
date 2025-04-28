@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Check, ChevronDown, X } from 'lucide-react';
 import { Badge } from './badge';
 import { Input } from './input';
+import { Button } from './button';
 
 export interface DropDownOption {
   label: string;
@@ -89,13 +90,13 @@ export const SearchableMultiSelect = ({
               <Badge
                 key={item.value}
                 variant="outline"
-                className="flex items-center gap-2 z-30 m-0"
+                className="flex items-center gap-2 m-0"
               >
                 {item.label.length > textTruncateSize ? `${item.label.slice(0, textTruncateSize)}...` : item.label}
-                <X
-                  className="cursor-pointer"
-                  onClick={e => removeItem(item, e)}
-                />
+                <Button variant={'ghost'} className="cursor-pointer h-4 w-4 !m-0 !p-0 z-100" onClick={e => removeItem(item, e)}>
+                  <X className='text-xs'/>
+                </Button>
+
               </Badge>
             ))
           )}
