@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Settings, BrainCog, Send, RefreshCw, Trash2, PlusCircle, CheckCircle, AlertCircle, Image } from 'lucide-react';
+import { Settings, Send, RefreshCw, Trash2, PlusCircle, CheckCircle, AlertCircle, Image } from 'lucide-react';
 import { useAi } from '@/contexts/contextAI';
 import { usePrompt } from '@/contexts/contextPrompts';
 import { ChatMessage } from '@/types';
@@ -27,9 +27,10 @@ export function AiChat() {
     setGeneratedPrompt,
   } = useAi();
 
+
   const { addPrompt } = usePrompt();
 
-  const [inputMessage, setInputMessage] = useState('');
+  const [inputMessage, setInputMessage] = useState('https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/76501062-a4f8-4f5f-b2f0-a2930664c673/original=true,quality=90/DTBE3GYVAAZBBHJPSHNJXNFTQ0.jpeg');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -63,10 +64,6 @@ export function AiChat() {
       handleSendMessage();
     }
   };
-
-
-
-
 
   //Save prompt to the prompt list
   const savePromptToList = async () => {
@@ -200,12 +197,7 @@ export function AiChat() {
 
         {/* Right side - Prompt Form */}
         <div className="flex flex-col w-1/2 h-full">
-          <div className="flex items-center justify-between p-2 border-b">
-            <div className="flex items-center">
-              <PlusCircle className="h-4 w-4 mr-2" />
-              <span className="font-medium">Generated Prompt</span>
-            </div>
-          </div>
+    
 
           <div className="flex-1 overflow-auto p-2">
             {generatedPrompt ? (
@@ -266,3 +258,4 @@ export function AiChat() {
     </div>
   );
 }
+

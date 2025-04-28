@@ -474,21 +474,30 @@ async function getFolders(req: BunRequest): Promise<Response> {
 //Get Civitai image data
 async function getCivitaiImage(req: BunRequest): Promise<Response> {
   try {
-    const imageId = req.params?.id;
-    if (!imageId) {
-      return Response.json({ success: false, error: 'Image ID not provided' },
+    const imageUrl = req.params?.id;
+
+    if (!imageUrl) {
+      return Response.json({ success: false, error: 'Image URL not provided' },
         { status: 400, headers: corsHeaders });
     }
 
-    const response = await fetch(`https://civitai.com/api/trpc/image.getGenerationData?input={"json":{"id":${imageId}}}`);
+    const response = await fetch(imageUrl);
 
     if (!response.ok) {
-      return Response.json({ success: false, error: 'Failed to fetch from Civitai API' },
+      return Response.json({ success: false, error: 'Failed to fetch image' },
         { status: response.status, headers: corsHeaders });
     }
 
-    const data = await response.json();
-    return Response.json({ success: true, data }, { headers: corsHeaders });
+    const imageBuffer = await response.arrayBuffer();
+    const base64Image = Buffer.from(imageBuffer).toString('base64');
+
+    return Response.json({
+      success: true,
+      data: {
+        base64: `data:${response.headers.get('content-type') || 'image/jpeg'};base64,${base64Image}`
+      }
+    }, { headers: corsHeaders });
+
   } catch (error) {
     return Response.json({ success: false, error: String(error) },
       { status: 500, headers: corsHeaders });

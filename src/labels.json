@@ -34,7 +34,7 @@
     },
     {
       "name": "prefectIllustriousXL_v10",
-      "label": ""
+      "label": "Prefect illustrious XL"
     },
     {
       "name": "revAnimated_v122EOL",
@@ -54,6 +54,14 @@
     }
   ],
   "lorasLabels": [
+    {
+      "name": "69yottea_illu_v2",
+      "label": "96yottea | Style LoRa"
+    },
+    {
+      "name": "748cm_illu",
+      "label": "748cm | Shiiro's Styles | Niji"
+    },
     {
       "name": "0010011_style_sharp",
       "label": ""
@@ -79,8 +87,16 @@
       "label": ""
     },
     {
+      "name": "illustrious_all_rated_v1",
+      "label": "Motimalu - All Rated (Illustrious)"
+    },
+    {
       "name": "J_Anime",
       "label": ""
+    },
+    {
+      "name": "ppw_v7_Animv4",
+      "label": "Pony: People's Works"
     },
     {
       "name": "SDXL Flux.1 D - Matte (Vanta)Black - Experiment",

@@ -38,5 +38,53 @@
     ],
     "currentRun": 0,
     "status": "idle"
+  },
+  {
+    "id": "15937d08-5ea1-41c3-bf6a-eb47aabfc2d1",
+    "isOpen": false,
+    "runCount": 1,
+    "currentRun": 0,
+    "status": "idle",
+    "name": "Gritty Urban Cinematic Portrait",
+    "text": "stunning detail, high resolution, cinematic realism, hyperdetailed 8K, visually striking, refined lighting, premium quality, expressive scene, natural tones, lifelike, gritty urban mood, soft haze, BREAK, ash-blonde hair, subtle freckles, defined facial structure, delicate lips, ice-blue eyes, lean figure, shoulder freckles, provocative outfit, full-body frame, ripped fishnet stockings, squatting pose, alley beside bar, moody lighting, leaning on wall, gazing into distance, cigarette in hand, ((eye-level angle)), hands resting on knees, worn-out expression, melancholy eyes, front-facing, BREAK single female focus, emphasis on character, studio-quality lighting, Photorealism, real-world texture, 8K ultra detail, dusk setting, background bokeh, sharp subject focus",
+    "negativePrompt": "bad quality, worst quality, worst detail, censor, bad anatomy,",
+    "cfgScale": 4.5,
+    "seed": 1965321266,
+    "steps": 40,
+    "sampler": "Euler a",
+    "width": 832,
+    "height": 1216,
+    "tags": [
+      "photorealism",
+      "cinematic",
+      "female",
+      "urban",
+      "portrait",
+      "realistic",
+      "gritty",
+      "full-body"
+    ],
+    "models": [
+      "prefectIllustriousXL_v10"
+    ],
+    "lorasRandom": false,
+    "loras": [
+      {
+        "name": "illustrious_all_rated_v1",
+        "weight": 0.6
+      },
+      {
+        "name": "69yottea_illu_v2",
+        "weight": 0.4
+      },
+      {
+        "name": "748cm_illu",
+        "weight": 0.6
+      },
+      {
+        "name": "ppw_v7_Animv4",
+        "weight": 0.6
+      }
+    ]
   }
 ]

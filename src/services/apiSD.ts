@@ -140,3 +140,22 @@ export const refreshModels = async (): Promise<boolean> => {
     return false;
   }
 };
+
+//Get PNG info from an image
+export const getPngInfo = async (imageBase64: string): Promise<any> => {
+  console.log("getPngInfo : imageBase64", imageBase64);
+  try {
+    const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/png-info`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: imageBase64 }),
+    });
+
+    if (!response.ok) throw new Error(`Failed to get PNG info, status: ${response.status}`);
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error getting PNG info:', error);
+    return null;
+  }
+};

@@ -33,3 +33,7 @@ export function randomIntBetween(min: number, max: number): number {
 export function getModelLabel(array: LabelItem[], name: string): string {
   return array.find(item => item.name === name)?.label || name;
 }
+
+export function checkIfModelExist(array: LabelItem[], name: string): boolean {
+  return array.some(item => item.name === name);
+}

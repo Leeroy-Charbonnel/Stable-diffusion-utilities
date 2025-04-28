@@ -54,7 +54,6 @@ export interface PromptEditor {
   models: string[];
   lorasRandom: boolean;
   loras: LoraEditorConfig[];
-
 }
 
 export interface Prompt {

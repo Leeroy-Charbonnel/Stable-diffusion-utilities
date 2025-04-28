@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { generateChatCompletion, getOpenAiModels } from '@/services/apiAI';
-import { generateUUID } from '@/lib/utils';
+import { checkIfModelExist, generateUUID } from '@/lib/utils';
 import { DEFAULT_AI_API_KEY } from '@/lib/constantsKeys';
-import { AiChatRole, ChatMessage, Prompt } from '@/types';
+import { AiChatRole, ChatMessage, Prompt, PromptEditor } from '@/types';
 import { useApi } from './contextSD';
 import { CHAT_SYSTEM_EXTRACTION_PROMPT, CHAT_SYSTEM_GENERATION_PROMPT } from '@/lib/constantsAI';
-import { DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, FILE_API_BASE_URL } from '@/lib/constants';
+import { DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, FILE_API_BASE_URL } from '@/lib/constants';
+import { getPngInfo } from '@/services/apiSD';
 
 const DEFAULT_AI_SETTINGS: AiSettings = {
   apiKey: DEFAULT_AI_API_KEY,
@@ -36,8 +37,8 @@ interface AiContextType {
   setMaxTokens: (tokens: number) => void;
 
 
-  generatedPrompt: Prompt | null;
-  setGeneratedPrompt: (prompt: Prompt) => void;
+  generatedPrompt: PromptEditor| null;
+  setGeneratedPrompt: (prompt: PromptEditor) => void;
 }
 
 const AiContext = createContext<AiContextType | undefined>(undefined);
@@ -58,7 +59,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const setTemperature = (temperature: number) => { setSettings((prev) => ({ ...prev, temperature })); };
   const setMaxTokens = (maxTokens: number) => { setSettings((prev) => ({ ...prev, maxTokens })); };
 
-  const [generatedPrompt, setGeneratedPrompt] = useState<Prompt | null>(null);
+  const [generatedPrompt, setGeneratedPrompt] = useState<PromptEditor | null>(null);
   const { availableSamplers: availableSDSamplers,
     availableModels: availableSDModels,
     availableLoras: availableSDLoras,
@@ -97,30 +98,24 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     try {
       const response = await getOpenAiModels();
 
-      // Handle the response properly based on the fixed API function
       if (response && response.data) {
-        // Filter to get only GPT chat models
         const chatModels = response.data
-          .filter((model: any) =>
-            model.id.includes('gpt') &&
-            !model.id.includes('preview')
-          )
+          .filter((model: any) => model.id.includes('gpt') && !model.id.includes('preview'))
           .map((model: any) => model.id);
 
         setAvailableModels(chatModels);
 
-        // If current model is not in available models, select the first one
         if (chatModels.length > 0 && !chatModels.includes(settings.model)) {
           setModel(chatModels[0]);
         }
       } else {
         // Fallback models if API doesn't return proper data
-        setAvailableModels(['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']);
+        setAvailableModels([]);
       }
     } catch (error) {
       console.error('Error fetching models:', error);
       // Fallback to default models
-      setAvailableModels(['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']);
+      setAvailableModels([]);
     } finally {
       setIsLoadingModels(false);
     }
@@ -129,9 +124,9 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
 
   const prepareExtractionSystemPrompt = (): string => {
-    const modelsSection = `${availableSDModels.join(', ')}`;
+    const modelsSection = `${availableSDModels.map(x => `Name : ${x.name} (Label : ${x.label})`).join(', ')}`;
+    const lorasSection = `${availableSDLoras.map(x => `Name : ${x.name} (Label : ${x.label})`).join(', ')}`;
     const samplersSection = `${availableSDSamplers.join(', ')}`;
-    const lorasSection = `${availableSDLoras.map(l => l.name).join(', ')}`;
 
     let preparedPrompt = CHAT_SYSTEM_EXTRACTION_PROMPT
       .replace('AVAILABLE_MODELS_PLACEHOLDER', modelsSection)
@@ -141,6 +136,14 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     return preparedPrompt;
   }
 
+  const createMessage = (content: string, role: 'user' | 'assistant' | 'system' = 'user') => {
+    return {
+      id: generateUUID(),
+      role,
+      content,
+      timestamp: new Date().toISOString(),
+    };
+  }
 
   //Send a message and get a response
   const sendMessage = async (content: string, role: 'user' | 'assistant' | 'system' = 'user') => {
@@ -155,71 +158,41 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
     //Setup system prompt
     if (messages.length == 0 || updatedMode === 'extraction') {
-      const systemMessage = {
-        id: generateUUID(),
-        role: 'system' as AiChatRole,
-        content: updatedMode === 'extraction' ? prepareExtractionSystemPrompt() : CHAT_SYSTEM_GENERATION_PROMPT,
-        timestamp: new Date().toISOString(),
-      };
-
-      console.log("send system message", systemMessage);
+      const mContent = updatedMode === 'extraction' ? prepareExtractionSystemPrompt() : CHAT_SYSTEM_GENERATION_PROMPT;
+      const systemMessage = createMessage(mContent, 'system');
       updatedMessages = [systemMessage];
     }
 
     //Treat the message
     if (updatedMode == 'extraction') {
-      const civitId = extractCivitaiId(content);
-      if (!civitId) return
-      const civitData = await fetchCivitaiData(civitId);
+      //Get base64 from url, then extract metadata
+      const base64Image = (await fetchCivitaiData(content)).base64;
+      const civitData = await getPngInfo(base64Image);
 
       //Create a new message
-      newMessage = {
-        id: generateUUID(),
-        role: role,
-        content: JSON.stringify({ message: content, data: civitData }),
-        timestamp: new Date().toISOString(),
-      };
-      console.log("send message", newMessage);
+      const mContent = JSON.stringify({ message: content, data: civitData })
+      newMessage = createMessage(mContent, role)
+
       updatedMessages = [...updatedMessages, newMessage];
       setMessages(updatedMessages);
-
     } else {
       //Create a new message
-      newMessage = {
-        id: generateUUID(),
-        role: role,
-        content: JSON.stringify({ message: 'message', data: content }),
-        timestamp: new Date().toISOString(),
-      };
-      console.log("send message", newMessage);
+      const mContent = JSON.stringify({ message: content, data: {} });
+      newMessage = createMessage(mContent, role);
       updatedMessages = [...updatedMessages, newMessage];
-
       setMessages(updatedMessages);
-
     }
     //If it's a user message, get a response from the AI
     if (role === 'user') {
       try {
         //Get response from OpenAI
-        const response = await generateChatCompletion(
-          settings.model,
-          updatedMessages,
-          settings.temperature,
-          settings.maxTokens
-        );
+        const response = await generateChatCompletion(settings.model, updatedMessages, settings.temperature, settings.maxTokens);
         if (!response) {
           throw new Error('Failed to get a response from the AI.');
         }
 
         //Add the assistant's response
-        const assistantMessage: ChatMessage = {
-          id: generateUUID(),
-          role: 'assistant',
-          content: response,
-          timestamp: new Date().toISOString(),
-        };
-
-        console.log("assistant message", assistantMessage);
+        const assistantMessage: ChatMessage = createMessage(response, 'assistant');
 
         setMessages((prevMessages) => [...prevMessages, assistantMessage]);
         extractPromptFromResponse(response, updatedMode);
@@ -237,83 +210,88 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
 
   const checkIfExtractionMode = (content: string): boolean => {
-    return content.includes("civitai.com/images");
+    return content.includes("image.civitai.com");
   }
 
-  const extractCivitaiId = (url: string): string | null => {
-    const match = url.match(/https:\/\/civitai\.com\/images\/(\d+)/);
-    return match ? match[1] : null;
-  };
-
-  const fetchCivitaiData = async (imageId: string): Promise<any> => {
+  const fetchCivitaiData = async (imageUrl: string): Promise<{ base64: string }> => {
     try {
-      const response = await fetch(`${FILE_API_BASE_URL}/civitai/image/${imageId}`);
+      const encodedUrl = encodeURIComponent(imageUrl);
+      const response = await fetch(`${FILE_API_BASE_URL}/civitai/image/${encodedUrl}`);
+
       if (!response.ok) {
-        throw new Error('Failed to fetch from Civitai API');
+        throw new Error('Failed to fetch image data');
       }
+
       const result = await response.json();
+
       if (!result.success) {
-        throw new Error(result.error || 'Failed to fetch Civitai data');
+        throw new Error(result.error || 'Failed to fetch image data');
       }
+
       return result.data;
     } catch (error) {
-      console.error('Error fetching Civitai data:', error);
-      return null;
+      console.error('Error fetching image data:', error);
+      return { base64: '' };
     }
   };
 
 
   function extractPromptFromResponse(response: string, mode: string) {
-    const jsonResponse = JSON.parse(response).data;
+    const jsonResponse = JSON.parse(response);
+    const generatePrompt = jsonResponse.generatePrompt;
+    const data = jsonResponse.data;
 
-    console.log("data json", jsonResponse);
+    if (!generatePrompt) return;
 
-    console.log(mode);
     if (mode == 'extraction') {
-      const prompt: Prompt = {
+      const prompt: PromptEditor = {
+
         id: generateUUID(),
         isOpen: false,
-        name: jsonResponse.name,
-        text: jsonResponse.text,
-        negativePrompt: jsonResponse.negativePrompt,
-        cfgScale: jsonResponse.cfgScale,
-        seed: jsonResponse.seed || -1,
-        steps: jsonResponse.steps || 30,
-        sampler: jsonResponse.sampler || '',
-        model: jsonResponse.model || availableModels[0],
-        width: jsonResponse.width || 512,
-        height: jsonResponse.height || 512,
-        tags: jsonResponse.tags || [],
-        loras: jsonResponse.loras || [],
         runCount: 1,
         currentRun: 0,
-        status: 'idle'
+        status: 'idle',
+
+        name: data.name || DEFAULT_PROMPT_NAME,
+        text: data.text,
+        negativePrompt: data.negativePrompt,
+        cfgScale: data.cfgScale,
+        seed: data.seed || -1,
+        steps: data.steps || DEFAULT_PROMPT_STEP,
+        sampler: data.sampler || '',
+        width: data.width || DEFAULT_PROMPT_WIDTH,
+        height: data.height || DEFAULT_PROMPT_HEIGHT,
+        tags: data.tags || [],
+        models: [checkIfModelExist(availableSDModels, data.model) ? data.model : availableSDModels[0].name],
+        lorasRandom: false,
+        loras: data.loras.filter((l: { name: string, weight: number }) => checkIfModelExist(availableSDLoras, l.name))
       }
       setGeneratedPrompt(prompt);
     } else {
-      const prompt: Prompt = {
+      const prompt: PromptEditor = {
         id: generateUUID(),
         isOpen: false,
-        name: jsonResponse.name,
-        text: jsonResponse.text,
-        negativePrompt: jsonResponse.negativePrompt,
+        runCount: 1,
+        currentRun: 0,
+        status: 'idle',
+
+        name: data.name || DEFAULT_PROMPT_NAME,
+        text: data.text,
+        negativePrompt: data.negativePrompt,
         cfgScale: DEFAULT_PROMPT_CFG_SCALE,
         seed: -1,
         steps: DEFAULT_PROMPT_STEP,
         sampler: availableSDSamplers.length > 0 ? availableSDSamplers[0] : '',
-        model: availableSDModels.length > 0 ? availableSDModels[0] : '',
-        width: DEFAULT_PROMPT_HEIGHT,
-        height: DEFAULT_PROMPT_WIDTH,
-        tags: jsonResponse.tags,
+        width: DEFAULT_PROMPT_WIDTH,
+        height: DEFAULT_PROMPT_HEIGHT,
+        tags: data.tags || [],
+        models: [availableSDModels.length > 0 ? availableSDModels[0].name : ''],
+        lorasRandom: false,
         loras: [],
-        runCount: 1,
-        currentRun: 0,
-        status: 'idle'
       }
       setGeneratedPrompt(prompt);
     }
 
-    console.log("generated prompt", prompt);
   }
 
 
