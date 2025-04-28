@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PlusCircle } from 'lucide-react';
-import { ExecutionStatus, Prompt, PromptEditor } from '@/types';
+import { ExecutionStatus, ProgressData, Prompt, PromptEditor } from '@/types';
 import { PromptCard } from './PromptCard';
 import { useApi } from '@/contexts/contextSD';
 import { generateUUID, randomBetween, randomIntBetween } from '@/lib/utils';
@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { ExecutionPanel } from './ExecutionPanel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDOM_LORAS_MAX_COUNT, RANDOM_LORAS_MAX_WEIGHT, RANDOM_LORAS_MIN_WEIGHT } from '@/lib/constants';
+import { SD_API_BASE_URL } from '@/lib/constants';
 
 export function PromptsManager() {
   const { isConnected, generateImage, availableSamplers, availableModels, availableLoras } = useApi();
@@ -26,10 +27,16 @@ export function PromptsManager() {
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
   const [promptsToRunCount, setPromptsToRunCount] = useState(0);
 
+  //New state for elapsed time and progress data
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [progressData, setProgressData] = useState<ProgressData | null>(null);
+
   const cancelExecutionRef = useRef(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
+  const elapsedTimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const executionStartTimeRef = useRef<number>(0);
 
   const [showTags, setShowTags] = useState(false);
   const [showModels, setShowModels] = useState(false);
@@ -44,8 +51,68 @@ export function PromptsManager() {
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
       }
+      if (elapsedTimeIntervalRef.current) {
+        clearInterval(elapsedTimeIntervalRef.current);
+      }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
     };
   }, []);
+
+  //Function to start time tracking
+  const startTimeTracking = () => {
+    //Reset elapsed time
+    setElapsedTime(0);
+    executionStartTimeRef.current = Date.now();
+
+    //Start interval to update elapsed time every second
+    elapsedTimeIntervalRef.current = setInterval(() => {
+      const currentTime = Date.now();
+      const seconds = (currentTime - executionStartTimeRef.current) / 1000;
+      setElapsedTime(seconds);
+    }, 1000);
+  };
+
+  //Function to stop time tracking
+  const stopTimeTracking = () => {
+    if (elapsedTimeIntervalRef.current) {
+      clearInterval(elapsedTimeIntervalRef.current);
+      elapsedTimeIntervalRef.current = null;
+    }
+  };
+
+  //Function to fetch progress data
+  const fetchProgressData = async () => {
+    try {
+      const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/progress`);
+      if (response.ok) {
+        const data = await response.json() as ProgressData;
+        setProgressData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching progress data:', error);
+    }
+  };
+
+  //Function to start progress polling
+  const startProgressPolling = () => {
+    //Reset progress data
+    setProgressData(null);
+
+    //Start interval to fetch progress data every 500ms
+    progressIntervalRef.current = setInterval(fetchProgressData, 500);
+  };
+
+  //Function to stop progress polling
+  const stopProgressPolling = () => {
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+    //Clear progress data
+    setProgressData(null);
+  };
 
   //Handle prompt update with debounce
   const handlePromptUpdate = (updatedPrompt: PromptEditor) => {
@@ -64,6 +131,7 @@ export function PromptsManager() {
   const handleInterruptExecution = () => {
     setIsCancelling(true);
     cancelExecutionRef.current = true;
+    stopProgressPolling();
   };
 
   //Handle execution of a single prompt
@@ -78,6 +146,10 @@ export function PromptsManager() {
     cancelExecutionRef.current = false;
     setIsCancelling(false);
 
+    //Start time tracking and progress polling
+    startTimeTracking();
+    startProgressPolling();
+
     try {
       await executePrompt(promptToExecute);
       setStatus('completed');
@@ -87,6 +159,10 @@ export function PromptsManager() {
         description: err instanceof Error ? err.message : String(err)
       });
     }
+
+    //Stop time tracking and progress polling
+    stopTimeTracking();
+    stopProgressPolling();
 
     //Use await to ensure we wait for resetExecution to complete
     await resetExecution();
@@ -109,6 +185,10 @@ export function PromptsManager() {
     cancelExecutionRef.current = false;
     setIsCancelling(false);
 
+    //Start time tracking and progress polling
+    startTimeTracking();
+    startProgressPolling();
+
     try {
       for (let i = 0; i < prompts.length; i++) {
         if (cancelExecutionRef.current) {
@@ -127,6 +207,10 @@ export function PromptsManager() {
     }
 
     setStatus('completed');
+
+    //Stop time tracking and progress polling
+    stopTimeTracking();
+    stopProgressPolling();
 
     await resetExecution();
   };
@@ -193,7 +277,6 @@ export function PromptsManager() {
         }
 
         try {
-          console.log(promptData);
           const result = await generateImage(promptData);
 
           if (result) { setSuccessCount(prev => prev + 1); }
@@ -209,11 +292,7 @@ export function PromptsManager() {
           ...prompt
         });
       }
-
     }
-
-
-
 
     setExecutingPromptId(null);
     return;
@@ -254,9 +333,7 @@ export function PromptsManager() {
             <div className="flex gap-2">
               <Button variant={'outline'} onClick={() => setShowTags(!showTags)} ><span className={`${showTags ? 'text-white' : 'text-gray-500'}`}>Tags</span></Button>
               <Button variant={'outline'} onClick={() => setShowModels(!showModels)}><span className={`${showModels ? 'text-white' : 'text-gray-500'}`}>Models</span></Button>
-              <Button
-                onClick={handleAddPrompt}
-                disabled={isPromptLoading || status === 'execution'}>
+              <Button onClick={handleAddPrompt} disabled={isPromptLoading || status === 'execution'}>
                 <PlusCircle />Add Prompt</Button>
             </div>
           </div>
@@ -307,6 +384,8 @@ export function PromptsManager() {
             promptsToRunCount={promptsToRunCount}
             isApiConnected={isConnected}
             isCancelling={isCancelling}
+            elapsedTime={elapsedTime}
+            progressData={progressData}
             onStartExecution={handleExecuteAll}
             onCancelExecution={handleInterruptExecution}
           />

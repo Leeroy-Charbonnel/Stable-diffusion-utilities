@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Play, StopCircle, CheckCircle, XCircle } from 'lucide-react';
-import { ExecutionStatus, PromptEditor } from '@/types';
+import { ExecutionStatus, ProgressData, PromptEditor } from '@/types';
 import { Separator } from '@/components/ui/separator';
 
 interface ExecutionPanelProps {
@@ -13,6 +13,8 @@ interface ExecutionPanelProps {
   promptsToRunCount: number;
   isApiConnected: boolean;
   isCancelling: boolean;
+  elapsedTime: number;
+  progressData: ProgressData | null;
   onStartExecution: () => void;
   onCancelExecution: () => void;
 }
@@ -26,6 +28,8 @@ export function ExecutionPanel({
   promptsToRunCount,
   isApiConnected,
   isCancelling,
+  elapsedTime,
+  progressData,
   onStartExecution,
   onCancelExecution
 }: ExecutionPanelProps) {
@@ -33,20 +37,65 @@ export function ExecutionPanel({
   const hasCompleted = status === 'completed';
   const progressPercentage = promptsToRunCount > 0 ? Math.round((currentPromptIndex / promptsToRunCount) * 100) : 0;
 
+  //Format elapsed time as mm:ss
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  //Get SD current progress percentage
+  const sdProgressPercentage = progressData?.progress ? Math.round(progressData.progress * 100) : 0;
+
   return (
     <div className="h-full flex flex-col p-4">
       <h3 className="text-lg font-semibold mb-4">Execution Status</h3>
 
       <Separator className='my-2' />
 
+      {/* Elapsed Time Section */}
+      {isExecuting && (
+        <div className="mb-4">
+          <div className="flex justify-between text-sm font-medium mb-1">
+            <span>Elapsed Time</span>
+            <span>{formatTime(elapsedTime)}</span>
+          </div>
+        </div>
+      )}
+
       {/* Progress Section */}
       <div className="mb-4">
         <div className="flex justify-between text-sm font-medium mb-1">
-          <span>Progress</span>
+          <span>Overall Progress</span>
           <span>{currentPromptIndex} of {promptsToRunCount} ({progressPercentage}%)</span>
         </div>
         <Progress value={progressPercentage} className="h-1" />
       </div>
+
+      {/* Current Generation Progress */}
+      {isExecuting && progressData && (
+        <div className="mb-4">
+          <div className="flex justify-between text-sm font-medium mb-1">
+            <span>Current Generation</span>
+            <span>Step {progressData.state.sampling_step} / {progressData.state.sampling_steps} ({sdProgressPercentage}%)</span>
+          </div>
+          <Progress value={sdProgressPercentage} className="h-1" />
+        </div>
+      )}
+
+      {/* Preview Image Section */}
+      {isExecuting && progressData?.current_image && (
+        <div className="mb-4 flex justify-center">
+          <div className="border rounded overflow-hidden w-full aspect-square max-w-44">
+            <img
+              src={`data:image/png;base64,${progressData.current_image}`}
+              alt="Generation preview"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      )}
+
       <Separator className='my-2' />
 
       {/* Counters Section */}
@@ -93,7 +142,6 @@ export function ExecutionPanel({
           Execution completed!
         </div>
       )}
-
 
       {/* Action Buttons - Now at the end, using mt-auto to push it to bottom */}
       <div className="mt-auto">
