@@ -1,16 +1,11 @@
 
 
-
-
-
-
 part prompt
-add time elasped
-security on tag
-random on lora wieght
-run nb run on every selelect model
-current progress bar ?
-When in sngle execution, stop btn on card, if gloabal execution, skip button
+Style ?
+context menu to :
+ 	delete
+	duplicate
+	copy models, copy lora, copy tags
 
 
 
@@ -18,13 +13,12 @@ part image
 fix dialog
 
 
-part ai
-Secutiry on lora names
+
 
 
 
 other
-no module 'xformers'. Processing without…
+
 
 https://ui.shadcn.com/docs/components/toggle-group
 https://ui.shadcn.com/docs/components/combobox

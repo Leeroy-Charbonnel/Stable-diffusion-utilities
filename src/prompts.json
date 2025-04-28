@@ -1,8 +1,106 @@
 [
   {
-    "id": "15937d08-5ea1-41c3-bf6a-eb47aabfc2d1",
-    "isOpen": true,
+    "id": "efa3a0f6-1e30-4a67-84a2-1f4004d7781f",
+    "isOpen": false,
     "runCount": 1,
+    "currentRun": 0,
+    "status": "idle",
+    "name": "Inventive Futuristic Cityscape",
+    "text": "A sprawling futuristic city at sunset, filled with imaginative architecture and glowing neon lights. Towering skyscrapers with organic, flowing shapes, transparent sky bridges connecting buildings, flying vehicles zipping between the towers. The streets below bustle with diverse, cyberpunk-inspired characters. The scene is vibrant, colorful, and highly detailed, blending a sense of wonder and technology. Style: digital art, highly detailed, cinematic lighting, wide-angle perspective.",
+    "negativePrompt": "low quality, blurry, distorted, deformed buildings, extra limbs, text, watermarks, dull colors, repetitive patterns",
+    "cfgScale": 7,
+    "seed": -1,
+    "steps": 20,
+    "sampler": "DPM++ 2M",
+    "width": 512,
+    "height": 512,
+    "tags": [
+      "futuristic",
+      "cityscape",
+      "cyberpunk",
+      "digital art",
+      "cinematic",
+      "imaginative"
+    ],
+    "models": [
+      "CheckpointYesmix_v16Original"
+    ],
+    "lorasRandom": false,
+    "loras": []
+  },
+  {
+    "id": "72a46ccb-5382-4963-9a63-aba8813d141b",
+    "isOpen": false,
+    "runCount": 1,
+    "currentRun": 0,
+    "status": "idle",
+    "name": "Inventive Futuristic Cityscape (Extended)",
+    "text": "A sprawling futuristic city at sunset, filled with imaginative architecture and glowing neon lights. Towering skyscrapers with organic, flowing shapes and iridescent surfaces stretch into the sky. Transparent sky bridges and suspended walkways connect buildings, while lush rooftop gardens and vertical green spaces add a touch of nature amidst the urban sprawl. Flying vehicles and personal drones zip between the towers, their colorful lights reflecting off the glassy facades. On the bustling streets below, a diverse crowd of cyberpunk-inspired characters—humans, androids, and augmented beings—interact at vibrant marketplaces, food stalls, and digital kiosks with holographic displays. The air is alive with floating advertisements, animated billboards, and subtle fog illuminated by neon hues of pink, blue, and violet. The scene is vibrant, dynamic, and highly detailed, blending a sense of wonder, advanced technology, and utopian optimism. Style: digital art, ultra high-resolution, cinematic lighting with dramatic sun rays and ambient reflections, wide-angle perspective, inspired by the works of Syd Mead and Katsuhiro Otomo.",
+    "negativePrompt": "low quality, blurry, distorted, deformed buildings, extra limbs, poorly rendered faces, text, watermarks, dull or flat colors, repetitive patterns, oversaturated lighting, empty streets, lack of detail",
+    "cfgScale": 7,
+    "seed": -1,
+    "steps": 20,
+    "sampler": "DPM++ 2M",
+    "width": 512,
+    "height": 512,
+    "tags": [
+      "futuristic",
+      "cityscape",
+      "cyberpunk",
+      "digital art",
+      "cinematic",
+      "imaginative",
+      "high detail",
+      "neon",
+      "diverse characters"
+    ],
+    "models": [
+      "CheckpointYesmix_v16Original"
+    ],
+    "lorasRandom": false,
+    "loras": []
+  },
+  {
+    "id": "8b45e8fc-185a-4fca-a83d-4e4181da8f32",
+    "isOpen": false,
+    "runCount": 1,
+    "currentRun": 0,
+    "status": "idle",
+    "name": "Ultra-Detailed Inventive Futuristic Cityscape (Extended Extended)",
+    "text": "An expansive, breathtaking futuristic cityscape at sunset, set on an immense scale that merges advanced technology with organic design elements. The skyline is dominated by soaring skyscrapers with innovative, flowing architectures inspired by natural forms—towers with curved, crystalline exteriors, ribbed metallic surfaces, and shimmering, iridescent glass. Interwoven through the city are transparent sky bridges, elegant suspended walkways, and multi-level platforms, all softly illuminated by embedded LED lights and glowing neon strips in vibrant hues of electric blue, magenta, and emerald green. Lush rooftop gardens and vertical forests cascade down the sides of buildings, blending biophilic design principles with high-tech infrastructure. Between the structures, enormous holographic art installations float in mid-air, displaying shifting patterns and interactive digital sculptures. \n\nThe bustling streets below teem with life: a diverse mix of humans, androids, robots, and cybernetically enhanced beings, each adorned in unique, futuristic fashion. Street vendors sell exotic foods from glowing kiosks, and open-air markets are filled with stalls displaying advanced gadgets, artisan crafts, and virtual reality experiences. Pedestrian walkways are crowded with people of all ages and backgrounds, their faces illuminated by the soft glow of wearable tech and augmented reality glasses. Animated billboards, floating advertisements, and interactive holographic displays project vibrant visuals and information in multiple languages, adding layers of visual interest and depth to the scene. \n\nAbove, the sky is painted with dramatic sunset colors—fiery oranges, deep purples, and soft pinks—casting atmospheric rays that reflect off the city’s metallic and glass surfaces. Flying vehicles, from sleek personal hovercars to massive public transport airships, navigate well-lit aerial highways in organized streams, their headlights and underglow casting moving patterns of light on the streets below. Drones zip by carrying parcels, some trailing digital banners or advertising holograms. \n\nIn the distance, a sprawling harbor with floating platforms and futuristic ships is visible, while parks and plazas filled with trees, fountains, and public art offer peaceful oases within the urban environment. The mood is vibrant, optimistic, and forward-looking, evoking a sense of awe, wonder, and endless possibility. Artistic style: hyper-detailed digital art, ultra high-resolution, cinematic wide-angle perspective, dramatic and dynamic lighting with strong sunbeams, reflections, and subtle atmospheric haze. Influences include the visionary cityscapes of Syd Mead, the atmospheric depth of Katsuhiro Otomo’s anime, and the colorful vibrancy of James Gurney. Every element should be highly detailed and meticulously rendered, with an emphasis on complexity, diversity, and a harmonious blend of nature and technology.",
+    "negativePrompt": "low quality, blurry, poorly rendered architecture, deformed anatomy, extra limbs, distorted faces, missing details, flat or dull colors, empty streets, plain backgrounds, repetitive patterns, oversaturated or harsh lighting, visible text, watermarks, out-of-place objects, lack of depth, cartoonish style (unless specified), art errors",
+    "cfgScale": 7,
+    "seed": -1,
+    "steps": 20,
+    "sampler": "DPM++ 2M",
+    "width": 512,
+    "height": 512,
+    "tags": [
+      "futuristic",
+      "cityscape",
+      "cyberpunk",
+      "digital art",
+      "cinematic",
+      "high detail",
+      "neon",
+      "diverse characters",
+      "biophilic",
+      "urban",
+      "sunset",
+      "technology",
+      "nature",
+      "hyper-detailed"
+    ],
+    "models": [
+      "CheckpointYesmix_v16Original"
+    ],
+    "lorasRandom": false,
+    "loras": []
+  },
+  {
+    "id": "15937d08-5ea1-41c3-bf6a-eb47aabfc2d1",
+    "isOpen": false,
+    "runCount": 12,
     "currentRun": 0,
     "status": "idle",
     "name": "Gritty Urban Cinematic Portrait",
@@ -24,7 +122,8 @@
       "full-body"
     ],
     "models": [
-      "prefectIllustriousXL_v10"
+      "CheckpointYesmix_v16Original",
+      "Hassaku XL (Illustrious)"
     ],
     "lorasRandom": false,
     "loras": [

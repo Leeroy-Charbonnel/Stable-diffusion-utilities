@@ -27,12 +27,16 @@ export function PromptsManager() {
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
   const [promptsToRunCount, setPromptsToRunCount] = useState(0);
 
-  //New state for elapsed time and progress data
   const [elapsedTime, setElapsedTime] = useState(0);
   const [progressData, setProgressData] = useState<ProgressData | null>(null);
 
+  const skipExecutionRef = useRef(false);
   const cancelExecutionRef = useRef(false);
+  const [isSkipping, setIsSkipping] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [executingModel, setExecutingModel] = useState<string | null>(null);
+
+
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const elapsedTimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -60,13 +64,10 @@ export function PromptsManager() {
     };
   }, []);
 
-  //Function to start time tracking
   const startTimeTracking = () => {
-    //Reset elapsed time
     setElapsedTime(0);
     executionStartTimeRef.current = Date.now();
 
-    //Start interval to update elapsed time every second
     elapsedTimeIntervalRef.current = setInterval(() => {
       const currentTime = Date.now();
       const seconds = (currentTime - executionStartTimeRef.current) / 1000;
@@ -74,7 +75,6 @@ export function PromptsManager() {
     }, 1000);
   };
 
-  //Function to stop time tracking
   const stopTimeTracking = () => {
     if (elapsedTimeIntervalRef.current) {
       clearInterval(elapsedTimeIntervalRef.current);
@@ -82,7 +82,6 @@ export function PromptsManager() {
     }
   };
 
-  //Function to fetch progress data
   const fetchProgressData = async () => {
     try {
       const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/progress`);
@@ -95,46 +94,41 @@ export function PromptsManager() {
     }
   };
 
-  //Function to start progress polling
   const startProgressPolling = () => {
-    //Reset progress data
     setProgressData(null);
-
-    //Start interval to fetch progress data every 500ms
     progressIntervalRef.current = setInterval(fetchProgressData, 500);
   };
 
-  //Function to stop progress polling
   const stopProgressPolling = () => {
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
       progressIntervalRef.current = null;
     }
-    //Clear progress data
     setProgressData(null);
   };
 
-  //Handle prompt update with debounce
   const handlePromptUpdate = (updatedPrompt: PromptEditor) => {
     //Clear any pending updates
     if (updateTimeoutRef.current) {
       clearTimeout(updateTimeoutRef.current);
     }
-
     //Set timeout for debounced update
     updateTimeoutRef.current = setTimeout(() => {
       updatePrompt(updatedPrompt);
     }, DEBOUNCE_DELAY);
   };
 
-  //Handle interruption of execution
   const handleInterruptExecution = () => {
     setIsCancelling(true);
     cancelExecutionRef.current = true;
     stopProgressPolling();
   };
 
-  //Handle execution of a single prompt
+  const handleSkipCurrentPrompt = () => {
+    setIsSkipping(true);
+    skipExecutionRef.current = true;
+  };
+
   const handleExecutePrompt = async (promptToExecute: PromptEditor) => {
     setStatus('execution');
     setSuccessCount(0);
@@ -142,11 +136,12 @@ export function PromptsManager() {
     setCurrentPromptIndex(0);
     setPromptsToRunCount(promptToExecute.runCount);
 
-    //Reset cancellation flag
+    //Reset flag
     cancelExecutionRef.current = false;
+    skipExecutionRef.current = false;
+    setIsSkipping(false);
     setIsCancelling(false);
 
-    //Start time tracking and progress polling
     startTimeTracking();
     startProgressPolling();
 
@@ -160,11 +155,9 @@ export function PromptsManager() {
       });
     }
 
-    //Stop time tracking and progress polling
     stopTimeTracking();
     stopProgressPolling();
 
-    //Use await to ensure we wait for resetExecution to complete
     await resetExecution();
   };
 
@@ -181,9 +174,11 @@ export function PromptsManager() {
     const totalRuns = prompts.map(p => p.runCount).reduce((a, b) => a + b, 0) * totalModels;
     setPromptsToRunCount(totalRuns);
 
-    //Reset cancellation flag
+    //Reset flag
     cancelExecutionRef.current = false;
+    skipExecutionRef.current = false;
     setIsCancelling(false);
+    setIsSkipping(false);
 
     //Start time tracking and progress polling
     startTimeTracking();
@@ -226,6 +221,9 @@ export function PromptsManager() {
     setExecutingPromptId(null);
     setExecutedPromptIds(new Set());
     setIsCancelling(false);
+    setIsSkipping(false);
+
+    skipExecutionRef.current = false;
     cancelExecutionRef.current = false;
 
     //Reset counters
@@ -238,6 +236,7 @@ export function PromptsManager() {
 
     for (let k = 0; k < prompt.models.length; k++) {
       const model = prompt.models[k];
+      setExecutingModel(model);
 
       const promptData: Prompt = {
         name: prompt.name,
@@ -270,6 +269,13 @@ export function PromptsManager() {
       }
 
       for (let i = 0; i < prompt.runCount; i++) {
+
+        if (skipExecutionRef.current) {
+          console.log(`Execution skipped for prompt ${prompt.id} for model ${model}`);
+          skipExecutionRef.current = false;
+          break;
+        }
+
         //Check if execution has been cancelled
         if (cancelExecutionRef.current) {
           console.log(`Execution cancelled for prompt ${prompt.id}`);
@@ -344,16 +350,27 @@ export function PromptsManager() {
                 key={prompt.id}
                 prompt={prompt}
                 index={idx + 1}
+
                 showTags={showTags}
                 showModels={showModels}
+
+                onRunPrompt={handleExecutePrompt}
+                onSkipExecution={handleSkipCurrentPrompt}
+                onCancelExecution={handleInterruptExecution}
+
                 onDelete={() => deletePrompt(prompt.id)}
                 onMove={reorderPrompt}
-                onRunPrompt={handleExecutePrompt}
-                onCancelExecution={handleInterruptExecution}
                 onPromptUpdate={handlePromptUpdate}
+
+
+                isCancelling={isCancelling}
+                isSkipping={isSkipping}
+
                 isExecuted={executedPromptIds.has(prompt.id)}
                 isExecuting={status === 'execution'}
                 isCurrentlyExecuting={executingPromptId === prompt.id}
+                executingModel={executingModel}
+
                 isApiConnected={isConnected}
                 availableSamplers={availableSamplers}
                 availableModels={availableModels}

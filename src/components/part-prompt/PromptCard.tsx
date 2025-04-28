@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, Check, X, Play, ChevronDown, ChevronUp, StopCircle } from 'lucide-react';
+import { Trash2, Check, X, Play, ChevronDown, ChevronUp, StopCircle, SkipBack, SkipForward } from 'lucide-react';
 import { LabelItem, PromptEditor } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -19,21 +19,23 @@ type PromptCardProps = {
   showTags: boolean;
   showModels: boolean;
 
+  onRunPrompt: (prompt: PromptEditor) => void;
+  onSkipExecution: () => void;
+  onCancelExecution: () => void;
+
   onDelete: () => void;
   onMove: (id: string, direction: 'up' | 'down') => void;
   onPromptUpdate: (updatedPrompt: PromptEditor) => void;
-  onRunPrompt: (prompt: PromptEditor) => void;
-  onCancelExecution?: () => void;
+
+  isCancelling?: boolean;
+  isSkipping?: boolean;
+
   isExecuted?: boolean;
   isExecuting?: boolean;
   isCurrentlyExecuting?: boolean;
-  isApiConnected?: boolean;
-  executionProgress?: {
-    currentRun: number;
-    totalRuns: number;
-    currentProgress: number;
-  };
+  executingModel: string | null;
 
+  isApiConnected?: boolean;
   availableSamplers?: string[];
   availableModels?: LabelItem[];
   availableLoras?: LabelItem[];
@@ -44,13 +46,17 @@ export function PromptCard({
   index,
   showTags,
   showModels,
+  executingModel,
   onDelete,
   onMove,
   onPromptUpdate,
   onRunPrompt,
+  onSkipExecution,
   onCancelExecution,
   isExecuted = false,
   isExecuting = false,
+  isCancelling = false,
+  isSkipping = false,
   isCurrentlyExecuting = false,
   isApiConnected = false,
   availableSamplers = [],
@@ -134,30 +140,28 @@ export function PromptCard({
                 ))}
             </div>
             <div className="flex items-center space-x-2 ml-2">
-              {isCurrentlyExecuting && onCancelExecution ? (
-                <Button variant="destructive" size="sm" onClick={onCancelExecution} className="h-6 p-3.5 text-xs border-0">
-                  <StopCircle className="mr-1 h-3 w-3" />Stop</Button>
-              ) : (
+
+              {!isExecuting && (
                 <Button
                   variant="outline" size="sm" onClick={() => { onRunPrompt(prompt); }} className="h-6 p-3.5 text-xs border-0" disabled={isExecuting || !isApiConnected}>
                   <Play className="mr-1 h-3 w-3" />Run</Button>
+              )}
+
+              {isCurrentlyExecuting && (
+                <Button variant="destructive" size="sm" onClick={onSkipExecution} disabled={isCancelling || isSkipping} className="h-6 p-3.5 text-xs border-0">
+                  <SkipForward className="mr-1 h-3 w-3" />{isSkipping ? "Skipping..." : "Skip"}</Button>
               )}
 
 
               <div className="text-xs font-medium bg-input/30 h-7 px-2 flex items-center justify-center">
 
                 <NumberInput
-                  value={prompt.runCount} min={1} max={99}
+                  value={prompt.runCount} min={0} max={99}
                   onChange={(value: number) => handlePromptPartUpdate("runCount", value)}
                   className="h-full !bg-transparent border-0 max-w-6 text-right flex items-center justify-center px-0 mx-0 pr-2" disabled={isExecuting}
                 />
-
-
                 <div>×</div>
               </div>
-
-
-
 
               <Button variant="ghost" size="icon" onClick={() => { onMove(prompt.id, 'up'); }}
                 className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-white/10" disabled={isExecuting}>
@@ -210,7 +214,7 @@ export function PromptCard({
             <div className="flex flex-wrap gap-1.5">
               {/*Model Badge - Primary*/}
               {showModels && prompt.models && prompt.models.map(model => (
-                <div key="model" className="flex items-center px-2 py-0.5 h-5 bg-primary/30">
+                <div key="model" className={`flex items-center px-2 py-0.5 h-5 bg-primary/30 ${isCurrentlyExecuting && model === executingModel ? 'border-b border-primary' : ''}`}>
                   <div className="text-xs max-w-[100px] truncate">
                     {getModelLabel(availableModels, model)}
                   </div>
