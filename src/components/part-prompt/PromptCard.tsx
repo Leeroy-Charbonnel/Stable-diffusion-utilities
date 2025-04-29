@@ -23,6 +23,7 @@ type PromptCardProps = {
   onRunPrompt: (prompt: PromptEditor) => void;
   onSkipExecution: () => void;
   onDuplicatePrompt: () => void;
+  onCopyRefresh: () => void;
 
   onDelete: () => void;
   onMove: (id: string, direction: 'up' | 'down') => void;
@@ -54,6 +55,7 @@ export function PromptCard({
   onRunPrompt,
   onSkipExecution,
   onDuplicatePrompt,
+  onCopyRefresh,
   isExecuted = false,
   isExecuting = false,
   isCancelling = false,
@@ -208,6 +210,7 @@ export function PromptCard({
               <PromptForm
                 prompt={prompt}
                 onPromptUpdate={handlePromptUpdate}
+                onCopyRefresh={onCopyRefresh}
                 availableSamplers={availableSamplers}
                 availableModels={availableModels}
                 availableLoras={availableLoras}

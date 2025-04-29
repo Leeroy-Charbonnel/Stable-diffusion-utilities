@@ -12,10 +12,13 @@ import { NumberInput } from '@/components/ui/number-input';
 import { Separator } from '@/components/ui/separator';
 import { DropDownOption, SearchableMultiSelect } from '@/components/ui/dropdown-menu-multi';
 import { getModelLabel } from '@/lib/utils';
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '../ui/context-menu';
+import { usePrompt } from '@/contexts/contextPrompts';
 
 type PromptFormProps = {
   prompt: PromptEditor;
   onPromptUpdate: (prompt: PromptEditor) => void;
+  onCopyRefresh: () => void;
   availableSamplers: string[];
   availableModels: LabelItem[];
   availableLoras: LabelItem[];
@@ -25,6 +28,7 @@ type PromptFormProps = {
 export function PromptForm({
   prompt,
   onPromptUpdate,
+  onCopyRefresh,
   availableSamplers = [],
   availableModels = [],
   availableLoras = [],
@@ -33,6 +37,7 @@ export function PromptForm({
 
   const [formData, setFormData] = useState<PromptEditor>(prompt!);
   const [tagInput, setTagInput] = useState('');
+  const { UpdateCopyPromptPart, GetCopyPromptPart } = usePrompt();
 
   useEffect(() => {
     if (prompt) { setFormData(prompt); }
@@ -111,6 +116,28 @@ export function PromptForm({
     handleFormChange({ loras: formData.loras?.map(l => l.name === loraName ? { ...l, random: !l.random } : l) || [] });
   }
 
+  function handleUpateCopyPrompt(name: keyof PromptEditor): void {
+    onCopyRefresh();
+    switch (name) {
+      case 'loras':
+        UpdateCopyPromptPart('loras', formData.loras);
+        break;
+      case 'models':
+        UpdateCopyPromptPart('models', formData.models);
+        break;
+      case 'tags':
+        UpdateCopyPromptPart('tags', formData.tags);
+        break;
+      default:
+        UpdateCopyPromptPart(name, formData[name]);
+        break;
+    }
+  }
+  function handleUpatePastePrompt(name: keyof PromptEditor): void {
+    const value = GetCopyPromptPart(name);
+    if (!value) return;
+    handleFormChange({ [name]: value });
+  }
   return (
     <div className={"p-4 relative overflow-hidden"}>
 
@@ -187,20 +214,32 @@ export function PromptForm({
 
       <Separator className='mb-0 my-3' />
 
-      <div className='flex gap-2 items-center m-0 h-8'>
-        <Label htmlFor="sampler" className="w-20 h-8">Model</Label>
 
-        <div className='border-b w-full h-8'>
-          <SearchableMultiSelect
-            options={availableModels.map(x => { return { value: x.name, label: x.label ? x.label : x.name } })}
-            values={formData.models || []}
-            placeholder="Select options..."
-            searchPlaceholder="Type to search..."
-            onChange={handleModelChange}
-          />
-        </div>
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <div className='flex gap-2 items-center m-0 h-8'>
+            <Label htmlFor="sampler" className="w-20 h-8">Model</Label>
 
-      </div>
+            <div className='border-b w-full h-8'>
+              <SearchableMultiSelect
+                options={availableModels.map(x => { return { value: x.name, label: x.label ? x.label : x.name } })}
+                values={formData.models || []}
+                placeholder="Select options..."
+                searchPlaceholder="Type to search..."
+                onChange={handleModelChange}
+              />
+            </div>
+
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem disabled={readOnly} onClick={() => handleUpateCopyPrompt('models')}>Copy Models</ContextMenuItem>
+          <ContextMenuItem disabled={readOnly || !GetCopyPromptPart('models')} onClick={() => handleUpatePastePrompt('models')}>Paste Models</ContextMenuItem>
+          <ContextMenuItem disabled={readOnly} variant='destructive' onClick={() => handleFormChange({ models: [] })}>Clear Models</ContextMenuItem>
+
+        </ContextMenuContent>
+      </ContextMenu>
+
 
       <Separator className='mb-0 my-3' />
 
@@ -241,124 +280,146 @@ export function PromptForm({
 
       <Separator className='mb-0 my-3' />
 
-      {/* LoRAs Selector*/}
-      <div className='m-0 h-8 mb-2'>
 
-        <div className="flex items-center gap-2"><Label className="pb-2 min-w-20 h-8">LoRAs</Label>
+      <ContextMenu>
+        <ContextMenuTrigger>
+          {/* LoRAs Selector*/}
+          <div className='m-0 h-8 mb-2'>
 
-          <Select onValueChange={handleLoraSelect} value="" disabled={readOnly || formData.lorasRandom}>
-            <SelectTrigger className={"!h-8 !w-38"}>
-              <SelectValue placeholder="Add a LoRA" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableLoras.filter((lora) => !formData.loras?.some(existingLora => existingLora.name === lora.name)).map((lora) => (
-                <SelectItem key={lora.name} value={lora.name} title={lora.name}>{getModelLabel(availableLoras, lora.name)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <div className="flex items-center gap-2"><Label className="pb-2 min-w-20 h-8">LoRAs</Label>
 
-          <Button variant="outline" onClick={() => handleFormChange({ lorasRandom: !formData.lorasRandom })} className='h-8 w-8'>
-            <Dice6
-              className={`w-6 h-6 ${formData.lorasRandom ? 'text-primary' : 'text-muted-foreground'}`}
-            />
-          </Button>
+              <Select onValueChange={handleLoraSelect} value="" disabled={readOnly || formData.lorasRandom}>
+                <SelectTrigger className={"!h-8 !w-38"}>
+                  <SelectValue placeholder="Add a LoRA" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableLoras.filter((lora) => !formData.loras?.some(existingLora => existingLora.name === lora.name)).map((lora) => (
+                    <SelectItem key={lora.name} value={lora.name} title={lora.name}>{getModelLabel(availableLoras, lora.name)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-
-        </div>
-      </div>
-
-
-
-      {formData.loras && formData.loras.length > 0 && (
-        <div>
-          {formData.loras.map((lora) => (
-            <div key={lora.name} className="mb-2 h-8 grid grid-cols-2 gap-2 items-center">
-              <div className={`font-medium truncate ${formData.lorasRandom ? 'text-muted-foreground' : ''}`} title={lora.name}>{getModelLabel(availableLoras, lora.name)}</div>
-              <div className="flex items-center gap-1">
-
-                <Button
-                  disabled={readOnly || formData.lorasRandom} variant="ghost"
-                  onClick={() => toggleLoraRandom(lora.name)}
-                >
-                  <Dice6
-                    className={`w-6 h-6 ${lora.random ? 'text-primary' : 'text-muted-foreground'}`}
-                  />
-                </Button>
-
-
-
-                <Slider
-                  value={[lora.weight]}
-                  min={-2}
-                  max={2}
-                  step={0.1}
-                  onValueChange={(value: number[]) => updateLoraWeight(lora.name, value[0])}
-                  disabled={readOnly || lora.random || formData.lorasRandom}
-                  className=''
+              <Button variant="outline" onClick={() => handleFormChange({ lorasRandom: !formData.lorasRandom })} className='h-8 w-8'>
+                <Dice6
+                  className={`w-6 h-6 ${formData.lorasRandom ? 'text-primary' : 'text-muted-foreground'}`}
                 />
-                <NumberInput
-                  value={lora.weight}
-                  onChange={(value) => updateLoraWeight(lora.name, value)}
-                  min={-2} max={2} step={0.1} className={"h-7 w-16 text-sm border-0 !bg-transparent border-b"}
-                  disabled={readOnly || lora.random || formData.lorasRandom}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeLora(lora.name)}
-                  className="h-6 w-6"
-                  disabled={readOnly || formData.lorasRandom}
-                >
-                  <Trash className="h-3 w-3" />
-                </Button>
-              </div>
+              </Button>
+
+
             </div>
-          ))}
-        </div>
-      )}
+          </div>
 
+
+
+          {formData.loras && formData.loras.length > 0 && (
+            <div>
+              {formData.loras.map((lora) => (
+                <div key={lora.name} className="mb-2 h-8 grid grid-cols-2 gap-2 items-center">
+                  <div className={`font-medium truncate ${formData.lorasRandom ? 'text-muted-foreground' : ''}`} title={lora.name}>{getModelLabel(availableLoras, lora.name)}</div>
+                  <div className="flex items-center gap-1">
+
+                    <Button
+                      disabled={readOnly || formData.lorasRandom} variant="ghost"
+                      onClick={() => toggleLoraRandom(lora.name)}
+                    >
+                      <Dice6
+                        className={`w-6 h-6 ${lora.random ? 'text-primary' : 'text-muted-foreground'}`}
+                      />
+                    </Button>
+
+
+
+                    <Slider
+                      value={[lora.weight]}
+                      min={-2}
+                      max={2}
+                      step={0.1}
+                      onValueChange={(value: number[]) => updateLoraWeight(lora.name, value[0])}
+                      disabled={readOnly || lora.random || formData.lorasRandom}
+                      className=''
+                    />
+                    <NumberInput
+                      value={lora.weight}
+                      onChange={(value) => updateLoraWeight(lora.name, value)}
+                      min={-2} max={2} step={0.1} className={"h-7 w-16 text-sm border-0 !bg-transparent border-b"}
+                      disabled={readOnly || lora.random || formData.lorasRandom}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeLora(lora.name)}
+                      className="h-6 w-6"
+                      disabled={readOnly || formData.lorasRandom}
+                    >
+                      <Trash className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem disabled={readOnly} onClick={() => handleUpateCopyPrompt('loras')}>Copy Lora</ContextMenuItem>
+          <ContextMenuItem disabled={readOnly || !GetCopyPromptPart('loras')} onClick={() => handleUpatePastePrompt('loras')}>Paste Lora</ContextMenuItem>
+          <ContextMenuItem disabled={readOnly} variant='destructive' onClick={() => handleFormChange({ loras: [] })}>Clear Loras</ContextMenuItem>
+
+        </ContextMenuContent>
+      </ContextMenu>
 
       <Separator className='mb-0 my-3' />
 
       {/* Tags */}
-      <div>
-        <div className="flex justify-between gap-2 mb-2">
-          <Label htmlFor="tags" className="pb-2">Tags</Label>
 
-          <Input
-            id="tags"
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={handleTagKeyDown}
-            placeholder="Add tags (press Enter to add)"
-            className={"h-8 flex-1"}
-            readOnly={readOnly}
-            disabled={readOnly}
-          />
-          <Button
-            type="button"
-            variant="default"
-            size="sm"
-            onClick={() => addTags(tagInput)}
-            disabled={tagInput === '' || readOnly}
-          >
-            Add
-          </Button>
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {formData.tags.map((tag) => (
-            <Badge key={tag} variant="secondary" className="flex items-center justify-center gap-1 text-xs py-1">
-              {tag}
-              {!readOnly && (
-                <div className="h-3 w-3 cursor-pointer" onClick={() => removeTag(tag)} >
-                  <XIcon size={12} />
-                </div>
-              )}
-            </Badge>
-          ))}
-        </div>
-      </div>
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <div>
+            <div className="flex justify-between gap-2 mb-2">
+              <Label htmlFor="tags" className="pb-2">Tags</Label>
+
+              <Input
+                id="tags"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                placeholder="Add tags (press Enter to add)"
+                className={"h-8 flex-1"}
+                readOnly={readOnly}
+                disabled={readOnly}
+              />
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={() => addTags(tagInput)}
+                disabled={tagInput === '' || readOnly}
+              >
+                Add
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {formData.tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="flex items-center justify-center gap-1 text-xs py-1">
+                  {tag}
+                  {!readOnly && (
+                    <div className="h-3 w-3 cursor-pointer" onClick={() => removeTag(tag)} >
+                      <XIcon size={12} />
+                    </div>
+                  )}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem disabled={readOnly} onClick={() => handleUpateCopyPrompt('tags')}>Copy Tags</ContextMenuItem>
+          <ContextMenuItem disabled={readOnly || !GetCopyPromptPart('tags')} onClick={() => handleUpatePastePrompt('tags')}>Paste Tags</ContextMenuItem>
+          <ContextMenuItem disabled={readOnly} variant='destructive' onClick={() => handleFormChange({ tags: [] })}>Clear Tags</ContextMenuItem>
+
+        </ContextMenuContent>
+      </ContextMenu>
     </div >
+
   );
 }

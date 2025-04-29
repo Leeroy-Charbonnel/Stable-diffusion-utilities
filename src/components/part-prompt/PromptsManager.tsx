@@ -16,6 +16,7 @@ import { SD_API_BASE_URL } from '@/lib/constants';
 export function PromptsManager() {
   const { isConnected, generateImage, availableSamplers, availableModels, availableLoras } = useApi();
   const { prompts, loadPrompts, addPrompt, updatePrompt, deletePrompt, reorderPrompt, isLoading: isPromptLoading } = usePrompt();
+  const [refreshContextMenu, setRefreshContextMenu] = useState(false);
 
   const [status, setStatus] = useState<ExecutionStatus>('idle');
 
@@ -80,6 +81,10 @@ export function PromptsManager() {
       clearInterval(elapsedTimeIntervalRef.current);
       elapsedTimeIntervalRef.current = null;
     }
+  };
+
+  const handleUpdateCopyRefresh = () => {
+    setRefreshContextMenu(!refreshContextMenu);
   };
 
   const fetchProgressData = async () => {
@@ -374,6 +379,7 @@ export function PromptsManager() {
                 onRunPrompt={handleExecutePrompt}
                 onSkipExecution={handleSkipCurrentPrompt}
                 onDuplicatePrompt={() => handleDuplicatePrompt(prompt)}
+                onCopyRefresh={() => handleUpdateCopyRefresh()}
 
                 onDelete={() => deletePrompt(prompt.id)}
                 onMove={reorderPrompt}

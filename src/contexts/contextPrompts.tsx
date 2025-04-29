@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
-import { PromptEditor } from '@/types';
+import { LoraEditorConfig, PromptEditor } from '@/types';
 import * as promptsApi from '@/services/apiPrompt';
 import { toast } from 'sonner';
-import { DEBOUNCE_DELAY } from '@/lib/constants';
+import { DEBOUNCE_DELAY, DEFAULT_PROMPT_STEP } from '@/lib/constants';
+import { generateUUID } from '@/lib/utils';
 
 interface PromptContextType {
     prompts: PromptEditor[];
+    UpdateCopyPromptPart: <T extends keyof PromptEditor>(propName: T, value: PromptEditor[T]) => void;
+    GetCopyPromptPart: <T extends keyof PromptEditor>(propName: T) => PromptEditor[T] | undefined;
     isLoading: boolean;
     error: string | null;
     loadPrompts: () => Promise<void>;
@@ -19,9 +22,37 @@ const PromptContext = createContext<PromptContextType | undefined>(undefined);
 
 export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [prompts, setPrompts] = useState<PromptEditor[]>([]);
+    const [promptCopy, setPromptCopy] = useState<PromptEditor | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const initialiseCopyPrompt = () => {
+        console.log("initialiseCopyPrompt");
+        const prompt: PromptEditor = {
+            id: generateUUID(),
+            isOpen: false,
+            name: '',
+            text: '',
+            negativePrompt: '',
+            cfgScale: 0,
+            seed: -1,
+            steps: DEFAULT_PROMPT_STEP,
+            sampler: '',
+            models: [],
+            width: 0,
+            height: 0,
+            lorasRandom: false,
+            runCount: 1,
+            tags: [],
+            loras: [],
+            currentRun: 0,
+            status: 'idle',
+        };
+        setPromptCopy(prompt);
+    }
+
+
 
     const saveToDisk = async () => {
         try {
@@ -68,6 +99,7 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     //Load prompts on mount
     useEffect(() => {
+        initialiseCopyPrompt();
         loadPrompts();
     }, []);
 
@@ -166,8 +198,27 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
     };
 
+    function UpdateCopyPromptPart<T extends keyof PromptEditor>(propName: T, value: PromptEditor[T]) {
+        if (!promptCopy) return;
+        promptCopy[propName] = value;
+        setPromptCopy(promptCopy);
+        toast.success(`Copied ${propName} to clipboard`);
+    }
+    function GetCopyPromptPart<T extends keyof PromptEditor>(propName: T): PromptEditor[T] | undefined {
+        if (!promptCopy) return;
+        const value = promptCopy[propName];
+
+        if (propName === 'tags' && (value as string[]).length == 0) return
+        if (propName === 'loras' && (value as LoraEditorConfig[]).length == 0) return
+        if (propName === 'models' && (value as string[]).length == 0) return
+
+        return value;
+    }
+
     const value: PromptContextType = {
         prompts,
+        UpdateCopyPromptPart,
+        GetCopyPromptPart,
         isLoading,
         error,
         loadPrompts,
