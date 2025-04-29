@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Image as ImageIcon, RefreshCw, FolderOpen, Trash2, CheckSquare, FolderClosed, X } from 'lucide-react';
 import { useApi } from '@/contexts/contextSD';
-import { ImageMetadata } from '@/types';
+import { ImageMetadata, LabelsData, PromptEditor } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
@@ -15,8 +15,8 @@ import { FilterPanel } from './FilterPanel';
 import { ImageCard } from './ImageCard';
 import { ImageDetailsDialog } from './ImageDetailsDialog';
 import { usePrompt } from '@/contexts/contextPrompts';
-import { generateUUID } from '@/lib/utils';
-import { getImageFromPath } from '@/services/apiFS';
+import { generateUUID, getModelLabel } from '@/lib/utils';
+import { getImageFromPath, getLabelsData } from '@/services/apiFS';
 
 // interface ImageViewerProps {
 //   isActiveTab: boolean,
@@ -25,6 +25,8 @@ import { getImageFromPath } from '@/services/apiFS';
 export function ImageViewer() {
   const { apiFS, isLoading: isApiLoading } = useApi();
   const { addPrompt } = usePrompt();
+
+  const [labelsData, setLabelsData] = useState<LabelsData>({ modelLabels: [], lorasLabels: [] });
 
   //Images arrays
   const [generatedImages, setGeneratedImages] = useState<ImageMetadata[]>([]);
@@ -68,9 +70,13 @@ export function ImageViewer() {
   //Function to load images from server
   async function loadImagesFromServer() {
     try {
+      const labelsData = await getLabelsData();
+      setLabelsData(labelsData);
+
       const loadedImages = await apiFS.getAllImageMetadata();
+      // loadedImages.forEach(img => img.promptData.model = getModelLabel(labelsData.modelLabels, img.promptData.model));
       setGeneratedImages(loadedImages);
-      // console.log(`ImageViewer - Loaded ${loadedImages.length} images`);
+      console.log(`ImageViewer - Loaded ${loadedImages.length} images`);
     } catch (error) {
       console.error('Failed to load images from server:', error);
     }
@@ -81,7 +87,7 @@ export function ImageViewer() {
     try {
       const folders = await apiFS.getFolders();
       setAvailableFolders(folders.sort());
-      // console.log(`ImageViewer - Loaded ${folders.length} folders`);
+      console.log(`ImageViewer - Loaded ${folders.length} folders`);
     } catch (error) {
       console.error('Failed to load folders:', error);
       setAvailableFolders(['default']);
@@ -194,9 +200,9 @@ export function ImageViewer() {
     const loras = new Set<string>();
 
     generatedImages.forEach(img => {
-      img.tags?.forEach(tag => tags.add(tag));
-      if (img.model) { models.add(img.model); }
-      if (img.loras && img.loras.length > 0) { img.loras.forEach(lora => loras.add(lora.name)); }
+      img.promptData.tags?.forEach(tag => tags.add(tag));
+      if (img.promptData.model) { models.add(img.promptData.model); }
+      if (img.promptData.loras && img.promptData.loras.length > 0) { img.promptData.loras.forEach(lora => loras.add(lora.name)); }
     });
 
     setAvailableTags(Array.from(tags).sort());
@@ -212,23 +218,23 @@ export function ImageViewer() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (img) =>
-          img.prompt.toLowerCase().includes(query) ||
-          (img.name && img.name.toLowerCase().includes(query)) ||
-          img.tags.some((tag) => tag.toLowerCase().includes(query))
+          img.promptData.text.toLowerCase().includes(query) ||
+          (img.promptData.name && img.promptData.name.toLowerCase().includes(query)) ||
+          img.promptData.tags.some((tag) => tag.toLowerCase().includes(query))
       );
     }
 
     //Filter by selected tags (all selected tags must be present)
     if (selectedTags.length > 0) {
-      filtered = filtered.filter((img) => selectedTags.every((tag) => img.tags.includes(tag)));
+      filtered = filtered.filter((img) => selectedTags.every((tag) => img.promptData.tags.includes(tag)));
     }
     //Filter by selected models
     if (selectedModels.length > 0) {
-      filtered = filtered.filter((img) => img.model && selectedModels.includes(img.model));
+      filtered = filtered.filter((img) => img.promptData.model && selectedModels.includes(img.promptData.model));
     }
     //Filter by selected loras
     if (selectedLoras.length > 0) {
-      filtered = filtered.filter((img) => img.loras && img.loras.some((lora) => selectedLoras.includes(lora.name)));
+      filtered = filtered.filter((img) => img.promptData.loras && img.promptData.loras.some((lora) => selectedLoras.includes(lora.name)));
     }
     //Filter by selected folders
     if (selectedFolders.length > 0) {
@@ -385,6 +391,7 @@ export function ImageViewer() {
       console.error('Error deleting image(s):', error);
       toast.error("Failed to delete image(s)");
     } finally {
+      console.log('deleted, setting open to false');
       setIsLoading(false);
       setDeleteDialogOpen(false);
       setImagesToDelete([]);
@@ -395,30 +402,31 @@ export function ImageViewer() {
   const handleCreatePrompt = async (image: ImageMetadata) => {
     try {
       //Create a new prompt from the image
-      const newPrompt = {
+      const newPrompt: PromptEditor = {
+
         id: generateUUID(),
         isOpen: false,
-        folder: image.folder,
-        name: image.name,
-        text: image.prompt,
-        negativePrompt: image.negativePrompt,
-        seed: image.seed,
-        cfgScale: image.cfgScale,
-        steps: image.steps,
-        sampler: image.sampler,
-        model: image.model,
-        width: image.width,
-        height: image.height,
         runCount: 1,
-        tags: [...image.tags],
-        loras: image.loras || [],
         currentRun: 0,
         status: "idle",
+
+        name: image.promptData.name,
+        text: image.promptData.text,
+        negativePrompt: image.promptData.negativePrompt,
+        cfgScale: image.promptData.cfgScale,
+        seed: image.promptData.seed,
+        steps: image.promptData.steps,
+        sampler: image.promptData.sampler,
+        width: image.promptData.width,
+        height: image.promptData.height,
+        tags: [...image.promptData.tags],
+
+        models: [image.promptData.model],
+        lorasRandom: false,
+        loras: image.promptData.loras.map(l => { return { ...l, random: false } }) || [],
       };
 
       await addPrompt(newPrompt);
-      toast.success("Prompt created successfully");
-
     } catch (error) {
       console.error('Error creating prompt:', error);
       toast.error("Error creating prompt", {

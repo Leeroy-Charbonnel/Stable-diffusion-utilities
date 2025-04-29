@@ -84,7 +84,6 @@ export interface SaveImageRequest {
   metadata: ImageMetadata;
 }
 
-//Stable Diffusion API progress data
 export interface ProgressData {
   progress: number;
   eta_relative: number;

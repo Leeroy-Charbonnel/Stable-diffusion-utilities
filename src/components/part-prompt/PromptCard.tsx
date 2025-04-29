@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, Check, X, Play, ChevronDown, ChevronUp, StopCircle, SkipBack, SkipForward } from 'lucide-react';
+import { Trash2, Check, X, Play, ChevronDown, ChevronUp, SkipForward } from 'lucide-react';
 import { LabelItem, PromptEditor } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -10,6 +10,7 @@ import { PromptForm } from './PromptForm';
 import { Separator } from '@/components/ui/separator';
 import { NumberInput } from '../ui/number-input';
 import { getModelLabel } from '@/lib/utils';
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '../ui/context-menu';
 
 
 type PromptCardProps = {
@@ -21,7 +22,7 @@ type PromptCardProps = {
 
   onRunPrompt: (prompt: PromptEditor) => void;
   onSkipExecution: () => void;
-  onCancelExecution: () => void;
+  onDuplicatePrompt: () => void;
 
   onDelete: () => void;
   onMove: (id: string, direction: 'up' | 'down') => void;
@@ -52,7 +53,7 @@ export function PromptCard({
   onPromptUpdate,
   onRunPrompt,
   onSkipExecution,
-  onCancelExecution,
+  onDuplicatePrompt,
   isExecuted = false,
   isExecuting = false,
   isCancelling = false,
@@ -117,80 +118,91 @@ export function PromptCard({
     <Card className="overflow-hidden rounded-none p-0 gap-0 w-full">
       <Accordion type="single" collapsible value='true' className="w-full">
         <AccordionItem value={prompt.isOpen.toString()} className="border-none">
-          <div className={`px-4 py-2 flex items-center justify-between`}>
-            <div className="flex-1 truncate flex items-center">
+          <ContextMenu>
+            <ContextMenuTrigger>
 
-              <AccordionTrigger className="hover:no-underline py-0 mr-2 flex" onClick={handleAccordionChange}></AccordionTrigger>
+              <div className={`px-4 py-2 flex items-center justify-between`}>
+                <div className="flex-1 truncate flex items-center">
 
-              <span className="text-xs font-medium bg-input/30 h-6 w-6 p-3.5 flex items-center justify-center mr-2">{index}</span>
+                  <AccordionTrigger className="hover:no-underline py-0 mr-2 flex" onClick={handleAccordionChange}></AccordionTrigger>
 
-              {isExecuting && (<h3 className="text-sm font-medium truncate">{prompt.name}</h3>)}
+                  <span className="text-xs font-medium bg-input/30 h-6 w-6 p-3.5 flex items-center justify-center mr-2">{index}</span>
 
-              {!isExecuting && (
-                isEditingName ? (
-                  <div className="flex items-center flex-1">
-                    <Input value={nameValue} onChange={handleNameChange} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
-                    <Button size="icon" variant="outline" onClick={saveNameChange} className="h-6 w-6 mx-1 p-3.5 border-0"><Check /></Button>
-                    <Button size="icon" variant="outline" onClick={cancelNameEdit} className="h-6 w-6 p-3.5 border-0"> <X /></Button>
+                  {isExecuting && (<h3 className="text-sm font-medium truncate">{prompt.name}</h3>)}
+
+                  {!isExecuting && (
+                    isEditingName ? (
+                      <div className="flex items-center flex-1">
+                        <Input value={nameValue} onChange={handleNameChange} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
+                        <Button size="icon" variant="outline" onClick={saveNameChange} className="h-6 w-6 mx-1 p-3.5 border-0"><Check /></Button>
+                        <Button size="icon" variant="outline" onClick={cancelNameEdit} className="h-6 w-6 p-3.5 border-0"> <X /></Button>
+                      </div>
+                    ) : (
+                      <h3 className="text-sm font-medium truncate hover:underline cursor-pointer" onClick={() => { setIsEditingName(true); }}>
+                        {prompt.name}
+                      </h3>
+                    ))}
+                </div>
+                <div className="flex items-center space-x-2 ml-2">
+
+                  {!isExecuting && (
+                    <Button
+                      variant="outline" size="sm" onClick={() => { onRunPrompt(prompt); }} className="h-6 p-3.5 text-xs border-0" disabled={isExecuting || !isApiConnected}>
+                      <Play className="mr-1 h-3 w-3" />Run</Button>
+                  )}
+
+                  {isCurrentlyExecuting && (
+                    <Button variant="destructive" size="sm" onClick={onSkipExecution} disabled={isCancelling || isSkipping} className="h-6 p-3.5 text-xs border-0">
+                      <SkipForward className="mr-1 h-3 w-3" />{isSkipping ? "Skipping..." : "Skip"}</Button>
+                  )}
+
+
+                  <div className="text-xs font-medium bg-input/30 h-7 px-2 flex items-center justify-center">
+
+                    <NumberInput
+                      value={prompt.runCount} min={0} max={99}
+                      onChange={(value: number) => handlePromptPartUpdate("runCount", value)}
+                      className="h-full !bg-transparent border-0 max-w-6 text-right flex items-center justify-center px-0 mx-0 pr-2" disabled={isExecuting}
+                    />
+                    <div>×</div>
                   </div>
-                ) : (
-                  <h3 className="text-sm font-medium truncate hover:underline cursor-pointer" onClick={() => { setIsEditingName(true); }}>
-                    {prompt.name}
-                  </h3>
-                ))}
-            </div>
-            <div className="flex items-center space-x-2 ml-2">
 
-              {!isExecuting && (
-                <Button
-                  variant="outline" size="sm" onClick={() => { onRunPrompt(prompt); }} className="h-6 p-3.5 text-xs border-0" disabled={isExecuting || !isApiConnected}>
-                  <Play className="mr-1 h-3 w-3" />Run</Button>
-              )}
+                  <Button variant="ghost" size="icon" onClick={() => { onMove(prompt.id, 'up'); }}
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-white/10" disabled={isExecuting}>
+                    <ChevronUp />
+                  </Button>
 
-              {isCurrentlyExecuting && (
-                <Button variant="destructive" size="sm" onClick={onSkipExecution} disabled={isCancelling || isSkipping} className="h-6 p-3.5 text-xs border-0">
-                  <SkipForward className="mr-1 h-3 w-3" />{isSkipping ? "Skipping..." : "Skip"}</Button>
-              )}
+                  <Button variant="ghost" size="icon" onClick={() => { onMove(prompt.id, 'down'); }}
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-white/10" disabled={isExecuting}>
+                    <ChevronDown />
+                  </Button>
 
-
-              <div className="text-xs font-medium bg-input/30 h-7 px-2 flex items-center justify-center">
-
-                <NumberInput
-                  value={prompt.runCount} min={0} max={99}
-                  onChange={(value: number) => handlePromptPartUpdate("runCount", value)}
-                  className="h-full !bg-transparent border-0 max-w-6 text-right flex items-center justify-center px-0 mx-0 pr-2" disabled={isExecuting}
-                />
-                <div>×</div>
-              </div>
-
-              <Button variant="ghost" size="icon" onClick={() => { onMove(prompt.id, 'up'); }}
-                className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-white/10" disabled={isExecuting}>
-                <ChevronUp />
-              </Button>
-
-              <Button variant="ghost" size="icon" onClick={() => { onMove(prompt.id, 'down'); }}
-                className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-white/10" disabled={isExecuting}>
-                <ChevronDown />
-              </Button>
-
-              <Button variant="ghost" size="icon" onClick={() => { onDelete(); }}
-                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" disabled={isExecuting}>
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </div>
-
-
-          {(isExecuted || isCurrentlyExecuting) && (
-            <div className="px-4 py-3 space-y-2">
-              <div className="w-full">
-                <div className="flex items-center gap-2">
-                  <Progress value={currentProgress} className="h-1 flex-1" />
-                  <span className="text-xs">{prompt.currentRun}/{prompt.runCount}</span>
+                  <Button variant="ghost" size="icon" onClick={() => { onDelete(); }}
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" disabled={isExecuting}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
               </div>
-            </div>
-          )}
+
+
+              {(isExecuted || isCurrentlyExecuting) && (
+                <div className="px-4 py-3 space-y-2">
+                  <div className="w-full">
+                    <div className="flex items-center gap-2">
+                      <Progress value={currentProgress} className="h-1 flex-1" />
+                      <span className="text-xs">{prompt.currentRun}/{prompt.runCount}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </ContextMenuTrigger>
+            <ContextMenuContent>
+              <ContextMenuItem onClick={onDuplicatePrompt}>Duplicate prompt</ContextMenuItem>
+              <ContextMenuItem variant='destructive' onClick={onDelete}>Delete prompt</ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
+
           <AccordionContent className="pt-0">
             <div className="px-0">
               <PromptForm

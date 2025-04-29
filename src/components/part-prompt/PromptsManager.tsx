@@ -273,17 +273,19 @@ export function PromptsManager() {
       prompt.currentRun = 0;
       for (let i = 0; i < prompt.runCount; i++) {
 
+        //Check if execution has been cancelled
+        if (cancelExecutionRef.current) {
+          console.log(`Execution cancelled for prompt ${prompt.id}`);
+          break;
+        }
+
         if (skipExecutionRef.current) {
           console.log(`Execution skipped for prompt ${prompt.id} for model ${model}`);
           skipExecutionRef.current = false;
           break;
         }
 
-        //Check if execution has been cancelled
-        if (cancelExecutionRef.current) {
-          console.log(`Execution cancelled for prompt ${prompt.id}`);
-          break;
-        }
+
 
         try {
           const result = await generateImage(promptData);
@@ -332,6 +334,18 @@ export function PromptsManager() {
     await addPrompt(newPrompt);
   };
 
+
+  const handleDuplicatePrompt = async (prompt: PromptEditor) => {
+    const newPrompt: PromptEditor = {
+      ...prompt,
+      id: generateUUID(),
+      currentRun: 0,
+      status: 'idle',
+    }
+
+    await addPrompt(newPrompt);
+  }
+
   return (
     <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-8rem)]">
       <ResizablePanel defaultSize={75} minSize={30}>
@@ -359,7 +373,7 @@ export function PromptsManager() {
 
                 onRunPrompt={handleExecutePrompt}
                 onSkipExecution={handleSkipCurrentPrompt}
-                onCancelExecution={handleInterruptExecution}
+                onDuplicatePrompt={() => handleDuplicatePrompt(prompt)}
 
                 onDelete={() => deletePrompt(prompt.id)}
                 onMove={reorderPrompt}

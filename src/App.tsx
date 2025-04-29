@@ -49,7 +49,7 @@ function App() {
             <div className="w-full h-screen">
               <div className="h-full">
                 <div className="h-full" style={{ display: activeTab === 'prompts' ? 'block' : 'none' }}><PromptsManager /></div>
-                {/* <div className="h-full" style={{ display: activeTab === 'images' ? 'block' : 'none' }}><ImageViewer /></div> */}
+                <div className="h-full" style={{ display: activeTab === 'images' ? 'block' : 'none' }}><ImageViewer /></div>
                 <div className="h-full" style={{ display: activeTab === 'ai' ? 'block' : 'none' }}><AiChat /></div>
                 <div className="h-full" style={{ display: activeTab === 'models' ? 'block' : 'none' }}><ModelsManager /></div>
               </div>

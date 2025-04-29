@@ -79,7 +79,7 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
             if (success) {
                 setPrompts(updatedPrompts);
-                toast("Prompt created successfully!");
+                toast.success("Prompt created successfully!");
                 return true;
             }
             toast("Failed to create prompt");

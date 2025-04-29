@@ -145,5 +145,34 @@
         "weight": 0.6
       }
     ]
+  },
+  {
+    "id": "2b99c45f-ef40-441d-b37a-11ee37f0c00c",
+    "isOpen": false,
+    "runCount": 1,
+    "currentRun": 0,
+    "status": "idle",
+    "name": "Inventive Futuristic Cityscape",
+    "text": "A sprawling futuristic city at sunset, filled with imaginative architecture and glowing neon lights. Towering skyscrapers with organic, flowing shapes, transparent sky bridges connecting buildings, flying vehicles zipping between the towers. The streets below bustle with diverse, cyberpunk-inspired characters. The scene is vibrant, colorful, and highly detailed, blending a sense of wonder and technology. Style: digital art, highly detailed, cinematic lighting, wide-angle perspective.",
+    "negativePrompt": "low quality, blurry, distorted, deformed buildings, extra limbs, text, watermarks, dull colors, repetitive patterns",
+    "cfgScale": 7,
+    "seed": -1,
+    "steps": 20,
+    "sampler": "DPM++ 2M",
+    "width": 512,
+    "height": 512,
+    "tags": [
+      "futuristic",
+      "cityscape",
+      "cyberpunk",
+      "digital art",
+      "cinematic",
+      "imaginative"
+    ],
+    "models": [
+      "CheckpointYesmix_v16Original"
+    ],
+    "lorasRandom": false,
+    "loras": []
   }
 ]
