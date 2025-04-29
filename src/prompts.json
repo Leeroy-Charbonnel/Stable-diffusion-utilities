@@ -2,7 +2,7 @@
   {
     "id": "efa3a0f6-1e30-4a67-84a2-1f4004d7781f",
     "isOpen": false,
-    "runCount": 1,
+    "runCount": 20,
     "currentRun": 0,
     "status": "idle",
     "name": "Inventive Futuristic Cityscape",
@@ -23,7 +23,8 @@
       "imaginative"
     ],
     "models": [
-      "CheckpointYesmix_v16Original"
+      "CheckpointYesmix_v16Original",
+      "prefectIllustriousXL_v10"
     ],
     "lorasRandom": false,
     "loras": []

@@ -134,7 +134,7 @@ export function PromptsManager() {
     setSuccessCount(0);
     setFailureCount(0);
     setCurrentPromptIndex(0);
-    setPromptsToRunCount(promptToExecute.runCount);
+    setPromptsToRunCount(promptToExecute.runCount * promptToExecute.models.length);
 
     //Reset flag
     cancelExecutionRef.current = false;
@@ -236,6 +236,9 @@ export function PromptsManager() {
 
     for (let k = 0; k < prompt.models.length; k++) {
       const model = prompt.models[k];
+      console.log("setting current run to 0");
+      prompt.currentRun = 0;
+
       setExecutingModel(model);
 
       const promptData: Prompt = {
@@ -267,7 +270,7 @@ export function PromptsManager() {
         height: prompt.height,
         tags: prompt.tags
       }
-
+      prompt.currentRun = 0;
       for (let i = 0; i < prompt.runCount; i++) {
 
         if (skipExecutionRef.current) {

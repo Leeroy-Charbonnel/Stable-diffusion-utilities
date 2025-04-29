@@ -64,69 +64,63 @@ export function ExecutionPanel({
       )}
 
       {/* Progress Section */}
-      <div className="mb-4">
-        <div className="flex justify-between text-sm font-medium mb-1">
-          <span>Overall Progress</span>
-          <span>{currentPromptIndex} of {promptsToRunCount} ({progressPercentage}%)</span>
-        </div>
+      <div className="flex mb-4 items-center gap-2">
+        <span className='text-nowrap'>Overall Progress</span>
         <Progress value={progressPercentage} className="h-1" />
+        <span className='text-nowrap'>{currentPromptIndex} of {promptsToRunCount}</span>
       </div>
 
       {/* Current Generation Progress */}
       {isExecuting && progressData && (
-        <div className="mb-4">
-          <div className="flex justify-between text-sm font-medium mb-1">
-            <span>Current Generation</span>
-            <span>Step {progressData.state.sampling_step} / {progressData.state.sampling_steps} ({sdProgressPercentage}%)</span>
-          </div>
+        <div className="flex mb-4 items-center gap-2">
+          <span className='text-nowrap'>Current Generation</span>
           <Progress value={sdProgressPercentage} className="h-1" />
+          <span className='text-nowrap'>Step {progressData.state.sampling_step} / {progressData.state.sampling_steps}</span>
         </div>
       )}
-
-      {/* Preview Image Section */}
-      {isExecuting && progressData?.current_image && (
-        <div className="mb-4 flex justify-center">
-          <div className="border rounded overflow-hidden w-full aspect-square max-w-44">
-            <img
-              src={`data:image/png;base64,${progressData.current_image}`}
-              alt="Generation preview"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </div>
-      )}
-
       <Separator className='my-2' />
 
       {/* Counters Section */}
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        <div className="p-3 rounded-md flex">
-          <div className="flex items-center">
-            <CheckCircle className="h-4 w-4 mr-2" />
-            <span>Success {successCount}</span>
-          </div>
-        </div>
-
-        <div className="p-3 rounded-md flex">
-          <div className="flex items-center ">
-            <XCircle className="h-4 w-4 mr-2" />
-            <span>Failed {failureCount}</span>
-          </div>
-        </div>
+      <div className="flex gap-2 mx-auto">
+        <span>Success {successCount}</span>
+        <span className="mx-2">|</span>
+        <span>Failed {failureCount}</span>
       </div>
+
+      <Separator className='my-2' />
+
+
+      {/* Preview Image Section */}
+      {isExecuting && progressData?.current_image && (
+        <div className="flex flex-1 justify-center items-start w-5/6 mx-auto mb-4 overflow-hidden">
+          <img
+            src={`data:image/png;base64,${progressData.current_image}`}
+            alt="Generation preview"
+            className="w-full max-h-full object-contain"
+          />
+        </div>
+      )}
+
+
+
+
 
       {/* Total Stats Section - Now above action button */}
       {!isExecuting && (hasCompleted || (successCount > 0 || failureCount > 0)) && (
-        <div className="mb-4 p-3 bg-secondary/20 rounded-md">
-          <h4 className="text-sm font-medium mb-2">Last Execution Stats</h4>
-          <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="mb-4 p-3 bg-secondary/20 text-sm">
+          <h4 className="text-sm  mb-2">Last Execution Stats</h4>
+
+          <span className="text-muted-foreground">Total Time:</span>
+          <span className="ml-2">{formatTime(elapsedTime)}</span>
+
+          <div className="grid grid-cols-2 gap-2">
             <div>
               <span className="text-muted-foreground">Total Images:</span>
-              <span className="ml-2 font-medium">{successCount + failureCount}</span>
+              <span className="ml-2">{successCount + failureCount}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Success Rate:</span>
-              <span className="ml-2 font-medium">
+              <span className="ml-2">
                 {(successCount + failureCount) > 0
                   ? Math.round((successCount / (successCount + failureCount)) * 100)
                   : 0}%
@@ -136,14 +130,6 @@ export function ExecutionPanel({
         </div>
       )}
 
-      {/* Status Message */}
-      {status === 'completed' && (
-        <div className="mb-4 p-2 bg-green-50 dark:bg-green-900/20 rounded text-sm">
-          Execution completed!
-        </div>
-      )}
-
-      {/* Action Buttons - Now at the end, using mt-auto to push it to bottom */}
       <div className="mt-auto">
         {isExecuting ? (
           <Button

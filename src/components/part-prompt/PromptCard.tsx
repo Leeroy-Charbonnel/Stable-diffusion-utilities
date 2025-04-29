@@ -214,7 +214,7 @@ export function PromptCard({
             <div className="flex flex-wrap gap-1.5">
               {/*Model Badge - Primary*/}
               {showModels && prompt.models && prompt.models.map(model => (
-                <div key="model" className={`flex items-center px-2 py-0.5 h-5 bg-primary/30 ${isCurrentlyExecuting && model === executingModel ? 'border-b border-primary' : ''}`}>
+                <div key="model" className={`flex items-center px-2 py-0.5 h-5 bg-primary/30 ${isCurrentlyExecuting && model === executingModel ? 'animate-pulse' : ''}`}>
                   <div className="text-xs max-w-[100px] truncate">
                     {getModelLabel(availableModels, model)}
                   </div>
