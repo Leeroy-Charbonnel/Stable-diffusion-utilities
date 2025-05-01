@@ -15,6 +15,7 @@ dist-ssr
 tests/*
 src/output/*
 src/lib/constantsKeys.ts
+src/prompt*.json
 
 # Editor directories and files
 .vscode/*
