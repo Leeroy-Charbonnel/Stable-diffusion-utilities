@@ -1,122 +1,162 @@
 {
   "modelLabels": [
     {
-      "name": "CheckpointYesmix_v16Original",
-      "label": "Checkpoint 4"
-    },
-    {
-      "name": "Flux.1-Dev Hyper NF4 + Flux.1-Dev BNB NF4 + Flux.1-Schnell BNB NF4",
-      "label": ""
-    },
-    {
-      "name": "flux_dev",
-      "label": ""
+      "name": "cyberrealisticPony_v90Alt1",
+      "label": "CyberRealistic Pony"
     },
     {
       "name": "Hassaku XL (Illustrious)",
-      "label": ""
+      "label": "Hassaku XL (Illustrious)"
     },
     {
-      "name": "LunarCherryMix (Illustrious)",
-      "label": ""
+      "name": "hassakuXLPony_v13BetterEyesVersion",
+      "label": "Hassaku XL (Pony)"
     },
     {
-      "name": "Nova Anime XL",
-      "label": ""
+      "name": "illuquaint_v02",
+      "label": "IlluQuaint"
+    },
+    {
+      "name": "illustrij_v13",
+      "label": "Illustrij"
+    },
+    {
+      "name": "illustriousRealismBy_v10VAE",
+      "label": "Illustrious Realism by klaabu"
+    },
+    {
+      "name": "novaAnimeXL_ilV60",
+      "label": "Nova Anime XL"
+    },
+    {
+      "name": "oneFORALLPonyFantasy_v20DPO",
+      "label": "ONE FOR ALL «Pony Fantasy» DPO+VAE"
     },
     {
       "name": "plantMilkModelSuite_almond",
-      "label": ""
+      "label": "Plant Milk 🌿 - Model Suite"
     },
     {
-      "name": "Pony Diffusion V6 XL",
-      "label": ""
+      "name": "ponyDiffusionV6XL_v6StartWithThisOne",
+      "label": "Pony Diffusion V6 XL"
     },
     {
       "name": "prefectIllustriousXL_v10",
       "label": "Prefect illustrious XL"
     },
     {
-      "name": "revAnimated_v122EOL",
-      "label": ""
+      "name": "smoothMixNoobai_realism",
+      "label": "Smooth Mix - (NoobAI/Illustrious/Pony)"
     },
     {
-      "name": "Smooth Mix - (NoobAIIllustriousPony)",
-      "label": ""
-    },
-    {
-      "name": "synthwavepunk_v2",
-      "label": ""
+      "name": "waiNSFWIllustrious_v90",
+      "label": "WAI-NSFW-illustrious-SDXL"
     },
     {
       "name": "WildCardX-XL-Fusion",
-      "label": ""
+      "label": "WildCardX-XL-Fusion"
     }
   ],
   "lorasLabels": [
     {
-      "name": "69yottea_illu_v2",
-      "label": "96yottea | Style LoRa"
-    },
-    {
-      "name": "748cm_illu",
-      "label": "748cm | Shiiro's Styles | Niji"
-    },
-    {
       "name": "0010011_style_sharp",
-      "label": ""
+      "label": "DRÆM | Shiiro's Styles | Niji"
+    },
+    {
+      "name": "Anime v1.3",
+      "label": "Anime art"
     },
     {
       "name": "artilands_v02-000006",
-      "label": ""
+      "label": "Artify´s Fantastic Flux Landscape Lora V2.0"
     },
     {
-      "name": "BeautyInEvilFlux",
-      "label": ""
+      "name": "Billie_SexNote",
+      "label": "Billie (SexNote) Illustrious/Pony"
     },
     {
-      "name": "Dark_Ghibli",
-      "label": "TEST DARK GHIBLI 4"
+      "name": "ck-Sommo-Concept-Art-000015",
+      "label": "Sommo Sci-Fi Concept Art by ChronoKnight - [FLUX & IL]"
     },
     {
-      "name": "Dissolve Style [FLUX+SDXL+SD1.5]",
-      "label": ""
+      "name": "Cyberpunk_Style",
+      "label": "Cyberpunk Style"
     },
     {
-      "name": "extremely detailed (no trigger) - sliders.ntcai.xyz",
-      "label": ""
+      "name": "DetailedEyes_V3",
+      "label": "DetailedEyes_XL"
     },
     {
-      "name": "illustrious_all_rated_v1",
-      "label": "Motimalu - All Rated (Illustrious)"
+      "name": "Expressive_H-000001",
+      "label": "ExpressiveH (Hentai LoRa Style) エロアニメ"
     },
     {
-      "name": "J_Anime",
-      "label": ""
+      "name": "g0th1cPXL",
+      "label": "Vixon's Pony Styles - gothic neon"
     },
     {
-      "name": "ppw_v7_Animv4",
-      "label": "Pony: People's Works"
+      "name": "il_color_temp_slider_d1",
+      "label": "(IL Slider | Tweaker) Color Temperature, Saturation, Brightness | 色温 亮度 饱和度 (IL/Noob调节滑块)"
     },
     {
-      "name": "SDXL Flux.1 D - Matte (Vanta)Black - Experiment",
-      "label": ""
+      "name": "illustrious_quality_modifiers_masterpieces_v1",
+      "label": "Aesthetic Quality Modifiers - Masterpiece"
     },
     {
-      "name": "Translucent - Subsurface Scattering Test",
-      "label": ""
+      "name": "incase_2024_style_v2",
+      "label": "New Incase Style (2024) | NoobAI | Illustrious | PonyXL | Flux.1 D"
     },
     {
-      "name": "Vixon's Pony Styles - gothic neon",
-      "label": ""
+      "name": "incase_style_v3-1_ponyxl_ilff",
+      "label": "Incase Style [PonyXL]"
     },
     {
-      "name": "XL Weapon Orbstaff - By HailoKnight",
-      "label": ""
+      "name": "LeIsT0_style",
+      "label": "LeIsT0 | Shiiro's Styles"
     },
     {
-      "name": "Zavy's Dark Atmospheric Contrast - SDXL",
-      "label": ""
+      "name": "Luminous_Shadowscape-000016",
+      "label": "Luminous Shadowscape"
+    },
+    {
+      "name": "OB半写实肖像画V2.0",
+      "label": "OB半写实肖像画 Semi-realistic portrait painting"
+    },
+    {
+      "name": "PCB_Image_Enhancer_for_FLUX",
+      "label": "KFT's HLA Image Enhancer [FLUX]"
+    },
+    {
+      "name": "PinkieRetroAnimeIL",
+      "label": "[Pinkie] - Retro Anime ⭐- [ILLUSTRIOUS]"
+    },
+    {
+      "name": "princess_xl_v1",
+      "label": "All Disney Princess XL LoRA Model from Ralph Breaks the Internet"
+    },
+    {
+      "name": "ral-dissolve-flux",
+      "label": "Dissolve Style [FLUX+SDXL+SD1.5]"
+    },
+    {
+      "name": "reij-detaILer",
+      "label": "detaILeReij"
+    },
+    {
+      "name": "Smooth Style 2 SDXL_LoRA_Pony Diffusion V6 XL",
+      "label": "Not Artists Styles for Pony Diffusion V6 XL"
+    },
+    {
+      "name": "Techno_Digitalis",
+      "label": "Techno Digitalis"
+    },
+    {
+      "name": "test2-000013",
+      "label": "nistyle - manga sketch & detail"
+    },
+    {
+      "name": "USNR STYLE_XL_lokr",
+      "label": "薄塗り / USNR STYLE"
     }
   ]
 }

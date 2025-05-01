@@ -1,5 +1,5 @@
 import { ImageMetadata, LabelsData, Prompt } from '@/types';
-import { FILE_API_BASE_URL } from '@/lib/constants';
+import { DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER, FILE_API_BASE_URL } from '@/lib/constants';
 
 
 const dispatchImageSavedEvent = () => {
@@ -185,7 +185,7 @@ export const getFolders = async (): Promise<string[]> => {
     return result.data;
   } catch (error) {
     console.error('Error getting folders:', error);
-    return ['default'];
+    return [DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER];
   }
 };
 

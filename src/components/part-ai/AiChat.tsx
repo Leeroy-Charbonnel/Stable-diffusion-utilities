@@ -136,9 +136,6 @@ export function AiChat() {
               <div className="flex-1 flex items-center justify-center text-muted-foreground">
                 <div className="text-center">
                   <p>No messages yet. Start the conversation!</p>
-                  <p className="text-sm mt-2 max-w-sm">
-                    Ask for a Stable Diffusion prompt or paste a Civitai image URL to extract its parameters.
-                  </p>
                 </div>
               </div>
             ) : (
@@ -205,6 +202,7 @@ export function AiChat() {
 
                 <div className="border-b pb-2">
                   <PromptForm
+                    onCopyRefresh={() => { }}
                     prompt={generatedPrompt}
                     onPromptUpdate={setGeneratedPrompt}
                     availableSamplers={availableSamplers}
@@ -215,11 +213,7 @@ export function AiChat() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                <PlusCircle className="h-12 w-12 mb-4 opacity-30" />
                 <p className="mb-2">No prompt ready yet</p>
-                <p className="text-sm max-w-xs text-center">
-                  Ask the AI to create a prompt for you, or paste a Civitai image URL to extract its parameters.
-                </p>
               </div>
             )}
 

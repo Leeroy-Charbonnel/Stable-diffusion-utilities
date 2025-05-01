@@ -25,7 +25,6 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [promptCopy, setPromptCopy] = useState<PromptEditor | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const initialiseCopyPrompt = () => {
         console.log("initialiseCopyPrompt");
@@ -52,38 +51,6 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setPromptCopy(prompt);
     }
 
-
-
-    const saveToDisk = async () => {
-        try {
-            await promptsApi.saveAllPrompts(prompts);
-        } catch (error) {
-            console.error('Error saving prompts:', error);
-        }
-    };
-
-    //Schedule save with debounce
-    const scheduleSave = () => {
-        if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current);
-        }
-        saveTimeoutRef.current = setTimeout(saveToDisk, DEBOUNCE_DELAY);
-    };
-
-    //Save on prompts change
-    useEffect(() => {
-        if (prompts.length > 0) {
-            scheduleSave();
-        }
-
-        return () => {
-            if (saveTimeoutRef.current) {
-                clearTimeout(saveTimeoutRef.current);
-                saveToDisk();
-            }
-        };
-    }, [prompts]);
-
     const loadPrompts = async (): Promise<void> => {
         setIsLoading(true);
         setError(null);
@@ -107,6 +74,7 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setIsLoading(true);
         try {
             const updatedPrompts = [...prompts, prompt];
+            console.log("add prompt");
             const success = await promptsApi.saveAllPrompts(updatedPrompts);
 
             if (success) {
@@ -125,25 +93,12 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     };
 
     const updatePrompt = async (updatedPrompt: PromptEditor): Promise<boolean> => {
-        //Update immediately
-        setPrompts(prev =>
-            prev.map(p => p.id === updatedPrompt.id ? updatedPrompt : p)
-        );
-
-        //For execution-related updates, save immediately
-        if (updatedPrompt.status !== 'idle' || updatedPrompt.currentRun > 0) {
-            if (saveTimeoutRef.current) {
-                clearTimeout(saveTimeoutRef.current);
-                saveTimeoutRef.current = null;
-            }
-            try {
-                await saveToDisk();
-                return true;
-            } catch (error) {
-                return false;
-            }
+        const updatedPrompts = prompts.map(p => p.id === updatedPrompt.id ? updatedPrompt : p)
+        const success = await promptsApi.saveAllPrompts(updatedPrompts);
+        if (success) {
+            setPrompts(updatedPrompts);
+            return true;
         }
-
         return true;
     };
 
@@ -152,7 +107,6 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         try {
             const updatedPrompts = prompts.filter(p => p.id !== promptId);
             const success = await promptsApi.saveAllPrompts(updatedPrompts);
-
             if (success) {
                 setPrompts(updatedPrompts);
                 return true;
@@ -183,6 +137,7 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             newPrompts.splice(promptIndex, 1);
             newPrompts.splice(newIndex, 0, promptToMove);
 
+            console.log("reorder prompt");
             const success = await promptsApi.saveAllPrompts(newPrompts);
 
             if (success) {

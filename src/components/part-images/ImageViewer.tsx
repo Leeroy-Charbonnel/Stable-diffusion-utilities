@@ -17,6 +17,8 @@ import { ImageDetailsDialog } from './ImageDetailsDialog';
 import { usePrompt } from '@/contexts/contextPrompts';
 import { generateUUID, getModelLabel } from '@/lib/utils';
 import { getImageFromPath, getLabelsData } from '@/services/apiFS';
+import { DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER } from '@/lib/constants';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 
 // interface ImageViewerProps {
 //   isActiveTab: boolean,
@@ -37,7 +39,7 @@ export function ImageViewer() {
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [availableLoras, setAvailableLoras] = useState<string[]>([]);
-  const [availableFolders, setAvailableFolders] = useState<string[]>(['default']);
+  const [availableFolders, setAvailableFolders] = useState<string[]>([DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER]);
   //Filter
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
@@ -63,7 +65,7 @@ export function ImageViewer() {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [moveFolderDialogOpen, setMoveFolderDialogOpen] = useState(false);
-  const [targetFolder, setTargetFolder] = useState<string>('default');
+  const [targetFolder, setTargetFolder] = useState<string>(DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER);
 
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
 
@@ -90,7 +92,7 @@ export function ImageViewer() {
       console.log(`ImageViewer - Loaded ${folders.length} folders`);
     } catch (error) {
       console.error('Failed to load folders:', error);
-      setAvailableFolders(['default']);
+      setAvailableFolders([DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER]);
     }
   };
 
@@ -238,7 +240,7 @@ export function ImageViewer() {
     }
     //Filter by selected folders
     if (selectedFolders.length > 0) {
-      filtered = filtered.filter((img) => selectedFolders.includes(img.folder || 'default'));
+      filtered = filtered.filter((img) => selectedFolders.includes(img.folder || DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER));
     }
     //Sort by creation date, newest first
     filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -335,13 +337,11 @@ export function ImageViewer() {
     setIsLoading(true);
     try {
       const data = await apiFS.moveImages(moves);
-
-
       imagesId.forEach(imageId => {
         const succeed = data.data.moved.includes(imageId);
         if (succeed) {
           const image = generatedImages.find(img => img.id === imageId);
-          if (image) updateImage(imageId, { ...image, folder: folder });
+          if (image) updateImage(imageId, { ...image, path: image.path.replace(image.folder, folder), folder: folder });
         }
       })
 
@@ -544,6 +544,7 @@ export function ImageViewer() {
                 {filteredImages.map((image, index) => (
                   <div key={image.id} className="h-auto">
                     <ImageCard
+                      key={image.id}
                       image={image}
                       isSelected={selectedImages.includes(image.id)}
                       isActive={lastSelectedImageIndexRef.current === index}
@@ -596,6 +597,8 @@ export function ImageViewer() {
             onOpenChange={setDetailsDialogOpen}
             image={focusedImage}
             imageUrl={focusedImageUrl}
+            isSelected={selectedImages.includes(focusedImage.id)}
+            toggleSelection={toggleImageSelection}
             onCreatePrompt={handleCreatePrompt}
             onDownload={handleDetailsDownload}
             onNavigate={handleImageNavigation}
@@ -633,19 +636,16 @@ export function ImageViewer() {
           </AlertDialogHeader>
 
           <div className="py-4">
-            <Select value={targetFolder} onValueChange={setTargetFolder}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a folder" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableFolders.map(folder => (
-                  <SelectItem key={folder} value={folder}>
-                    {folder}
-                  </SelectItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger className='border p-2'>{targetFolder}</DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {availableFolders.map((folder) => (
+                  <DropdownMenuItem key={folder} onClick={() => setTargetFolder(folder)}> {folder}</DropdownMenuItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+
 
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>

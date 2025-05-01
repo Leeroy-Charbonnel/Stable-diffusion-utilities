@@ -68,6 +68,14 @@ async function scanDirectoriesForImages(basePath: string = OUTPUT_DIR): Promise<
   return result;
 }
 
+
+function getSeedValue(data: string): number | null {
+  const seedRegex = /Seed:\s*(\d+)/;
+  const match = data.match(seedRegex);
+  return match ? parseInt(match[1]) : null;
+}
+
+
 //Extract metadata from image file
 async function extractMetadataFromImage(imagePath: string): Promise<ImageMetadata | null> {
   try {
@@ -79,8 +87,10 @@ async function extractMetadataFromImage(imagePath: string): Promise<ImageMetadat
       return null;
     }
 
+    console.log();
+
+
     try {
-      //Extract JSON metadata from XPComment tag
       const metadataStr = metadata.exif.toString('utf16le');
 
       const jsonStartIndex = metadataStr.indexOf('{');
@@ -89,7 +99,10 @@ async function extractMetadataFromImage(imagePath: string): Promise<ImageMetadat
       if (jsonStartIndex >= 0 && jsonEndIndex > jsonStartIndex) {
         const jsonStr = metadataStr.substring(jsonStartIndex, jsonEndIndex);
         const parsedMetadata = JSON.parse(jsonStr) as ImageMetadata;
+        const seed = metadata.comments ? getSeedValue(metadata.comments[0]?.text || '') : null;
 
+
+        if (seed) parsedMetadata.promptData.seed = seed;
         parsedMetadata.path = imagePath;
         parsedMetadata.folder = getImageFolder(imagePath);
         return parsedMetadata;
@@ -298,7 +311,6 @@ async function serveStaticImage(req: BunRequest): Promise<Response> {
     const { path } = await req.json() as {
       path: string
     };
-    console.log(`POST: Serving static image: ${path}`);
     const file = Bun.file(path);
     if (!await file.exists()) {
       return new Response("File not found", { status: 404, headers: corsHeaders });

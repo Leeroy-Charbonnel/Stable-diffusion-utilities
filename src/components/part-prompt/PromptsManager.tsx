@@ -10,7 +10,7 @@ import { usePrompt } from '@/contexts/contextPrompts';
 import { toast } from 'sonner';
 import { ExecutionPanel } from './ExecutionPanel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDOM_LORAS_MAX_COUNT, RANDOM_LORAS_MAX_WEIGHT, RANDOM_LORAS_MIN_WEIGHT } from '@/lib/constants';
+import { DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDOM_LORAS_MAX_WEIGHT, RANDOM_LORAS_MIN_WEIGHT } from '@/lib/constants';
 import { SD_API_BASE_URL } from '@/lib/constants';
 
 export function PromptsManager() {
@@ -175,8 +175,7 @@ export function PromptsManager() {
     setExecutedPromptIds(new Set());
 
     //Calculate total runs across all prompts
-    const totalModels = prompts.map(p => p.models.length).reduce((a, b) => a + b, 0);
-    const totalRuns = prompts.map(p => p.runCount).reduce((a, b) => a + b, 0) * totalModels;
+    const totalRuns = prompts.map(p => p.runCount * p.models.length).reduce((a, b) => a + b, 0)
     setPromptsToRunCount(totalRuns);
 
     //Reset flag
@@ -256,19 +255,15 @@ export function PromptsManager() {
         sampler: prompt.sampler,
         model: model,
         loras: (() => {
-          if (prompt.lorasRandom) {
-            const lorasNumber = randomIntBetween(1, RANDOM_LORAS_MAX_COUNT);
-            const shuffled = [...availableLoras].sort(() => 0.5 - Math.random());
-            return shuffled.slice(0, lorasNumber).map(lora => {
-              return { name: lora.name, weight: randomBetween(RANDOM_LORAS_MIN_WEIGHT, RANDOM_LORAS_MAX_WEIGHT) }
-            });
-          } else {
+          if (!prompt.lorasRandom) {
             return prompt.loras.map(lora => {
               return {
                 name: lora.name,
                 weight: lora.random ? randomBetween(RANDOM_LORAS_MIN_WEIGHT, RANDOM_LORAS_MAX_WEIGHT) : lora.weight
               }
             })
+          } else {
+            return prompt.loras;
           }
         })(),
         width: prompt.width,
@@ -290,7 +285,14 @@ export function PromptsManager() {
           break;
         }
 
-
+        if (prompt.lorasRandom) {
+          const lorasNumber = randomIntBetween(1, promptData.loras.length);
+          const shuffled = [...promptData.loras].sort(() => 0.5 - Math.random());
+          promptData.loras = shuffled.slice(0, lorasNumber).map(lora => {
+            return { name: lora.name, weight: randomBetween(RANDOM_LORAS_MIN_WEIGHT, RANDOM_LORAS_MAX_WEIGHT) }
+          });
+        } else {
+        }
 
         try {
           const result = await generateImage(promptData);

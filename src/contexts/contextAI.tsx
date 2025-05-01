@@ -12,7 +12,7 @@ const DEFAULT_AI_SETTINGS: AiSettings = {
   apiKey: DEFAULT_AI_API_KEY,
   model: 'gpt-4.1',
   temperature: 0.7,
-  maxTokens: 1000,
+  maxTokens: 5000,
 };
 
 interface AiSettings {
@@ -37,7 +37,7 @@ interface AiContextType {
   setMaxTokens: (tokens: number) => void;
 
 
-  generatedPrompt: PromptEditor| null;
+  generatedPrompt: PromptEditor | null;
   setGeneratedPrompt: (prompt: PromptEditor) => void;
 }
 
@@ -99,8 +99,15 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       const response = await getOpenAiModels();
 
       if (response && response.data) {
+
         const chatModels = response.data
-          .filter((model: any) => model.id.includes('gpt') && !model.id.includes('preview'))
+          .filter((model: any) =>
+            model.id.includes('gpt') &&
+            !model.id.includes('preview') &&
+            !model.id.includes('image') &&
+            !model.id.includes('mini') &&
+            model.id.match(new RegExp("-", "g")).length < 3
+          )
           .map((model: any) => model.id);
 
         setAvailableModels(chatModels);
@@ -170,7 +177,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       const civitData = await getPngInfo(base64Image);
 
       //Create a new message
-      const mContent = JSON.stringify({ message: content, data: civitData })
+      const mContent = JSON.stringify({ message: content + JSON.stringify(civitData), data: '' })
       newMessage = createMessage(mContent, role)
 
       updatedMessages = [...updatedMessages, newMessage];
@@ -193,6 +200,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
         //Add the assistant's response
         const assistantMessage: ChatMessage = createMessage(response, 'assistant');
+        console.log(assistantMessage);
 
         setMessages((prevMessages) => [...prevMessages, assistantMessage]);
         extractPromptFromResponse(response, updatedMode);
@@ -240,7 +248,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const jsonResponse = JSON.parse(response);
     const generatePrompt = jsonResponse.generatePrompt;
     const data = jsonResponse.data;
-
+    console.log(jsonResponse);
     if (!generatePrompt) return;
 
     if (mode == 'extraction') {

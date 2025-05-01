@@ -1,7 +1,6 @@
 // src/components/ui/number-input.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import { Input } from './input';
-import { cn } from '@/lib/utils';
 
 interface NumberInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
     value: number;
@@ -31,21 +30,67 @@ export function NumberInput({
         }
     }, [value]);
 
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const newValue = e.target.value;
         if (disabled) return;
 
+        setLocalValue(newValue);
+
+        //Allow any value to be entered, including empty string
+        if (newValue === '') {
+            //Don't trigger onChange for empty string
+            return;
+        }
+
+        //Only report a valid number to parent if not empty
         const numValue = Number(newValue);
         if (!isNaN(numValue)) {
-            let finalValue = numValue;
-            if (min !== undefined && finalValue < min) finalValue = min;
-            if (max !== undefined && finalValue > max) finalValue = max;
-            onChange(finalValue);
-            setLocalValue(finalValue.toString());
+            onChange(numValue);
         }
     };
 
+    //Handle blur to ensure valid value when focus leaves
+    const handleBlur = () => {
+        //If input is empty, set to default or min value
+        if (localValue === '') {
+            const defaultValue = min !== undefined ? min : 0;
+            setLocalValue(defaultValue.toString());
+            onChange(defaultValue);
+            return;
+        }
+
+        const numValue = Number(localValue);
+
+        if (isNaN(numValue)) {
+            //Reset to default value if input is not a valid number
+            const defaultValue = value || (min !== undefined ? min : 0);
+            setLocalValue(defaultValue.toString());
+            onChange(defaultValue);
+            return;
+        }
+
+        let finalValue = numValue;
+
+        //Apply constraints only on blur
+        if (min !== undefined && finalValue < min) {
+            finalValue = min;
+            setLocalValue(min.toString());
+        }
+
+        if (max !== undefined && finalValue > max) {
+            finalValue = max;
+            setLocalValue(max.toString());
+        }
+
+        onChange(finalValue);
+    };
+
+    //Handle key press to apply constraints on Enter
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleBlur(); //Apply the same constraints as blur
+        }
+    };
 
     return (
         <Input
@@ -53,8 +98,11 @@ export function NumberInput({
             inputMode="numeric"
             value={localValue}
             onChange={handleChange}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
             disabled={disabled}
             className={className}
+            step={step}
             {...props}
         />
     );

@@ -68,7 +68,6 @@ export function ImageCard({
 
     loadImage();
 
-    //Clean up object URL when component unmounts
     return () => {
       if (imageUrl && imageUrl.startsWith('blob:')) {
         URL.revokeObjectURL(imageUrl);
@@ -115,9 +114,6 @@ export function ImageCard({
       key={image.id}
       className={`p-0 gap-0 overflow-hidden relative rounded-lg m-0.5 transition-all select-none ${cssStyle}`}
     >
-
-
-
       {!isLoading && (<div>
 
         <ContextMenu onOpenChange={setContextMenuOpen} >
@@ -128,8 +124,6 @@ export function ImageCard({
               style={{ aspectRatio: `2/3` }}
               onClick={() => onImageClick(image)}>
 
-
-              {/*Quick Actions*/}
               <Checkbox
                 checked={isSelected}
                 className="border-1 border-neutral-500 rounded-none !bg-background/50 absolute top-3 left-3 z-10"
@@ -264,7 +258,7 @@ export function ImageCard({
             <div className="flex flex-wrap gap-1 justify-start items-center">
               <Skeleton className="h-6 w-18 rounded-full bg-primary/30" />
               {new Array(Math.min(numberOfTagsToShow + 1, image.promptData.tags.length)).fill(0).map(() => (
-                <Skeleton className="h-6 w-15 rounded-full" />
+                <Skeleton key={Math.random()} className="h-6 w-15 rounded-full" />
               ))}
             </div>
           </div>

@@ -139,7 +139,7 @@ export function PromptForm({
     handleFormChange({ [name]: value });
   }
   return (
-    <div className={"p-4 relative overflow-hidden"}>
+    <div className={"p-4 relative"}>
 
       {/* Prompt */}
       <div>
@@ -217,10 +217,10 @@ export function PromptForm({
 
       <ContextMenu>
         <ContextMenuTrigger>
-          <div className='flex gap-2 items-center m-0 h-8'>
-            <Label htmlFor="sampler" className="w-20 h-8">Model</Label>
+          <div className='flex gap-2 items-center m-0'>
+            <Label htmlFor="sampler" className="w-20 h-fit">Model</Label>
 
-            <div className='border-b w-full h-8'>
+            <div className='border-b w-full h-fit py-2'>
               <SearchableMultiSelect
                 options={availableModels.map(x => { return { value: x.name, label: x.label ? x.label : x.name } })}
                 values={formData.models || []}
@@ -288,7 +288,7 @@ export function PromptForm({
 
             <div className="flex items-center gap-2"><Label className="pb-2 min-w-20 h-8">LoRAs</Label>
 
-              <Select onValueChange={handleLoraSelect} value="" disabled={readOnly || formData.lorasRandom}>
+              <Select onValueChange={handleLoraSelect} value="" disabled={readOnly}>
                 <SelectTrigger className={"!h-8 !w-38"}>
                   <SelectValue placeholder="Add a LoRA" />
                 </SelectTrigger>
@@ -327,8 +327,6 @@ export function PromptForm({
                       />
                     </Button>
 
-
-
                     <Slider
                       value={[lora.weight]}
                       min={-2}
@@ -350,7 +348,7 @@ export function PromptForm({
                       size="icon"
                       onClick={() => removeLora(lora.name)}
                       className="h-6 w-6"
-                      disabled={readOnly || formData.lorasRandom}
+                      disabled={readOnly}
                     >
                       <Trash className="h-3 w-3" />
                     </Button>

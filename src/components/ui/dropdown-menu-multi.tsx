@@ -58,7 +58,6 @@ export const SearchableMultiSelect = ({
   );
 
   const handleSelect = (option: DropDownOption) => {
-    //Fixed: Only add the option if it's not already selected, otherwise remove it
     let updatedSelection;
     if (selected.some(item => item.value === option.value)) {
       updatedSelection = selected.filter(item => item.value !== option.value);
@@ -77,8 +76,7 @@ export const SearchableMultiSelect = ({
 
   return (
     <div className="relative w-full h-full" ref={dropdownRef}>
-      <button
-        type="button"
+      <div
         className="flex items-center justify-between w-full h-full"
         onClick={() => setIsOpen(!isOpen)}
       >
@@ -93,7 +91,7 @@ export const SearchableMultiSelect = ({
                 className="flex items-center gap-2 m-0"
               >
                 {item.label.length > textTruncateSize ? `${item.label.slice(0, textTruncateSize)}...` : item.label}
-                <Button variant={'ghost'} className="cursor-pointer h-4 w-4 !m-0 !p-0 z-100" onClick={e => removeItem(item, e)}>
+                <Button variant={'ghost'} className="cursor-pointer h-4 w-4 !m-0 !p-0 z-10" onClick={e => removeItem(item, e)}>
                   <X className='text-xs'/>
                 </Button>
 
@@ -102,7 +100,7 @@ export const SearchableMultiSelect = ({
           )}
         </div>
         <ChevronDown className="w-5 h-5 " />
-      </button>
+      </div>
 
       {isOpen && (
         <div className="absolute z-20 bg-secondary w-full mt-0 rounded-md shadow-lg">
@@ -115,7 +113,7 @@ export const SearchableMultiSelect = ({
           </div>
 
           {/* Options list */}
-          <div className="max-h-60 overflow-y-auto">
+          <div className="max-h-96 overflow-y-auto z-50">
             {filteredOptions.length > 0 ? (
               filteredOptions.map(option => (
                 <div

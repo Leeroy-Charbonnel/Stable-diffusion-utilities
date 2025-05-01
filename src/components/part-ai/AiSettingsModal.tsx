@@ -4,6 +4,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { useAi } from '@/contexts/contextAI';
 import { RefreshCw } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem } from '../ui/dropdown-menu';
+import { DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu';
 
 interface AiSettingsModalProps {
   open: boolean;
@@ -26,26 +28,20 @@ export function AiSettingsModal({ open, onOpenChange }: AiSettingsModalProps) {
         <DialogHeader>
           <DialogTitle>AI Settings</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6 py-4">
           <div className="space-y-2">
             <Label htmlFor="model">AI Model</Label>
-            <Select
-              value={settings.model}
-              onValueChange={(value) => setModel(value)}
-              disabled={isLoadingModels}
-            >
-              <SelectTrigger id="model">
-                <SelectValue placeholder="Select a model" />
-              </SelectTrigger>
-              <SelectContent>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger className='border p-2'>{settings.model}</DropdownMenuTrigger>
+              <DropdownMenuContent>
                 {availableModels.map((modelName) => (
-                  <SelectItem key={modelName} value={modelName}>
-                    {modelName}
-                  </SelectItem>
+                  <DropdownMenuItem key={modelName} onClick={() => setModel(modelName)}> {modelName}</DropdownMenuItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             {isLoadingModels && (
               <p className="text-xs text-muted-foreground flex items-center">
                 <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
@@ -89,6 +85,6 @@ export function AiSettingsModal({ open, onOpenChange }: AiSettingsModalProps) {
           </div>
         </div>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   );
 }

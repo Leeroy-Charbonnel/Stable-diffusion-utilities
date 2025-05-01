@@ -117,7 +117,7 @@ export function PromptCard({
   const currentProgress = (prompt.currentRun / prompt.runCount) * 100;
 
   return (
-    <Card className="overflow-hidden rounded-none p-0 gap-0 w-full">
+    <Card className="rounded-none p-0 gap-0 w-full">
       <Accordion type="single" collapsible value='true' className="w-full">
         <AccordionItem value={prompt.isOpen.toString()} className="border-none">
           <ContextMenu>
@@ -127,9 +127,7 @@ export function PromptCard({
                 <div className="flex-1 truncate flex items-center">
 
                   <AccordionTrigger className="hover:no-underline py-0 mr-2 flex" onClick={handleAccordionChange}></AccordionTrigger>
-
                   <span className="text-xs font-medium bg-input/30 h-6 w-6 p-3.5 flex items-center justify-center mr-2">{index}</span>
-
                   {isExecuting && (<h3 className="text-sm font-medium truncate">{prompt.name}</h3>)}
 
                   {!isExecuting && (
@@ -208,6 +206,7 @@ export function PromptCard({
           <AccordionContent className="pt-0">
             <div className="px-0">
               <PromptForm
+                key={`${prompt.id}-form`}
                 prompt={prompt}
                 onPromptUpdate={handlePromptUpdate}
                 onCopyRefresh={onCopyRefresh}
@@ -229,7 +228,7 @@ export function PromptCard({
             <div className="flex flex-wrap gap-1.5">
               {/*Model Badge - Primary*/}
               {showModels && prompt.models && prompt.models.map(model => (
-                <div key="model" className={`flex items-center px-2 py-0.5 h-5 bg-primary/30 ${isCurrentlyExecuting && model === executingModel ? 'animate-pulse' : ''}`}>
+                <div key={`${prompt.id}-${model}`} className={`flex items-center px-2 py-0.5 h-5 bg-primary/30 ${isCurrentlyExecuting && model === executingModel ? 'animate-pulse' : ''}`}>
                   <div className="text-xs max-w-[100px] truncate">
                     {getModelLabel(availableModels, model)}
                   </div>
@@ -243,7 +242,7 @@ export function PromptCard({
               )}
 
               {!prompt.lorasRandom && prompt.loras && showModels && prompt.loras.map(lora => (
-                <div key={lora.name} className="flex items-center px-2 py-0.5 h-5 border-primary border-1" title={lora.name}>
+                <div key={`${prompt.id}-${lora.name}`} className="flex items-center px-2 py-0.5 h-5 border-primary border-1" title={lora.name}>
                   <div className="text-xs max-w-[100px] truncate text-primary">
                     {getModelLabel(availableLoras, lora.name)}
                   </div>
@@ -252,7 +251,7 @@ export function PromptCard({
 
               {/*Regular Tag Badges*/}
               {prompt.tags && showTags && prompt.tags.map(tag => (
-                <div key={tag} className="flex items-center px-2 py-0.5 h-5 bg-input/30">
+                <div key={`${prompt.id}-${tag}`} className="flex items-center px-2 py-0.5 h-5 bg-input/30">
                   <div className="text-xs">
                     {tag}
                   </div>
