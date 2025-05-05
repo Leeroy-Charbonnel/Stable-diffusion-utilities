@@ -10,11 +10,12 @@ import { usePrompt } from '@/contexts/contextPrompts';
 import { toast } from 'sonner';
 import { ExecutionPanel } from './ExecutionPanel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDDOM_LORAS_MAX_COUNT, RANDOM_LORAS_MAX_WEIGHT, RANDOM_LORAS_MIN_WEIGHT } from '@/lib/constants';
+import { CONNECTION_CHECK_INTERVAL_MS, DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDDOM_LORAS_MAX_COUNT, RANDOM_LORAS_MAX_WEIGHT, RANDOM_LORAS_MIN_WEIGHT, RESTART_TIMEOUT_MS } from '@/lib/constants';
 import { SD_API_BASE_URL } from '@/lib/constants';
+import { restartStableDiffusion } from '@/services/apiSD';
 
 export function PromptsManager() {
-  const { isConnected, generateImage, availableSamplers, availableModels, availableLoras } = useApi();
+  const { isConnected, checkConnection, generateImage, availableSamplers, availableModels, availableLoras } = useApi();
   const { prompts, loadPrompts, addPrompt, updatePrompt, deletePrompt, reorderPrompt, isLoading: isPromptLoading } = usePrompt();
   const [refreshContextMenu, setRefreshContextMenu] = useState(false);
 
@@ -43,8 +44,13 @@ export function PromptsManager() {
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const executionStartTimeRef = useRef<number>(0);
 
+  const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const connectionCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+
   const [showTags, setShowTags] = useState(false);
   const [showModels, setShowModels] = useState(false);
+  const [isRestarting, setIsRestarting] = useState(false);
 
   useEffect(() => {
     loadPrompts();
@@ -52,6 +58,8 @@ export function PromptsManager() {
 
   //Cleanup on unmount
   useEffect(() => {
+    callRestartStableDiffusion();
+
     return () => {
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
@@ -62,8 +70,54 @@ export function PromptsManager() {
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
       }
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+      }
+      if (connectionCheckIntervalRef.current) {
+        clearInterval(connectionCheckIntervalRef.current);
+      }
     };
+
   }, []);
+
+
+  const callRestartStableDiffusion = async (): Promise<void> => {
+    console.log("callRestartStableDiffusion");
+    if (isRestarting) return;
+
+    setIsRestarting(true);
+    toast.info("Starting Stable Diffusion...");
+
+    try {
+      await restartStableDiffusion();
+
+      connectionCheckIntervalRef.current = setInterval(async () => {
+        const connected = await checkConnection();
+        console.log("Check connection");
+        if (connected) {
+          clearInterval(connectionCheckIntervalRef.current!);
+          connectionCheckIntervalRef.current = null;
+          setIsRestarting(false);
+          toast.success("Stable Diffusion restarted successfully!");
+        }
+      }, CONNECTION_CHECK_INTERVAL_MS);
+
+      restartTimeoutRef.current = setTimeout(() => {
+        if (connectionCheckIntervalRef.current) {
+          clearInterval(connectionCheckIntervalRef.current);
+          connectionCheckIntervalRef.current = null;
+        }
+        setIsRestarting(false);
+        toast.warning("Restart timeout reached. Continuing execution.");
+      }, RESTART_TIMEOUT_MS);
+    } catch (error) {
+      console.error("Error restarting Stable Diffusion:", error);
+      setIsRestarting(false);
+      toast.error("Failed to restart Stable Diffusion");
+    }
+  };
+
+
 
   const startTimeTracking = () => {
     setElapsedTime(0);

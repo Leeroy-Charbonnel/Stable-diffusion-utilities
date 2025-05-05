@@ -1,4 +1,4 @@
-import { SD_API_BASE_URL } from '@/lib/constants';
+import { FILE_API_BASE_URL, SD_API_BASE_URL } from '@/lib/constants';
 
 export interface Text2ImageRequest {
   prompt: string;
@@ -108,7 +108,7 @@ export const refreshLoras = async (): Promise<void> => {
     });
 
     if (!response.ok) throw new Error(`Failed to refresh LoRAs: ${response.status}`);
-    
+
   } catch (error) {
     console.error('Error refreshing LoRAs:', error);
   }
@@ -144,5 +144,20 @@ export const getPngInfo = async (imageBase64: string): Promise<any> => {
   } catch (error) {
     console.error('Error getting PNG info:', error);
     return null;
+  }
+};
+
+
+export const restartStableDiffusion = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(`${FILE_API_BASE_URL}/restart-sd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error('Error restarting Stable Diffusion:', error);
+    return false;
   }
 };

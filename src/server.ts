@@ -6,12 +6,17 @@ import { ImageMetadata, LabelsData, Prompt, PromptEditor } from "./types";
 import { DEFAULT_OUTPUT_FOLDER, DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER, LABELS_FILE_NAME, PROMPTS_FILE_NAME, SD_API_BASE_URL } from "./lib/constants";
 import sharp from 'sharp';
 import { getImageFolder } from "./lib/utils";
-
+import { ChildProcess, spawn } from "node:child_process";
+import path from "path";
 
 //Constants
 const OUTPUT_DIR: string = join(import.meta.dir, DEFAULT_OUTPUT_FOLDER);
 const PROMPTS_FILE: string = join(import.meta.dir, PROMPTS_FILE_NAME);
 const LABELS_FILE: string = join(import.meta.dir, LABELS_FILE_NAME);
+
+
+let sdProcess: ChildProcess | null = null;
+let sdPID: number | null = null;
 
 //CORS headers
 const corsHeaders: Record<string, string> = {
@@ -564,6 +569,79 @@ async function refreshCheckpoints(req: BunRequest): Promise<Response> {
   }
 }
 
+async function startStableDiffusionWebUI(): Promise<boolean> {
+  try {
+    console.log("Starting Stable Diffusion WebUI...");
+
+    const projectRoot = path.resolve(process.cwd());
+    const webuiPath = path.join(projectRoot, '..', 'webui-user.bat');
+
+    console.log(`Starting WebUI from path: ${webuiPath}`);
+
+    // Use spawn to start the process detached so it can run independently
+    sdProcess = spawn('cmd.exe', ['/c', webuiPath], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true
+    });
+
+    sdProcess.unref();
+
+    if (sdProcess.pid) {
+      sdPID = sdProcess.pid;
+      console.log(`Stable Diffusion WebUI started with process ID: ${sdPID}`);
+      return true;
+    } else {
+      console.error("Failed to get PID for Stable Diffusion WebUI process");
+      return false;
+    }
+  } catch (error) {
+    console.error("Error starting Stable Diffusion WebUI:", error);
+    return false;
+  }
+}
+
+async function restartStableDiffusion(req: BunRequest): Promise<Response> {
+  console.log("POST: Restarting Stable Diffusion WebUI");
+
+  try {
+    console.log(`Killing Stable Diffusion process with PID: ${sdPID}`);
+
+    await new Promise<void>((resolve) => {
+      exec(`taskkill /F /PID ${sdPID}`, (error) => {
+        if (error) {
+          console.warn(`Failed to kill process with PID ${sdPID}:`, error);
+        } else {
+          console.log(`Successfully killed process with PID ${sdPID}`);
+        }
+        sdPID = null;
+        sdProcess = null;
+        resolve();
+      });
+    });
+
+    const success = await startStableDiffusionWebUI();
+
+    if (success) {
+      return Response.json(
+        { success: true, message: 'Restart initiated', pid: sdPID },
+        { headers: corsHeaders }
+      );
+    } else {
+      return Response.json(
+        { success: false, error: 'Failed to start Stable Diffusion WebUI' },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+  } catch (error) {
+    console.error('Error restarting Stable Diffusion:', error);
+    return Response.json(
+      { success: false, error: String(error) },
+      { status: 500, headers: corsHeaders }
+    );
+  }
+}
+
 
 const server = Bun.serve({
   port: process.env.PORT || 3001,
@@ -615,7 +693,9 @@ const server = Bun.serve({
       GET: getLabelsData,
       POST: saveLabelsDataRoute
     },
-
+    "/api/restart-sd": {
+      POST: restartStableDiffusion
+    },
     //Fallback for API routes
     "/api/*": (req: BunRequest) => {
       if (req.method === "OPTIONS") {

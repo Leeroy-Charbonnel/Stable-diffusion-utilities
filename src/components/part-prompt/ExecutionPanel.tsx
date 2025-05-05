@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Play, StopCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Play, StopCircle, RefreshCw } from 'lucide-react';
 import { ExecutionStatus, ProgressData, PromptEditor } from '@/types';
 import { Separator } from '@/components/ui/separator';
 
@@ -15,6 +15,7 @@ interface ExecutionPanelProps {
   isCancelling: boolean;
   elapsedTime: number;
   progressData: ProgressData | null;
+  isRestarting?: boolean; // Add this prop
   onStartExecution: () => void;
   onCancelExecution: () => void;
 }
@@ -30,6 +31,7 @@ export function ExecutionPanel({
   isCancelling,
   elapsedTime,
   progressData,
+  isRestarting = false, 
   onStartExecution,
   onCancelExecution
 }: ExecutionPanelProps) {
@@ -44,7 +46,6 @@ export function ExecutionPanel({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  //Get SD current progress percentage
   const sdProgressPercentage = progressData?.progress ? Math.round(progressData.progress * 100) : 0;
 
   return (
@@ -52,6 +53,19 @@ export function ExecutionPanel({
       <h3 className="text-lg font-semibold mb-4">Execution Status</h3>
 
       <Separator className='my-2' />
+
+      {/* Restart Status */}
+      {isRestarting && (
+        <div className="mb-4 p-2 bg-yellow-500/20 rounded-md">
+          <div className="flex items-center space-x-2">
+            <RefreshCw className="animate-spin h-4 w-4" />
+            <span className="font-medium">Restarting Stable Diffusion...</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Processing will continue once the restart is complete or timeout is reached.
+          </p>
+        </div>
+      )}
 
       {/* Elapsed Time Section */}
       {isExecuting && (
@@ -101,10 +115,6 @@ export function ExecutionPanel({
         </div>
       )}
 
-
-
-
-
       {/* Total Stats Section - Now above action button */}
       {!isExecuting && (hasCompleted || (successCount > 0 || failureCount > 0)) && (
         <div className="mb-4 p-3 bg-secondary/20 text-sm">
@@ -136,16 +146,16 @@ export function ExecutionPanel({
             onClick={onCancelExecution}
             variant="destructive"
             className="w-full"
-            disabled={isCancelling}
+            disabled={isCancelling || isRestarting}
           >
             <StopCircle className="mr-2 h-4 w-4" />
-            {isCancelling ? 'Stopping...' : 'Stop Execution'}
+            {isCancelling ? 'Stopping...' : isRestarting ? 'Restarting...' : 'Stop Execution'}
           </Button>
         ) : (
           <Button
             onClick={onStartExecution}
             className="w-full"
-            disabled={!isApiConnected || prompts.length === 0}
+            disabled={!isApiConnected || prompts.length === 0 || isRestarting}
           >
             <Play className="mr-2 h-4 w-4" />
             Start Execution
