@@ -13,6 +13,10 @@
       "label": "Hassaku XL (Pony)"
     },
     {
+      "name": "homemadeCheckpoint_ponyV10",
+      "label": "Homemade Checkpoint"
+    },
+    {
       "name": "illuquaint_v02",
       "label": "IlluQuaint"
     },
@@ -67,6 +71,18 @@
       "label": "Anime art"
     },
     {
+      "name": "arcane",
+      "label": "Arcane Style LoRA"
+    },
+    {
+      "name": "arcane_style_illustrious_goofy",
+      "label": "Arcane style | Goofy Ai"
+    },
+    {
+      "name": "Arcane_vi-v2",
+      "label": "Arcane VI (LORA)"
+    },
+    {
       "name": "artilands_v02-000006",
       "label": "Artify´s Fantastic Flux Landscape Lora V2.0"
     },
@@ -109,6 +125,10 @@
     {
       "name": "incase_style_v3-1_ponyxl_ilff",
       "label": "Incase Style [PonyXL]"
+    },
+    {
+      "name": "Jinx_-_Arcane_League_of_Legends_PonyXL(1)",
+      "label": "Jinx - Arcane League of Legends (PonyXL)"
     },
     {
       "name": "LeIsT0_style",
@@ -157,6 +177,14 @@
     {
       "name": "USNR STYLE_XL_lokr",
       "label": "薄塗り / USNR STYLE"
+    },
+    {
+      "name": "ViPDXL",
+      "label": "Vi - Arcane PonyDiffusion XL"
+    },
+    {
+      "name": "ViPonyLora",
+      "label": "VI from League of Legends Game & Arcane 3 Skins | Pony / SD1.5"
     }
   ]
 }

@@ -10,7 +10,7 @@ import { usePrompt } from '@/contexts/contextPrompts';
 import { toast } from 'sonner';
 import { ExecutionPanel } from './ExecutionPanel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDOM_LORAS_MAX_WEIGHT, RANDOM_LORAS_MIN_WEIGHT } from '@/lib/constants';
+import { DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDDOM_LORAS_MAX_COUNT, RANDOM_LORAS_MAX_WEIGHT, RANDOM_LORAS_MIN_WEIGHT } from '@/lib/constants';
 import { SD_API_BASE_URL } from '@/lib/constants';
 
 export function PromptsManager() {
@@ -240,7 +240,6 @@ export function PromptsManager() {
 
     for (let k = 0; k < prompt.models.length; k++) {
       const model = prompt.models[k];
-      console.log("setting current run to 0");
       prompt.currentRun = 0;
 
       setExecutingModel(model);
@@ -282,11 +281,12 @@ export function PromptsManager() {
         if (skipExecutionRef.current) {
           console.log(`Execution skipped for prompt ${prompt.id} for model ${model}`);
           skipExecutionRef.current = false;
+          setIsSkipping(false);
           break;
         }
 
         if (prompt.lorasRandom) {
-          const lorasNumber = randomIntBetween(1, promptData.loras.length);
+          const lorasNumber = randomIntBetween(1, RANDDOM_LORAS_MAX_COUNT);
           const shuffled = [...promptData.loras].sort(() => 0.5 - Math.random());
           promptData.loras = shuffled.slice(0, lorasNumber).map(lora => {
             return { name: lora.name, weight: randomBetween(RANDOM_LORAS_MIN_WEIGHT, RANDOM_LORAS_MAX_WEIGHT) }

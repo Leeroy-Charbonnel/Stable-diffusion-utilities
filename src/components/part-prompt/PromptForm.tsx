@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { XIcon, Trash, Dice6 } from 'lucide-react';
-import { LabelItem, PromptEditor } from '@/types';
+import { LabelItem, LoraEditorConfig, PromptEditor } from '@/types';
 import { Slider } from "@/components/ui/slider"
 import { NumberInput } from '@/components/ui/number-input';
 import { Separator } from '@/components/ui/separator';
@@ -65,10 +65,6 @@ export function PromptForm({
     }
   };
 
-  const handleModelChange = (models: DropDownOption[]) => {
-    if (readOnly) return;
-    handleFormChange({ models: models.map(m => m.value) });
-  };
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (readOnly) return;
@@ -92,15 +88,26 @@ export function PromptForm({
     handleFormChange({ tags: formData.tags.filter((t) => t !== tag) });
   };
 
-  const handleLoraSelect = (loraName: string) => {
-    console.log(loraName);
+  const handleModelChange = (models: DropDownOption[]) => {
     if (readOnly) return;
-
-    if (loraName && !formData.loras?.some(l => l.name === loraName)) {
-      handleFormChange({ loras: [...(formData.loras || []), { name: loraName, weight: 1.0, random: false }] });
-    }
+    handleFormChange({ models: models.map(m => m.value) });
   };
 
+
+  const handleLoraChange = (lora: DropDownOption[]) => {
+    if (readOnly) return;
+
+    const updatedLoras: LoraEditorConfig[] = [];
+    lora.forEach((lora) => {
+      const existingLora = formData.loras?.find(l => l.name === lora.value);
+      if (existingLora) {
+        updatedLoras.push({ ...existingLora });
+      } else {
+        updatedLoras.push({ name: lora.value, weight: 1.0, random: false });
+      }
+    });
+    handleFormChange({ loras: updatedLoras });
+  };
   const removeLora = (loraName: string) => {
     if (readOnly) return;
     handleFormChange({ loras: formData.loras?.filter(l => l.name !== loraName) || [] });
@@ -284,28 +291,21 @@ export function PromptForm({
       <ContextMenu>
         <ContextMenuTrigger>
           {/* LoRAs Selector*/}
-          <div className='m-0 h-8 mb-2'>
-
+          <div className='m-0 h-8 mb-4'>
             <div className="flex items-center gap-2"><Label className="pb-2 min-w-20 h-8">LoRAs</Label>
-
-              <Select onValueChange={handleLoraSelect} value="" disabled={readOnly}>
-                <SelectTrigger className={"!h-8 !w-38"}>
-                  <SelectValue placeholder="Add a LoRA" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableLoras.filter((lora) => !formData.loras?.some(existingLora => existingLora.name === lora.name)).map((lora) => (
-                    <SelectItem key={lora.name} value={lora.name} title={lora.name}>{getModelLabel(availableLoras, lora.name)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableMultiSelect
+                options={availableLoras.map(x => { return { value: x.name, label: x.label ? x.label : x.name } })}
+                values={formData.loras.map(x => x.name) || []}
+                placeholder="Select options..."
+                searchPlaceholder="Type to search..."
+                onChange={handleLoraChange}
+              />
 
               <Button variant="outline" onClick={() => handleFormChange({ lorasRandom: !formData.lorasRandom })} className='h-8 w-8'>
                 <Dice6
                   className={`w-6 h-6 ${formData.lorasRandom ? 'text-primary' : 'text-muted-foreground'}`}
                 />
               </Button>
-
-
             </div>
           </div>
 

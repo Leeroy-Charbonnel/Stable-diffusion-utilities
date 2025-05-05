@@ -79,8 +79,6 @@ export function PromptCard({
   };
 
   const handlePromptPartUpdate = (name: string, value: any) => {
-
-    console.log(name, value);
     let newValue = value as any;
     if (name == "RunCount") { newValue = parseInt(newValue); }
     handlePromptUpdate({ ...prompt, [name]: newValue });
@@ -235,13 +233,13 @@ export function PromptCard({
                 </div>
               ))}
               {/*LoRA Badges*/}
-              {prompt.lorasRandom && (
+              {showModels && prompt.lorasRandom && (
                 <div key='random-lora' className="flex items-center px-2 py-0.5 h-5 border-primary border-1">
                   <div className="text-xs max-w-[100px] truncate text-primary">Random</div>
                 </div>
               )}
 
-              {!prompt.lorasRandom && prompt.loras && showModels && prompt.loras.map(lora => (
+              {showModels &&!prompt.lorasRandom && prompt.loras && showModels && prompt.loras.map(lora => (
                 <div key={`${prompt.id}-${lora.name}`} className="flex items-center px-2 py-0.5 h-5 border-primary border-1" title={lora.name}>
                   <div className="text-xs max-w-[100px] truncate text-primary">
                     {getModelLabel(availableLoras, lora.name)}
@@ -250,7 +248,7 @@ export function PromptCard({
               ))}
 
               {/*Regular Tag Badges*/}
-              {prompt.tags && showTags && prompt.tags.map(tag => (
+              {showTags && prompt.tags && prompt.tags.map(tag => (
                 <div key={`${prompt.id}-${tag}`} className="flex items-center px-2 py-0.5 h-5 bg-input/30">
                   <div className="text-xs">
                     {tag}

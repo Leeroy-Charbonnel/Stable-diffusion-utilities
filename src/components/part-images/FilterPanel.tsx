@@ -57,18 +57,17 @@ export function FilterPanel({
       </div>
 
       {/*Filter Actions */}
-      {hasActiveFilters && (
-        <div className="pt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={clearAllFilters}
-          >
-            Clear All Filters
-          </Button>
-        </div>
-      )}
+      <div className="pt-4">
+        <Button
+          variant="outline"
+          disabled={!hasActiveFilters}
+          size="sm"
+          className="w-full"
+          onClick={clearAllFilters}
+        >
+          Clear All Filters
+        </Button>
+      </div>
 
       <ResizablePanelGroup direction="vertical" className="min-h-[600px]">
         {/*Tags Filter */}
