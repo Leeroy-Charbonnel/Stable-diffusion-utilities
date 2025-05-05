@@ -284,7 +284,7 @@ export function PromptsManager() {
   }
 
   const callRestartStableDiffusion = async (): Promise<void> => {
-    if (isRestarting) return;
+    if (isRestarting) return Promise.resolve();
 
     // Stop progress polling during restart
     stopProgressPolling();
@@ -303,12 +303,13 @@ export function PromptsManager() {
       let connected = false;
 
       console.log("Starting connection check loop...");
-      while (!connected  && !cancelExecutionRef.current) {
+      while (!connected && !cancelExecutionRef.current) {
         try {
           connected = await checkConnection();
           if (connected) {
-            toast.info("Waiting 30 seconds for WebUI to stabilize...");
-            await new Promise(resolve => setTimeout(resolve, 30000));
+            toast.info("Connected to Stable Diffusion, waiting for WebUI to stabilize...");
+            // Wait for the WebUI to fully initialize after reconnection
+            await new Promise(resolve => setTimeout(resolve, 15000));
             break;
           }
         } catch (e) {
@@ -321,6 +322,9 @@ export function PromptsManager() {
       if (connected) {
         toast.success("Stable Diffusion restarted successfully");
         totalExecutedPromptsRef.current = 0;
+
+        // Restart the progress polling to continue monitoring
+        startProgressPolling();
       } else {
         toast.error("Failed to reconnect after restart");
         cancelExecutionRef.current = true;
@@ -397,21 +401,15 @@ export function PromptsManager() {
         }
 
         try {
-          // Check if we need to restart before generating this image
           if (totalExecutedPromptsRef.current >= PROMPTS_BEFORE_RESTART) {
             console.log(`Executed ${totalExecutedPromptsRef.current} prompts, restarting Stable Diffusion WebUI`);
-
-            // Restart Stable Diffusion
             await callRestartStableDiffusion();
-
             console.log("Restarted, resuming execution...");
-    
-            // Restart the progress polling
-            startProgressPolling();
           }
 
+          console.log("Await for image generation...");
           const result = await generateImage(promptData);
-
+          console.log(result);
           if (result) {
             setSuccessCount(prev => prev + 1);
             totalExecutedPromptsRef.current = totalExecutedPromptsRef.current + 1;
@@ -434,7 +432,6 @@ export function PromptsManager() {
     setExecutingPromptId(null);
     return;
   };
-
   const handleAddPrompt = async () => {
     const newPrompt: PromptEditor = {
       id: generateUUID(),

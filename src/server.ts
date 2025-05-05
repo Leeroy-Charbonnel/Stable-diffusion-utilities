@@ -597,17 +597,6 @@ function startStableDiffusionWebUI(): Promise<boolean> {
         resolve(false);
       }
     });
-
-    // Add a timeout to resolve the promise if spawn doesn't fire
-    setTimeout(() => {
-      if (sdProcess && sdProcess.pid) {
-        console.log("Process started but spawn event didn't fire, considering it started");
-        resolve(true);
-      } else {
-        console.error("Process failed to start within timeout");
-        resolve(false);
-      }
-    }, 5000);
   });
 }
 function restartStableDiffusionWebUI(req: BunRequest): Promise<Response> {
@@ -635,15 +624,14 @@ function restartStableDiffusionWebUI(req: BunRequest): Promise<Response> {
           // Start a new instance
           const success = await startStableDiffusionWebUI();
           console.log("Restart result:", success ? "Success" : "Failed");
-
-          return resolve(Response.json({ success }, { status: success ? 200 : 500, headers: corsHeaders }));
+          return resolve(Response.json({ success: success }, { headers: corsHeaders }));
         });
       } else {
         console.log("No running process found, starting a new one");
         const success = await startStableDiffusionWebUI();
         console.log("Start result:", success ? "Success" : "Failed");
 
-        return resolve(Response.json({ success }, { status: success ? 200 : 500, headers: corsHeaders }));
+        return resolve(Response.json({ success: success }, { headers: corsHeaders }));
       }
     } catch (error) {
       console.error("Error during restart:", error);

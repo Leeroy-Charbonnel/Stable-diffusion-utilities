@@ -132,10 +132,12 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         params.prompt = params.prompt + " " + prompt.loras.map(lora => `<lora:${lora.name}:${lora.weight}>`).join(", ");
       }
 
+      console.log("API SENDING:", params);
       const result = await apiSD.generateImage(params);
       if (!result || !result.images || result.images.length === 0) throw new Error("Failed to generate image");
+      console.log("Generated image:", result.images[0]);
       const generatedImage = await apiFS.saveGeneratedImage(generateUUID(), result.images[0], prompt);
-
+      console.log("Generated image:", generatedImage);
       return generatedImage;
     } catch (err) {
       console.log("Error generating image:", err);

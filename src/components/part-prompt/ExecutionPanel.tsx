@@ -75,9 +75,6 @@ export function ExecutionPanel({
             <RefreshCw className="animate-spin h-4 w-4" />
             <span className="font-medium">Restarting Stable Diffusion...</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Processing will continue once the restart is complete or timeout is reached.
-          </p>
         </div>
       )}
 

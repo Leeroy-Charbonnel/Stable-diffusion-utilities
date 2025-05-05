@@ -63,6 +63,7 @@ export const saveGeneratedImage = async (
       }
     };
 
+    console.log('Sending image to API');
     const response = await fetch(`${FILE_API_BASE_URL}/images`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

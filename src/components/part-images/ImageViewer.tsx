@@ -1,3 +1,4 @@
+// src/components/part-images/ImageViewer.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,11 +21,11 @@ import { getImageFromPath, getLabelsData } from '@/services/apiFS';
 import { DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER } from '@/lib/constants';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 
-// interface ImageViewerProps {
-//   isActiveTab: boolean,
-// }
+interface ImageViewerProps {
+  isActiveTab: boolean
+}
 
-export function ImageViewer() {
+export function ImageViewer({ isActiveTab }: ImageViewerProps) {
   const { apiFS, isLoading: isApiLoading } = useApi();
   const { addPrompt } = usePrompt();
 
@@ -56,6 +57,7 @@ export function ImageViewer() {
   const isCtrlPressedRef = useRef(false);
   const isShiftPressedRef = useRef(false);
   const lastSelectedImageIndexRef = useRef(-1);
+  const previousActiveTabRef = useRef(isActiveTab);
 
   //Image details dialog state
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -118,6 +120,17 @@ export function ImageViewer() {
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
+
+  // Auto-refresh when tab becomes active
+  useEffect(() => {
+    // Check if tab went from inactive to active
+    if (isActiveTab && !previousActiveTabRef.current) {
+      handleRefresh();
+    }
+    
+    // Update ref for next check
+    previousActiveTabRef.current = isActiveTab;
+  }, [isActiveTab]);
 
 
   //Refresh images and folders
