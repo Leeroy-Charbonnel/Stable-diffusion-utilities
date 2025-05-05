@@ -4,6 +4,8 @@ import { Play, StopCircle, RefreshCw } from 'lucide-react';
 import { ExecutionStatus, ProgressData, PromptEditor } from '@/types';
 import { Separator } from '@/components/ui/separator';
 import { PROMPTS_BEFORE_RESTART } from '@/lib/constants';
+import { Alert, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface ExecutionPanelProps {
   prompts: PromptEditor[];
@@ -57,6 +59,14 @@ export function ExecutionPanel({
       <h3 className="text-lg font-semibold mb-4">Execution Status</h3>
 
       <Separator className='my-2' />
+      
+      {/* API Connection Status - Added Here */}
+      {!isApiConnected && (
+        <Alert className="flex p-2 bg-destructive/20 mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Not Connected</AlertTitle>
+        </Alert>
+      )}
 
       {/* Restart Status */}
       {isRestarting && (

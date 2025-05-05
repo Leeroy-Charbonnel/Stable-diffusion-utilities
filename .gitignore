@@ -14,6 +14,7 @@ dist-ssr
 
 tests
 tests/*
+src/backup/*
 src/output/*
 src/lib/constantsKeys.ts
 src/prompt*.json

@@ -7,13 +7,13 @@
     "negativePrompt": "bad anatomy, extra limbs, deformed, ugly, poorly drawn, low quality, blurry, low resolution, bad proportions, bad shadows, wrong perspective, amateur, unprofessional, text, watermark, signature, back view, rear view, looking away, frontal view, gauntlets, shoes, pants, underwear, thong, panties, covered midriff, high waisted shorts\npants, shoes, socks",
     "cfgScale": 7,
     "seed": -1,
-    "steps": 45,
+    "steps": 10,
     "sampler": "DPM++ 2M",
     "models": [
       "illustrij_v13"
     ],
-    "width": 768,
-    "height": 1344,
+    "width": 256,
+    "height": 256,
     "lorasRandom": true,
     "runCount": 20,
     "tags": [],
@@ -51,7 +51,7 @@
     "id": "c6158eb6-1e4f-44af-88a1-9f382d2a23e5",
     "isOpen": false,
     "runCount": 20,
-    "currentRun": 20,
+    "currentRun": 9,
     "status": "idle",
     "name": "furry soft",
     "text": "Score_9, score_8_up, score_7_up, score_6_up, a single female participant, tresses of a soft light-brown hue, distinctive animalistic ears, nude, engaged in intense missionary sex (explicit hardcore:1.2). Legs bent, exposing the soles of her feet, on deep dark green velvet sheets. Visual emphasis on rough penetration (raw carnal energy:1.2), penis fucked pussy, full-body flush, wide-eyed gaze of intensity, and rhythmically moving breasts with each thrust (physical response:1.1). Fingers dig into sheets (tension:1.1)",
@@ -222,6 +222,33 @@
     "status": "idle"
   },
   {
+    "id": "1c810076-c51c-423b-9937-fc93fcab619c",
+    "isOpen": false,
+    "runCount": 20,
+    "currentRun": 0,
+    "status": "idle",
+    "name": "furry soft",
+    "text": "Score_9, score_8_up, score_7_up, score_6_up, a single female participant, tresses of a soft light-brown hue, distinctive animalistic ears, nude, engaged in intense standing missionary sex (explicit hardcore:1.2). pressed agains wall, standing fuck, sun light, hard shadow on her breast, Visual emphasis on rough penetration (raw carnal energy:1.2), penis fucked pussy, full-body flush, wide-eyed gaze of intensity, and rhythmically moving breasts with each thrust (physical response:1.1), smirk, bitting lips in pleasure",
+    "negativePrompt": "Score_5_down, low-resolution, blurred details, improper lighting, inaccurately drawn anatomy, speech bubbles, artist's watermark, censorship, overly hirsute, deformed limbs or digits, additional animalistic features beyond ears, incorrect visual perspective, clashing color palette.",
+    "cfgScale": 7,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "width": 768,
+    "height": 1344,
+    "tags": [],
+    "models": [
+      "illustrij_v13"
+    ],
+    "lorasRandom": false,
+    "loras": [
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 1,
+        "random": false
+      }
+    ]
+  },
+  {
     "id": "d6599ba4-fa89-40eb-8116-0e65eead8a29",
     "isOpen": false,
     "name": "vi2",
@@ -270,30 +297,51 @@
     "status": "idle"
   },
   {
-    "id": "1c810076-c51c-423b-9937-fc93fcab619c",
+    "id": "89d53045-50e0-4b58-ac5c-18bd1f6d84a8",
     "isOpen": false,
-    "runCount": 20,
-    "currentRun": 0,
-    "status": "idle",
-    "name": "furry soft",
-    "text": "Score_9, score_8_up, score_7_up, score_6_up, a single female participant, tresses of a soft light-brown hue, distinctive animalistic ears, nude, engaged in intense standing missionary sex (explicit hardcore:1.2). pressed agains wall, standing fuck, sun light, hard shadow on her breast, Visual emphasis on rough penetration (raw carnal energy:1.2), penis fucked pussy, full-body flush, wide-eyed gaze of intensity, and rhythmically moving breasts with each thrust (physical response:1.1), smirk, bitting lips in pleasure",
-    "negativePrompt": "Score_5_down, low-resolution, blurred details, improper lighting, inaccurately drawn anatomy, speech bubbles, artist's watermark, censorship, overly hirsute, deformed limbs or digits, additional animalistic features beyond ears, incorrect visual perspective, clashing color palette.",
+    "name": "vi",
+    "text": "[masterpiece:1.2], [best quality:1.2], [highly detailed:1.1], [Arcane art style:1.3], (3/4 side view:1.8), (Vi from Arcane:1.5)\n\n((deep red purple hair:1.6) with (asymmetrical undercut:1.4), (short hair on left side:1.5), (longer choppy layers on right side:1.4), (disheveled windswept look:1.3)), (piercing blue-grey eyes:1.2), (smoky eye makeup:1.1), (strong square jawline:1.3), (split left eyebrow scar:1.1), (small scar on upper lip:1.1), (parted lips:1.2), (confident expression:1.3), smirk\n\n(athletic physique:1.4), (slender toned waist:1.3), (flat stomach:1.3), (visible hip bones:1.4), (standing with weight on one leg:1.8), (normal standing pose:1.7)\n\n(leaning against concrete wall:1.6), (one bare foot pressed flat against wall at knee height:1.5), (one leg slightly bent:1.4), (other leg straight supporting weight:1.6), (provocative pose:1.5), (pulling down shorts with one hand:1.7), (bare ass exposed:1.8), (hip exposed:1.6), (pulling up top with other hand:1.8), (visible underboob:1.6)\n\n(wearing light grey crop top:1.5), (one strap falling off shoulder:1.5), (pulled up revealing stomach:1.6), (extremely low-riding grey boxer shorts/sweatpants:1.6), (pulled down extremely low:1.8), (showing entire rear:1.8), (front barely covering pussy:1.7), pink pubic hair, (almost revealing:1.6), (no underwear:1.6), (matching grey hoodie partially off shoulders:1.3)\n\n(small underground gym:1.4), (Zaun aesthetic:1.2), (concrete walls:1.3), (dark moody environment:1.5), (deep shadows:1.4), (dramatic rim lighting:1.6), (highlighting the curves and contours of her body:1.6), (industrial setting:1.3), (workout equipment in background:1.2), red and purple neon lights",
+    "negativePrompt": "bad anatomy, extra limbs, deformed, ugly, poorly drawn, low quality, blurry, low resolution, bad proportions, bad shadows, wrong perspective, amateur, unprofessional, text, watermark, signature, back view, rear view, looking away, frontal view, gauntlets, shoes, pants, underwear, thong, panties, covered midriff, high waisted shorts\npants, shoes, socks",
     "cfgScale": 7,
+    "seed": -1,
     "steps": 45,
     "sampler": "DPM++ 2M",
-    "width": 768,
-    "height": 1344,
-    "tags": [],
     "models": [
       "illustrij_v13"
     ],
-    "lorasRandom": false,
+    "width": 768,
+    "height": 1344,
+    "lorasRandom": true,
+    "runCount": 20,
+    "tags": [],
     "loras": [
+      {
+        "name": "ViPDXL",
+        "weight": 1,
+        "random": false
+      },
       {
         "name": "USNR STYLE_XL_lokr",
         "weight": 1,
         "random": false
+      },
+      {
+        "name": "arcane",
+        "weight": 1,
+        "random": false
+      },
+      {
+        "name": "arcane_style_illustrious_goofy",
+        "weight": 1,
+        "random": false
+      },
+      {
+        "name": "Arcane_vi-v2",
+        "weight": 1,
+        "random": false
       }
-    ]
+    ],
+    "currentRun": 0,
+    "status": "idle"
   }
 ]

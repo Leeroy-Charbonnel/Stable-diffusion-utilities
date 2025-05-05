@@ -149,7 +149,6 @@ export const getPngInfo = async (imageBase64: string): Promise<any> => {
 
 
 export const restartStableDiffusion = async (): Promise<boolean> => {
-  console.log("restartStableDiffusion");
   try {
     const response = await fetch(`${FILE_API_BASE_URL}/restart-sd`, {
       method: 'POST',

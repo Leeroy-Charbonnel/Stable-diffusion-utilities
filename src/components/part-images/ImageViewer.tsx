@@ -377,13 +377,34 @@ export function ImageViewer() {
     setDeleteDialogOpen(true);
   };
 
+  // src/components/part-images/ImageViewer.tsx
+  // Around line 429, modify the function:
+
   const confirmDelete = async () => {
     setIsLoading(true);
+    const isCurrentImageBeingDeleted = focusedImage && imagesToDelete.includes(focusedImage.path);
+
     try {
       const success = await apiFS.deleteImagesByPaths(imagesToDelete);
       if (success) {
         toast.success(`Deleted ${imagesToDelete.length} images`);
-        setGeneratedImages(generatedImages.filter(img => !imagesToDelete.includes(img.path)));
+
+        // Store the current index before updating the state
+        const currentIndex = focusedImageIndex;
+
+        // Update the images list
+        setGeneratedImages(prev => prev.filter(img => !imagesToDelete.includes(img.path)));
+
+        // If we deleted the current image and there are other images
+        if (isCurrentImageBeingDeleted) {
+          if (filteredImages.length > 1) {
+            // Navigate to the next image (will happen after this function completes)
+            handleImageNavigation('next');
+          } else {
+            // If no more images, close the dialog
+            setDetailsDialogOpen(false);
+          }
+        }
       } else {
         toast.error("Failed to delete image(s)");
       }
@@ -391,7 +412,6 @@ export function ImageViewer() {
       console.error('Error deleting image(s):', error);
       toast.error("Failed to delete image(s)");
     } finally {
-      console.log('deleted, setting open to false');
       setIsLoading(false);
       setDeleteDialogOpen(false);
       setImagesToDelete([]);
@@ -471,9 +491,9 @@ export function ImageViewer() {
         <div className="h-full flex flex-col p-3">
           <div className="flex items-center justify-between mb-4">
             <div className="flex gap-2">
-              <Button onClick={handleRefresh} variant="outline" disabled={isLoading || isApiLoading}>
-                <RefreshCw className={`mr-2 h-4 w-4 ${isLoading || isApiLoading ? 'animate-spin' : ''}`} />
-                {isLoading || isApiLoading ? 'Refreshing...' : 'Refresh'}
+              <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                {isLoading ? 'Refreshing...' : 'Refresh'}
               </Button>
               <Button onClick={openOutputFolder} variant="outline">
                 <FolderOpen className="mr-2 h-4 w-4" />

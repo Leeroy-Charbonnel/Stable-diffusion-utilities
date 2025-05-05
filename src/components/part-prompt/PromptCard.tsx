@@ -149,17 +149,10 @@ export function PromptCard({
 
                   {isCurrentlyExecuting && (
                     <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onInterruptGeneration();
-                      }}
-                      className="flex gap-1"
-                      disabled={isRestarting}
+                      onClick={onInterruptGeneration} variant="destructive" size="sm" className="h-6 p-3.5 text-xs border-0 aspect-square"
+                      disabled={isCancelling || isSkipping}
                     >
-                      <StopCircle className="h-4 w-4" />
-                      <span>Stop</span>
+                      <StopCircle className="h-3 w-3" />
                     </Button>
                   )}
 

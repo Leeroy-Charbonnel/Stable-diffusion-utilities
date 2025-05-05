@@ -9,7 +9,6 @@ import { AiProvider } from '@/contexts/contextAI';
 import { PromptProvider } from '@/contexts/contextPrompts';
 import { AppSidebar } from '@/components/Sidebar';
 import { Toaster } from 'sonner';
-import { useApi } from '@/contexts/contextSD';
 
 // Create a wrapper component to access the useApi hook
 function AppContent() {
@@ -23,23 +22,6 @@ function AppContent() {
     }
   );
   const [newImageNumber, setNewImageNumber] = useState(0);
-  const { checkConnection } = useApi();
-
-  // Check connection on startup
-  useEffect(() => {
-    const initialize = async () => {
-      await checkConnection();
-    };
-    
-    initialize();
-    
-    // Also set up a periodic connection check
-    const intervalId = setInterval(() => {
-      checkConnection();
-    }, 30000); // Check every 30 seconds
-    
-    return () => clearInterval(intervalId);
-  }, [checkConnection]);
 
   useEffect(() => {
     localStorage.setItem('sd-utilities-activeTab', activeTab);

@@ -1,3 +1,4 @@
+// src/components/Sidebar.tsx
 import {
     Sidebar,
     SidebarContent,
@@ -12,7 +13,6 @@ import {
     SidebarTrigger,
     useSidebar,
 } from "@/components/ui/sidebar";
-import { Alert, AlertTitle } from "@/components/ui/alert";
 import { ListChecks, Image, CheckCircle, AlertCircle, BrainCog, Database } from "lucide-react";
 import { useApi } from "@/contexts/contextSD";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +54,6 @@ function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps)
 
     return (
         <>
-
             <SidebarHeader className="flex flex-row items-center justify-between">
                 <div className={`p-4 border-b border-border overflow-hidden transition-width text-nowrap ${open ? "block" : "hidden"}`}>
                     <h1 className="text-xl font-bold">SD Utilities</h1>
@@ -88,15 +87,7 @@ function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps)
             </SidebarContent>
 
             <SidebarFooter>
-                <div className="flex">
-                    {!isConnected && open && (
-                        <Alert className={`flex p-2 bg-destructive/20 ${open ? '' : 'justify-center b-0'}`}>
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Not Connected</AlertTitle>
-                        </Alert>
-                    )
-                    }
-                </div>
+                {/* API status removed from here */}
             </SidebarFooter>
 
         </>

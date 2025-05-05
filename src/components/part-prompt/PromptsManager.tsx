@@ -54,14 +54,6 @@ export function PromptsManager() {
   const [isRestarting, setIsRestarting] = useState(false);
   const continueExecutionRef = useRef(false);
 
-  // Store the current execution state before restarting
-  const [executionStateBeforeRestart, setExecutionStateBeforeRestart] = useState<{
-    promptId: string | null;
-    modelIndex: number;
-    runIndex: number;
-    promptsExecuted: Set<string>;
-  } | null>(null);
-
   useEffect(() => {
     loadPrompts();
   }, []);
@@ -279,7 +271,6 @@ export function PromptsManager() {
     setExecutedPromptIds(new Set());
     setIsCancelling(false);
     setIsSkipping(false);
-    setExecutionStateBeforeRestart(null);
 
     skipExecutionRef.current = false;
     cancelExecutionRef.current = false;
@@ -292,30 +283,69 @@ export function PromptsManager() {
     setExecutingModelIndex(0);
   }
 
+  const callRestartStableDiffusion = async (): Promise<void> => {
+    if (isRestarting) return;
+
+    // Stop progress polling during restart
+    stopProgressPolling();
+
+    setIsRestarting(true);
+    toast.info("Restarting Stable Diffusion...");
+
+    try {
+      console.log("Requesting restart of Stable Diffusion WebUI...");
+      await restartStableDiffusion();
+
+      console.log("Restart requested, waiting for server to complete restart...");
+      // Wait 5 seconds to give the server time to restart
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      let connected = false;
+
+      console.log("Starting connection check loop...");
+      while (!connected  && !cancelExecutionRef.current) {
+        try {
+          connected = await checkConnection();
+          if (connected) {
+            toast.info("Waiting 30 seconds for WebUI to stabilize...");
+            await new Promise(resolve => setTimeout(resolve, 30000));
+            break;
+          }
+        } catch (e) {
+          console.log("Connection check error:", e);
+        }
+        // Wait 2 seconds between attempts
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+      if (connected) {
+        toast.success("Stable Diffusion restarted successfully");
+        totalExecutedPromptsRef.current = 0;
+      } else {
+        toast.error("Failed to reconnect after restart");
+        cancelExecutionRef.current = true;
+      }
+    } catch (error) {
+      console.error("Error during restart:", error);
+      toast.error("Failed to restart Stable Diffusion");
+      cancelExecutionRef.current = true;
+    } finally {
+      setIsRestarting(false);
+    }
+
+    return Promise.resolve();
+  };
+
   const executePrompt = async (prompt: PromptEditor): Promise<void> => {
     setExecutingPromptId(prompt.id);
-    const modelStartIndex = continueExecutionRef.current && executionStateBeforeRestart?.promptId === prompt.id
-      ? executionStateBeforeRestart.modelIndex
-      : 0;
 
-    for (let k = modelStartIndex; k < prompt.models.length; k++) {
+    for (let k = 0; k < prompt.models.length; k++) {
       if (cancelExecutionRef.current) break;
 
       setExecutingModelIndex(k);
       const model = prompt.models[k];
       prompt.currentRun = 0;
       setExecutingModel(model);
-
-      const runStartIndex = continueExecutionRef.current &&
-        executionStateBeforeRestart?.promptId === prompt.id &&
-        executionStateBeforeRestart.modelIndex === k
-        ? executionStateBeforeRestart.runIndex
-        : 0;
-
-      // Reset the continue flag after using it
-      if (continueExecutionRef.current) {
-        continueExecutionRef.current = false;
-      }
 
       const promptData: Prompt = {
         name: prompt.name,
@@ -343,7 +373,7 @@ export function PromptsManager() {
         tags: prompt.tags
       }
 
-      for (let i = runStartIndex; i < prompt.runCount; i++) {
+      for (let i = 0; i < prompt.runCount; i++) {
         setExecutingPromptRunIndex(i);
 
         if (cancelExecutionRef.current) {
@@ -371,29 +401,11 @@ export function PromptsManager() {
           if (totalExecutedPromptsRef.current >= PROMPTS_BEFORE_RESTART) {
             console.log(`Executed ${totalExecutedPromptsRef.current} prompts, restarting Stable Diffusion WebUI`);
 
-            // Save execution state before restart
-            setExecutionStateBeforeRestart({
-              promptId: prompt.id,
-              modelIndex: k,
-              runIndex: i,
-              promptsExecuted: new Set(executedPromptIds)
-            });
-
             // Restart Stable Diffusion
             await callRestartStableDiffusion();
 
-            // Reset prompt count after restart
-            totalExecutedPromptsRef.current = 0;
-
-            // If restart failed or was cancelled, break execution
-            if (!isConnected || cancelExecutionRef.current) {
-              console.log("Breaking execution after restart");
-              break;
-            }
-
-            // Set flag to continue from where we left off
-            continueExecutionRef.current = true;
-
+            console.log("Restarted, resuming execution...");
+    
             // Restart the progress polling
             startProgressPolling();
           }
@@ -421,65 +433,6 @@ export function PromptsManager() {
 
     setExecutingPromptId(null);
     return;
-  };
-
-  const callRestartStableDiffusion = async (): Promise<void> => {
-    if (isRestarting) return;
-
-    // Stop progress polling during restart
-    stopProgressPolling();
-
-    setIsRestarting(true);
-    toast.info("Restarting Stable Diffusion...");
-
-    try {
-      console.log("Requesting restart of Stable Diffusion WebUI...");
-      await restartStableDiffusion();
-
-      console.log("Restart requested, waiting for server to complete restart...");
-      // Wait 5 seconds to give the server time to restart
-      await new Promise(resolve => setTimeout(resolve, 5000));
-
-      let connected = false;
-      let attempts = 0;
-      const maxAttempts = 30; // 30 attempts * 2 seconds = up to 1 minute of waiting
-
-      console.log("Starting connection check loop...");
-      while (!connected && attempts < maxAttempts && !cancelExecutionRef.current) {
-        attempts++;
-        console.log(`Connection attempt ${attempts}/${maxAttempts}...`);
-
-        try {
-          connected = await checkConnection();
-          if (connected) {
-            console.log("Connection established!");
-            break;
-          }
-        } catch (e) {
-          console.log("Connection check error:", e);
-        }
-
-        // Wait 2 seconds between attempts
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-
-      if (connected) {
-        toast.success("Stable Diffusion restarted successfully");
-      } else {
-        toast.error("Failed to reconnect after restart");
-        // Cancel execution if we couldn't reconnect
-        cancelExecutionRef.current = true;
-      }
-    } catch (error) {
-      console.error("Error during restart:", error);
-      toast.error("Failed to restart Stable Diffusion");
-      // Cancel execution on error
-      cancelExecutionRef.current = true;
-    } finally {
-      setIsRestarting(false);
-    }
-
-    return Promise.resolve();
   };
 
   const handleAddPrompt = async () => {
