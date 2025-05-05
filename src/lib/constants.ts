@@ -25,7 +25,7 @@ export const RANDOM_LORAS_MAX_WEIGHT = 1.5;
 
 
 
-export const PROMPTS_BEFORE_RESTART = 20;
+export const PROMPTS_BEFORE_RESTART = 2;
 export const RESTART_TIMEOUT_MS = 5 * 60 * 1000;
-export const CONNECTION_CHECK_INTERVAL_MS = 5000;
+export const CONNECTION_CHECK_INTERVAL_MS = 1000;
 

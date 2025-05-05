@@ -10,7 +10,7 @@ import { usePrompt } from '@/contexts/contextPrompts';
 import { toast } from 'sonner';
 import { ExecutionPanel } from './ExecutionPanel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { CONNECTION_CHECK_INTERVAL_MS, DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDDOM_LORAS_MAX_COUNT, RANDOM_LORAS_MAX_WEIGHT, RANDOM_LORAS_MIN_WEIGHT, RESTART_TIMEOUT_MS } from '@/lib/constants';
+import { CONNECTION_CHECK_INTERVAL_MS, DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDDOM_LORAS_MAX_COUNT, RANDOM_LORAS_MAX_WEIGHT, RANDOM_LORAS_MIN_WEIGHT, RESTART_TIMEOUT_MS, PROMPTS_BEFORE_RESTART } from '@/lib/constants';
 import { SD_API_BASE_URL } from '@/lib/constants';
 import { restartStableDiffusion } from '@/services/apiSD';
 
@@ -28,6 +28,7 @@ export function PromptsManager() {
   const [failureCount, setFailureCount] = useState(0);
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
   const [promptsToRunCount, setPromptsToRunCount] = useState(0);
+  const totalExecutedPromptsRef = useRef(0);
 
   const [elapsedTime, setElapsedTime] = useState(0);
   const [progressData, setProgressData] = useState<ProgressData | null>(null);
@@ -58,8 +59,6 @@ export function PromptsManager() {
 
   //Cleanup on unmount
   useEffect(() => {
-    callRestartStableDiffusion();
-
     return () => {
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
@@ -81,41 +80,7 @@ export function PromptsManager() {
   }, []);
 
 
-  const callRestartStableDiffusion = async (): Promise<void> => {
-    console.log("callRestartStableDiffusion");
-    if (isRestarting) return;
 
-    setIsRestarting(true);
-    toast.info("Starting Stable Diffusion...");
-
-    try {
-      await restartStableDiffusion();
-
-      connectionCheckIntervalRef.current = setInterval(async () => {
-        const connected = await checkConnection();
-        console.log("Check connection");
-        if (connected) {
-          clearInterval(connectionCheckIntervalRef.current!);
-          connectionCheckIntervalRef.current = null;
-          setIsRestarting(false);
-          toast.success("Stable Diffusion restarted successfully!");
-        }
-      }, CONNECTION_CHECK_INTERVAL_MS);
-
-      restartTimeoutRef.current = setTimeout(() => {
-        if (connectionCheckIntervalRef.current) {
-          clearInterval(connectionCheckIntervalRef.current);
-          connectionCheckIntervalRef.current = null;
-        }
-        setIsRestarting(false);
-        toast.warning("Restart timeout reached. Continuing execution.");
-      }, RESTART_TIMEOUT_MS);
-    } catch (error) {
-      console.error("Error restarting Stable Diffusion:", error);
-      setIsRestarting(false);
-      toast.error("Failed to restart Stable Diffusion");
-    }
-  };
 
 
 
@@ -194,7 +159,7 @@ export function PromptsManager() {
     setFailureCount(0);
     setCurrentPromptIndex(0);
     setPromptsToRunCount(promptToExecute.runCount * promptToExecute.models.length);
-
+    totalExecutedPromptsRef.current = 0;
     //Reset flag
     cancelExecutionRef.current = false;
     skipExecutionRef.current = false;
@@ -227,6 +192,7 @@ export function PromptsManager() {
     setFailureCount(0);
     setCurrentPromptIndex(0);
     setExecutedPromptIds(new Set());
+    totalExecutedPromptsRef.current = 0;
 
     //Calculate total runs across all prompts
     const totalRuns = prompts.map(p => p.runCount * p.models.length).reduce((a, b) => a + b, 0)
@@ -289,6 +255,7 @@ export function PromptsManager() {
     setPromptsToRunCount(0);
   }
 
+
   const executePrompt = async (prompt: PromptEditor): Promise<void> => {
     setExecutingPromptId(prompt.id);
 
@@ -301,7 +268,7 @@ export function PromptsManager() {
       const promptData: Prompt = {
         name: prompt.name,
         text: prompt.text,
-        negativePrompt: prompt.negativePrompt,
+        negativePrompt: prompt.negativePrompt || "",
         cfgScale: prompt.cfgScale,
         seed: prompt.seed,
         steps: prompt.steps,
@@ -325,8 +292,6 @@ export function PromptsManager() {
       }
       prompt.currentRun = 0;
       for (let i = 0; i < prompt.runCount; i++) {
-
-        //Check if execution has been cancelled
         if (cancelExecutionRef.current) {
           console.log(`Execution cancelled for prompt ${prompt.id}`);
           break;
@@ -351,7 +316,19 @@ export function PromptsManager() {
         try {
           const result = await generateImage(promptData);
 
-          if (result) { setSuccessCount(prev => prev + 1); }
+          if (result) {
+            setSuccessCount(prev => prev + 1);
+            totalExecutedPromptsRef.current = totalExecutedPromptsRef.current + 1;
+
+            if (totalExecutedPromptsRef.current >= PROMPTS_BEFORE_RESTART) {
+              console.log(`Executed ${totalExecutedPromptsRef.current} prompts, restarting Stable Diffusion WebUI`);
+              console.log("WAIT FOR RESTART");
+              await callRestartStableDiffusion();
+              totalExecutedPromptsRef.current = 0;
+            }
+          }
+
+
           else { setFailureCount(prev => prev + 1); }
           setCurrentPromptIndex(prev => prev + 1);
         } catch (err) {
@@ -368,6 +345,44 @@ export function PromptsManager() {
 
     setExecutingPromptId(null);
     return;
+  };
+
+  const callRestartStableDiffusion = async (): Promise<void> => {
+    if (isRestarting) return;
+
+    setIsRestarting(true);
+    toast.info("Restarting Stable Diffusion...");
+
+    console.log("Restarting Stable Diffusion WebUI...");
+    await restartStableDiffusion();
+    console.log("Waiting 5 seconds...");
+    //wait 5 sec
+    await new Promise(resolve => setTimeout(resolve, 5 * 1000));
+    console.log("5 seconds passed, checking connection");
+    await checkConnection();
+    console.log(isConnected);
+
+    let elapsedTime = 0;
+    let startTimer = Date.now();
+    while (elapsedTime < RESTART_TIMEOUT_MS && !isConnected) {
+      await restartStableDiffusion();
+      await checkConnection();
+      await new Promise(resolve => setTimeout(resolve, CONNECTION_CHECK_INTERVAL_MS));
+
+      elapsedTime = Date.now() - startTimer;
+      console.log("Elapsed time:", elapsedTime);
+      console.log("Waiting for connection...");
+
+
+      if (!isConnected) {
+        break;
+      }
+      break;
+    }
+
+    console.log("Is connected");
+    setIsRestarting(false);
+    return Promise.resolve();
   };
 
   const handleAddPrompt = async () => {
@@ -480,8 +495,10 @@ export function PromptsManager() {
             promptsToRunCount={promptsToRunCount}
             isApiConnected={isConnected}
             isCancelling={isCancelling}
+            isRestarting={isRestarting}
             elapsedTime={elapsedTime}
             progressData={progressData}
+            totalExecutedPrompts={totalExecutedPromptsRef.current}
             onStartExecution={handleExecuteAll}
             onCancelExecution={handleInterruptExecution}
           />

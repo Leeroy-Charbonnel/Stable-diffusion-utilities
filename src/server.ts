@@ -16,7 +16,6 @@ const LABELS_FILE: string = join(import.meta.dir, LABELS_FILE_NAME);
 
 
 let sdProcess: ChildProcess | null = null;
-let sdPID: number | null = null;
 
 //CORS headers
 const corsHeaders: Record<string, string> = {
@@ -91,10 +90,6 @@ async function extractMetadataFromImage(imagePath: string): Promise<ImageMetadat
       console.log(`No EXIF data found in image: ${imagePath}`);
       return null;
     }
-
-    console.log();
-
-
     try {
       const metadataStr = metadata.exif.toString('utf16le');
 
@@ -269,7 +264,6 @@ async function getImagesMetadata(req: BunRequest): Promise<Response> {
 async function saveImage(req: BunRequest): Promise<Response> {
   console.log("POST: Saving image");
   try {
-    console.log("Saving generated image");
     const { imageBase64, metadata } = await req.json() as
       {
         imageBase64: string,
@@ -280,7 +274,6 @@ async function saveImage(req: BunRequest): Promise<Response> {
     const folderPath = join(OUTPUT_DIR, metadata.folder || DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER);
     const filePath = join(folderPath, filename);
     await ensureDirectories(folderPath);
-    console.log(`Saving image to: ${filePath}`);
 
     //Extract the base64 data
     const base64Data = imageBase64.replace(/^data:image\/png;base64,/, '');
@@ -569,79 +562,74 @@ async function refreshCheckpoints(req: BunRequest): Promise<Response> {
   }
 }
 
-async function startStableDiffusionWebUI(): Promise<boolean> {
-  try {
-    console.log("Starting Stable Diffusion WebUI...");
 
-    const projectRoot = path.resolve(process.cwd());
-    const webuiPath = path.join(projectRoot, '..', 'webui-user.bat');
+function startStableDiffusionWebUI(): Promise<boolean> {
+  console.log("Starting Stable Diffusion WebUI...");
+  const sdWebUIDir = 'D:/Projects/Code/stable-diffusion-webui';
+  const webuiPath = 'webui-user.bat';
+  
+  // Set the working directory explicitly and run the batch file
+  sdProcess = spawn(webuiPath, [], {
+    shell: true,
+    detached: true,
+    cwd: sdWebUIDir, // This is crucial - set the working directory
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  
 
-    console.log(`Starting WebUI from path: ${webuiPath}`);
-
-    // Use spawn to start the process detached so it can run independently
-    sdProcess = spawn('cmd.exe', ['/c', webuiPath], {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true
+  return new Promise((resolve, reject) => {
+    sdProcess!.on('spawn', () => {
+      console.log("Process spawned successfully");
+      resolve(true);
     });
-
-    sdProcess.unref();
-
-    if (sdProcess.pid) {
-      sdPID = sdProcess.pid;
-      console.log(`Stable Diffusion WebUI started with process ID: ${sdPID}`);
-      return true;
-    } else {
-      console.error("Failed to get PID for Stable Diffusion WebUI process");
-      return false;
-    }
-  } catch (error) {
-    console.error("Error starting Stable Diffusion WebUI:", error);
-    return false;
-  }
+    
+    sdProcess!.on('error', (err: Error) => {
+      console.error("Failed to start Stable Diffusion WebUI:", err);
+      reject(false);
+    });
+    
+    sdProcess!.on('exit', (code) => {
+      console.log(`Process exited with code ${code}`);
+      if (code !== 0) {
+        reject(false);
+      }
+    });
+  });
 }
 
-async function restartStableDiffusion(req: BunRequest): Promise<Response> {
-  console.log("POST: Restarting Stable Diffusion WebUI");
+function restartStableDiffusionWebUI(req: BunRequest): Promise<Response> {
+  console.log("Restarting Stable Diffusion WebUI...");
 
-  try {
-    console.log(`Killing Stable Diffusion process with PID: ${sdPID}`);
+  return new Promise(async (resolve, reject) => {
+    if (!sdProcess || !sdProcess.pid) {
+      console.log("No process to kill, starting a new one");
+      await startStableDiffusionWebUI();
+      return resolve(Response.json({ success: true }, { status: 200, headers: corsHeaders }));
+    }
 
-    await new Promise<void>((resolve) => {
-      exec(`taskkill /F /PID ${sdPID}`, (error) => {
+    try {
+      // For Windows, use taskkill to forcefully terminate the process tree
+      exec(`taskkill /pid ${sdProcess.pid} /t /f`, async (error) => {
         if (error) {
-          console.warn(`Failed to kill process with PID ${sdPID}:`, error);
+          console.log("Error killing process:", error);
+          // Continue anyway to try starting a new process
         } else {
-          console.log(`Successfully killed process with PID ${sdPID}`);
+          console.log("Process terminated successfully");
         }
-        sdPID = null;
+
+        // Reset the process reference
         sdProcess = null;
-        resolve();
+
+        // Start a new instance
+        await startStableDiffusionWebUI();
+        return resolve(Response.json({ success: true }, { status: 200, headers: corsHeaders }));
       });
-    });
-
-    const success = await startStableDiffusionWebUI();
-
-    if (success) {
-      return Response.json(
-        { success: true, message: 'Restart initiated', pid: sdPID },
-        { headers: corsHeaders }
-      );
-    } else {
-      return Response.json(
-        { success: false, error: 'Failed to start Stable Diffusion WebUI' },
-        { status: 500, headers: corsHeaders }
-      );
+    } catch (error) {
+      console.log("Error during restart:", error);
+      return resolve(Response.json({ success: false }, { status: 500, headers: corsHeaders }));
     }
-  } catch (error) {
-    console.error('Error restarting Stable Diffusion:', error);
-    return Response.json(
-      { success: false, error: String(error) },
-      { status: 500, headers: corsHeaders }
-    );
-  }
+  });
 }
-
 
 const server = Bun.serve({
   port: process.env.PORT || 3001,
@@ -694,7 +682,7 @@ const server = Bun.serve({
       POST: saveLabelsDataRoute
     },
     "/api/restart-sd": {
-      POST: restartStableDiffusion
+      POST: restartStableDiffusionWebUI
     },
     //Fallback for API routes
     "/api/*": (req: BunRequest) => {
@@ -707,9 +695,20 @@ const server = Bun.serve({
   }
 });
 
-//Initialize server
-ensureDirectories(OUTPUT_DIR).then(() => {
+ensureDirectories(OUTPUT_DIR).then(async () => {
   console.log(`Server running on port ${server.port}`);
   console.log(`Images will be saved to: ${OUTPUT_DIR}`);
   console.log(`Default folder: ${join(OUTPUT_DIR, DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER)}`);
+
+  try {
+    const success = await startStableDiffusionWebUI();
+    if (success) {
+      console.log("OKé");
+    } else {
+      console.error("Ratey");
+    }
+
+  } catch (error) {
+    console.error("Error starting Stable Diffusion WebUI:", error);
+  }
 });

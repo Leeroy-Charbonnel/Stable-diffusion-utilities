@@ -38,3 +38,4 @@ export function getModelLabel(array: LabelItem[], name: string): string {
 export function checkIfModelExist(array: LabelItem[], name: string): boolean {
   return array.some(item => item.name === name);
 }
+

@@ -3,6 +3,7 @@ import { Progress } from '@/components/ui/progress';
 import { Play, StopCircle, RefreshCw } from 'lucide-react';
 import { ExecutionStatus, ProgressData, PromptEditor } from '@/types';
 import { Separator } from '@/components/ui/separator';
+import { PROMPTS_BEFORE_RESTART } from '@/lib/constants';
 
 interface ExecutionPanelProps {
   prompts: PromptEditor[];
@@ -15,7 +16,8 @@ interface ExecutionPanelProps {
   isCancelling: boolean;
   elapsedTime: number;
   progressData: ProgressData | null;
-  isRestarting?: boolean; // Add this prop
+  isRestarting?: boolean;
+  totalExecutedPrompts: number;
   onStartExecution: () => void;
   onCancelExecution: () => void;
 }
@@ -31,7 +33,8 @@ export function ExecutionPanel({
   isCancelling,
   elapsedTime,
   progressData,
-  isRestarting = false, 
+  isRestarting = false,
+  totalExecutedPrompts,
   onStartExecution,
   onCancelExecution
 }: ExecutionPanelProps) {
@@ -47,6 +50,7 @@ export function ExecutionPanel({
   };
 
   const sdProgressPercentage = progressData?.progress ? Math.round(progressData.progress * 100) : 0;
+  const remainingPromptsBeforeRestart = PROMPTS_BEFORE_RESTART - totalExecutedPrompts;
 
   return (
     <div className="h-full flex flex-col p-4">
@@ -95,14 +99,19 @@ export function ExecutionPanel({
       <Separator className='my-2' />
 
       {/* Counters Section */}
-      <div className="flex gap-2 mx-auto">
+      <div className="flex gap-2 mx-auto text-sm">
         <span>Success {successCount}</span>
         <span className="mx-2">|</span>
         <span>Failed {failureCount}</span>
+        {isExecuting && (
+          <>
+            <span className="mx-2">|</span>
+            <span>Restart after {remainingPromptsBeforeRestart} more</span>
+          </>
+        )}
       </div>
 
       <Separator className='my-2' />
-
 
       {/* Preview Image Section */}
       {isExecuting && progressData?.current_image && (
