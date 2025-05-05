@@ -566,67 +566,91 @@ async function refreshCheckpoints(req: BunRequest): Promise<Response> {
 function startStableDiffusionWebUI(): Promise<boolean> {
   console.log("Starting Stable Diffusion WebUI...");
   const sdWebUIDir = 'D:/Projects/Code/stable-diffusion-webui';
-  const webuiPath = 'webui-user.bat';
-  
-  // Set the working directory explicitly and run the batch file
+  const webuiPath = path.join(sdWebUIDir, 'webui-user.bat');
+
+  if (!existsSync(sdWebUIDir)) {
+    console.error(`Stable Diffusion directory not found at: ${sdWebUIDir}`);
+    return Promise.resolve(false);
+  }
+
   sdProcess = spawn(webuiPath, [], {
     shell: true,
     detached: true,
-    cwd: sdWebUIDir, // This is crucial - set the working directory
+    cwd: sdWebUIDir,
     stdio: ['ignore', 'pipe', 'pipe']
   });
-  
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     sdProcess!.on('spawn', () => {
       console.log("Process spawned successfully");
       resolve(true);
     });
-    
+
     sdProcess!.on('error', (err: Error) => {
       console.error("Failed to start Stable Diffusion WebUI:", err);
-      reject(false);
+      resolve(false);
     });
-    
+
     sdProcess!.on('exit', (code) => {
       console.log(`Process exited with code ${code}`);
       if (code !== 0) {
-        reject(false);
+        resolve(false);
       }
     });
+
+    // Add a timeout to resolve the promise if spawn doesn't fire
+    setTimeout(() => {
+      if (sdProcess && sdProcess.pid) {
+        console.log("Process started but spawn event didn't fire, considering it started");
+        resolve(true);
+      } else {
+        console.error("Process failed to start within timeout");
+        resolve(false);
+      }
+    }, 5000);
   });
 }
-
 function restartStableDiffusionWebUI(req: BunRequest): Promise<Response> {
   console.log("Restarting Stable Diffusion WebUI...");
 
-  return new Promise(async (resolve, reject) => {
-    if (!sdProcess || !sdProcess.pid) {
-      console.log("No process to kill, starting a new one");
-      await startStableDiffusionWebUI();
-      return resolve(Response.json({ success: true }, { status: 200, headers: corsHeaders }));
-    }
-
+  return new Promise(async (resolve) => {
     try {
-      // For Windows, use taskkill to forcefully terminate the process tree
-      exec(`taskkill /pid ${sdProcess.pid} /t /f`, async (error) => {
-        if (error) {
-          console.log("Error killing process:", error);
-          // Continue anyway to try starting a new process
-        } else {
-          console.log("Process terminated successfully");
-        }
+      if (sdProcess && sdProcess.pid) {
+        console.log(`Killing process with PID: ${sdProcess.pid}`);
 
-        // Reset the process reference
-        sdProcess = null;
+        // For Windows, use taskkill to forcefully terminate the process tree
+        exec(`taskkill /pid ${sdProcess.pid} /t /f`, async (error) => {
+          if (error) {
+            console.log("Error killing process, may continue if process already terminated:", error);
+          } else {
+            console.log("Process terminated successfully");
+          }
 
-        // Start a new instance
-        await startStableDiffusionWebUI();
-        return resolve(Response.json({ success: true }, { status: 200, headers: corsHeaders }));
-      });
+          // Add a small delay to ensure process is fully terminated
+          await new Promise(r => setTimeout(r, 2000));
+
+          // Reset the process reference
+          sdProcess = null;
+
+          // Start a new instance
+          const success = await startStableDiffusionWebUI();
+          console.log("Restart result:", success ? "Success" : "Failed");
+
+          return resolve(Response.json({ success }, { status: success ? 200 : 500, headers: corsHeaders }));
+        });
+      } else {
+        console.log("No running process found, starting a new one");
+        const success = await startStableDiffusionWebUI();
+        console.log("Start result:", success ? "Success" : "Failed");
+
+        return resolve(Response.json({ success }, { status: success ? 200 : 500, headers: corsHeaders }));
+      }
     } catch (error) {
-      console.log("Error during restart:", error);
-      return resolve(Response.json({ success: false }, { status: 500, headers: corsHeaders }));
+      console.error("Error during restart:", error);
+      return resolve(Response.json({
+        success: false,
+        error: String(error)
+      }, { status: 500, headers: corsHeaders }));
     }
   });
 }

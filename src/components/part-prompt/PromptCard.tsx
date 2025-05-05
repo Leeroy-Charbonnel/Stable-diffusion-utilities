@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, Check, X, Play, ChevronDown, ChevronUp, SkipForward } from 'lucide-react';
+import { Trash2, Check, X, Play, ChevronDown, ChevronUp, SkipForward, StopCircle } from 'lucide-react';
 import { LabelItem, PromptEditor } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -13,7 +13,7 @@ import { getModelLabel } from '@/lib/utils';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '../ui/context-menu';
 
 
-type PromptCardProps = {
+interface PromptCardProps {
   prompt: PromptEditor;
   index: number;
 
@@ -22,26 +22,28 @@ type PromptCardProps = {
 
   onRunPrompt: (prompt: PromptEditor) => void;
   onSkipExecution: () => void;
+  onInterruptGeneration: () => void; // Add this new handler
   onDuplicatePrompt: () => void;
   onCopyRefresh: () => void;
 
   onDelete: () => void;
-  onMove: (id: string, direction: 'up' | 'down') => void;
-  onPromptUpdate: (updatedPrompt: PromptEditor) => void;
+  onMove: (promptId: string, direction: 'up' | 'down') => Promise<boolean>;
+  onPromptUpdate: (prompt: PromptEditor) => void;
 
-  isCancelling?: boolean;
-  isSkipping?: boolean;
+  isCancelling: boolean;
+  isSkipping: boolean;
+  isRestarting?: boolean; // Add this new prop
 
-  isExecuted?: boolean;
-  isExecuting?: boolean;
-  isCurrentlyExecuting?: boolean;
+  isExecuted: boolean;
+  isExecuting: boolean;
+  isCurrentlyExecuting: boolean;
   executingModel: string | null;
 
-  isApiConnected?: boolean;
-  availableSamplers?: string[];
-  availableModels?: LabelItem[];
-  availableLoras?: LabelItem[];
-};
+  isApiConnected: boolean;
+  availableSamplers: string[];
+  availableModels: LabelItem[];
+  availableLoras: LabelItem[];
+}
 
 export function PromptCard({
   prompt,
@@ -55,7 +57,9 @@ export function PromptCard({
   onRunPrompt,
   onSkipExecution,
   onDuplicatePrompt,
+  onInterruptGeneration,
   onCopyRefresh,
+  isRestarting,
   isExecuted = false,
   isExecuting = false,
   isCancelling = false,
@@ -143,7 +147,24 @@ export function PromptCard({
                 </div>
                 <div className="flex items-center space-x-2 ml-2">
 
+                  {isCurrentlyExecuting && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onInterruptGeneration();
+                      }}
+                      className="flex gap-1"
+                      disabled={isRestarting}
+                    >
+                      <StopCircle className="h-4 w-4" />
+                      <span>Stop</span>
+                    </Button>
+                  )}
+
                   {!isExecuting && (
+
                     <Button
                       variant="outline" size="sm" onClick={() => { onRunPrompt(prompt); }} className="h-6 p-3.5 text-xs border-0" disabled={isExecuting || !isApiConnected}>
                       <Play className="mr-1 h-3 w-3" />Run</Button>
@@ -239,7 +260,7 @@ export function PromptCard({
                 </div>
               )}
 
-              {showModels &&!prompt.lorasRandom && prompt.loras && showModels && prompt.loras.map(lora => (
+              {showModels && !prompt.lorasRandom && prompt.loras && showModels && prompt.loras.map(lora => (
                 <div key={`${prompt.id}-${lora.name}`} className="flex items-center px-2 py-0.5 h-5 border-primary border-1" title={lora.name}>
                   <div className="text-xs max-w-[100px] truncate text-primary">
                     {getModelLabel(availableLoras, lora.name)}

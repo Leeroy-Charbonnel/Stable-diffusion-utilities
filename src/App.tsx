@@ -9,8 +9,10 @@ import { AiProvider } from '@/contexts/contextAI';
 import { PromptProvider } from '@/contexts/contextPrompts';
 import { AppSidebar } from '@/components/Sidebar';
 import { Toaster } from 'sonner';
+import { useApi } from '@/contexts/contextSD';
 
-function App() {
+// Create a wrapper component to access the useApi hook
+function AppContent() {
   const [activeTab, setActiveTab] = useState<'prompts' | 'images' | 'ai' | 'models'>(
     () => {
       const savedTab = localStorage.getItem('sd-utilities-activeTab');
@@ -21,12 +23,28 @@ function App() {
     }
   );
   const [newImageNumber, setNewImageNumber] = useState(0);
+  const { checkConnection } = useApi();
+
+  // Check connection on startup
+  useEffect(() => {
+    const initialize = async () => {
+      await checkConnection();
+    };
+    
+    initialize();
+    
+    // Also set up a periodic connection check
+    const intervalId = setInterval(() => {
+      checkConnection();
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [checkConnection]);
 
   useEffect(() => {
     localStorage.setItem('sd-utilities-activeTab', activeTab);
     if (activeTab === 'images') setNewImageNumber(0);
   }, [activeTab]);
-
 
   useEffect(() => {
     const handleImageSaved = () => {
@@ -37,25 +55,29 @@ function App() {
     return () => { window.removeEventListener('image-saved', handleImageSaved); };
   }, [activeTab]);
 
+  return (
+    <div className="min-h-screen bg-background text-foreground dark flex overflow-hidden">
+      <AppSidebar activeTab={activeTab} setActiveTab={setActiveTab} newImageNumber={newImageNumber} />
 
+      <div className="w-full h-screen">
+        <div className="h-full">
+          <div className="h-full" style={{ display: activeTab === 'prompts' ? 'block' : 'none' }}><PromptsManager /></div>
+          <div className="h-full" style={{ display: activeTab === 'images' ? 'block' : 'none' }}><ImageViewer /></div>
+          <div className="h-full" style={{ display: activeTab === 'ai' ? 'block' : 'none' }}><AiChat /></div>
+          <div className="h-full" style={{ display: activeTab === 'models' ? 'block' : 'none' }}><ModelsManager /></div>
+        </div>
+      </div>
+      <Toaster />
+    </div>
+  );
+}
+
+function App() {
   return (
     <SdProvider>
       <PromptProvider>
         <AiProvider>
-
-          <div className="min-h-screen bg-background text-foreground dark flex overflow-hidden">
-            <AppSidebar activeTab={activeTab} setActiveTab={setActiveTab} newImageNumber={newImageNumber} />
-
-            <div className="w-full h-screen">
-              <div className="h-full">
-                <div className="h-full" style={{ display: activeTab === 'prompts' ? 'block' : 'none' }}><PromptsManager /></div>
-                <div className="h-full" style={{ display: activeTab === 'images' ? 'block' : 'none' }}><ImageViewer /></div>
-                <div className="h-full" style={{ display: activeTab === 'ai' ? 'block' : 'none' }}><AiChat /></div>
-                <div className="h-full" style={{ display: activeTab === 'models' ? 'block' : 'none' }}><ModelsManager /></div>
-              </div>
-            </div>
-          </div>
-          <Toaster />
+          <AppContent />
         </AiProvider>
       </PromptProvider>
     </SdProvider>

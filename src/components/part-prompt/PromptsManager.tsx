@@ -12,7 +12,7 @@ import { ExecutionPanel } from './ExecutionPanel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { CONNECTION_CHECK_INTERVAL_MS, DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDDOM_LORAS_MAX_COUNT, RANDOM_LORAS_MAX_WEIGHT, RANDOM_LORAS_MIN_WEIGHT, RESTART_TIMEOUT_MS, PROMPTS_BEFORE_RESTART } from '@/lib/constants';
 import { SD_API_BASE_URL } from '@/lib/constants';
-import { restartStableDiffusion } from '@/services/apiSD';
+import { interruptGeneration, restartStableDiffusion } from '@/services/apiSD';
 
 export function PromptsManager() {
   const { isConnected, checkConnection, generateImage, availableSamplers, availableModels, availableLoras } = useApi();
@@ -23,6 +23,8 @@ export function PromptsManager() {
 
   const [executingPromptId, setExecutingPromptId] = useState<string | null>(null);
   const [executedPromptIds, setExecutedPromptIds] = useState<Set<string>>(new Set());
+  const [executingPromptRunIndex, setExecutingPromptRunIndex] = useState(0);
+  const [executingModelIndex, setExecutingModelIndex] = useState(0);
 
   const [successCount, setSuccessCount] = useState(0);
   const [failureCount, setFailureCount] = useState(0);
@@ -39,7 +41,6 @@ export function PromptsManager() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [executingModel, setExecutingModel] = useState<string | null>(null);
 
-
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const elapsedTimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -48,41 +49,33 @@ export function PromptsManager() {
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const connectionCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-
   const [showTags, setShowTags] = useState(false);
   const [showModels, setShowModels] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
+  const continueExecutionRef = useRef(false);
+
+  // Store the current execution state before restarting
+  const [executionStateBeforeRestart, setExecutionStateBeforeRestart] = useState<{
+    promptId: string | null;
+    modelIndex: number;
+    runIndex: number;
+    promptsExecuted: Set<string>;
+  } | null>(null);
 
   useEffect(() => {
     loadPrompts();
   }, []);
 
-  //Cleanup on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
-      if (elapsedTimeIntervalRef.current) {
-        clearInterval(elapsedTimeIntervalRef.current);
-      }
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
-      if (restartTimeoutRef.current) {
-        clearTimeout(restartTimeoutRef.current);
-      }
-      if (connectionCheckIntervalRef.current) {
-        clearInterval(connectionCheckIntervalRef.current);
-      }
+      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      if (elapsedTimeIntervalRef.current) clearInterval(elapsedTimeIntervalRef.current);
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+      if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
+      if (connectionCheckIntervalRef.current) clearInterval(connectionCheckIntervalRef.current);
     };
-
   }, []);
-
-
-
-
-
 
   const startTimeTracking = () => {
     setElapsedTime(0);
@@ -107,6 +100,9 @@ export function PromptsManager() {
   };
 
   const fetchProgressData = async () => {
+    // Don't fetch progress data during restart
+    if (isRestarting) return;
+
     try {
       const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/progress`);
       if (response.ok) {
@@ -120,6 +116,12 @@ export function PromptsManager() {
 
   const startProgressPolling = () => {
     setProgressData(null);
+
+    // Clear any existing interval
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+
     progressIntervalRef.current = setInterval(fetchProgressData, 500);
   };
 
@@ -132,11 +134,11 @@ export function PromptsManager() {
   };
 
   const handlePromptUpdate = (updatedPrompt: PromptEditor) => {
-    //Clear any pending updates
+    // Clear any pending updates
     if (updateTimeoutRef.current) {
       clearTimeout(updateTimeoutRef.current);
     }
-    //Set timeout for debounced update
+    // Set timeout for debounced update
     updateTimeoutRef.current = setTimeout(() => {
       updatePrompt(updatedPrompt);
     }, DEBOUNCE_DELAY);
@@ -146,11 +148,41 @@ export function PromptsManager() {
     setIsCancelling(true);
     cancelExecutionRef.current = true;
     stopProgressPolling();
+
+    // Call the SD API to interrupt the generation
+    interruptGeneration().then(success => {
+      if (success) {
+        toast.success("Generation interrupted");
+      } else {
+        toast.error("Failed to interrupt generation");
+      }
+    });
+  };
+
+  const handleInterruptCurrentGeneration = async () => {
+    try {
+      const success = await interruptGeneration();
+      if (success) {
+        toast.success("Current generation interrupted");
+      } else {
+        toast.error("Failed to interrupt generation");
+      }
+    } catch (error) {
+      console.error("Error interrupting generation:", error);
+      toast.error("Error interrupting generation");
+    }
   };
 
   const handleSkipCurrentPrompt = () => {
     setIsSkipping(true);
     skipExecutionRef.current = true;
+
+    // Also interrupt the current generation
+    interruptGeneration().then(success => {
+      if (success) {
+        toast.success("Skipping to next prompt");
+      }
+    });
   };
 
   const handleExecutePrompt = async (promptToExecute: PromptEditor) => {
@@ -160,7 +192,7 @@ export function PromptsManager() {
     setCurrentPromptIndex(0);
     setPromptsToRunCount(promptToExecute.runCount * promptToExecute.models.length);
     totalExecutedPromptsRef.current = 0;
-    //Reset flag
+    // Reset flags
     cancelExecutionRef.current = false;
     skipExecutionRef.current = false;
     setIsSkipping(false);
@@ -185,7 +217,7 @@ export function PromptsManager() {
     await resetExecution();
   };
 
-  //Handle execution of all prompts
+  // Handle execution of all prompts
   const handleExecuteAll = async () => {
     setStatus('execution');
     setSuccessCount(0);
@@ -194,17 +226,18 @@ export function PromptsManager() {
     setExecutedPromptIds(new Set());
     totalExecutedPromptsRef.current = 0;
 
-    //Calculate total runs across all prompts
+    // Calculate total runs across all prompts
     const totalRuns = prompts.map(p => p.runCount * p.models.length).reduce((a, b) => a + b, 0)
     setPromptsToRunCount(totalRuns);
 
-    //Reset flag
+    // Reset flags
     cancelExecutionRef.current = false;
     skipExecutionRef.current = false;
+    continueExecutionRef.current = false;
     setIsCancelling(false);
     setIsSkipping(false);
 
-    //Start time tracking and progress polling
+    // Start time tracking and progress polling
     startTimeTracking();
     startProgressPolling();
 
@@ -227,7 +260,7 @@ export function PromptsManager() {
 
     setStatus('completed');
 
-    //Stop time tracking and progress polling
+    // Stop time tracking and progress polling
     stopTimeTracking();
     stopProgressPolling();
 
@@ -235,35 +268,54 @@ export function PromptsManager() {
   };
 
   const resetExecution = async () => {
-    //Reset all prompts to idle state in a sequential manner
+    // Reset all prompts to idle state in a sequential manner
     const promptsToReset = prompts.filter(p => p.currentRun > 0);
     for (const p of promptsToReset) {
       await updatePrompt({ ...p, currentRun: 0, status: 'idle' });
     }
 
-    //Clear execution state
+    // Clear execution state
     setExecutingPromptId(null);
     setExecutedPromptIds(new Set());
     setIsCancelling(false);
     setIsSkipping(false);
+    setExecutionStateBeforeRestart(null);
 
     skipExecutionRef.current = false;
     cancelExecutionRef.current = false;
+    continueExecutionRef.current = false;
 
-    //Reset counters
+    // Reset counters
     setCurrentPromptIndex(0);
     setPromptsToRunCount(0);
+    setExecutingPromptRunIndex(0);
+    setExecutingModelIndex(0);
   }
-
 
   const executePrompt = async (prompt: PromptEditor): Promise<void> => {
     setExecutingPromptId(prompt.id);
+    const modelStartIndex = continueExecutionRef.current && executionStateBeforeRestart?.promptId === prompt.id
+      ? executionStateBeforeRestart.modelIndex
+      : 0;
 
-    for (let k = 0; k < prompt.models.length; k++) {
+    for (let k = modelStartIndex; k < prompt.models.length; k++) {
+      if (cancelExecutionRef.current) break;
+
+      setExecutingModelIndex(k);
       const model = prompt.models[k];
       prompt.currentRun = 0;
-
       setExecutingModel(model);
+
+      const runStartIndex = continueExecutionRef.current &&
+        executionStateBeforeRestart?.promptId === prompt.id &&
+        executionStateBeforeRestart.modelIndex === k
+        ? executionStateBeforeRestart.runIndex
+        : 0;
+
+      // Reset the continue flag after using it
+      if (continueExecutionRef.current) {
+        continueExecutionRef.current = false;
+      }
 
       const promptData: Prompt = {
         name: prompt.name,
@@ -290,8 +342,10 @@ export function PromptsManager() {
         height: prompt.height,
         tags: prompt.tags
       }
-      prompt.currentRun = 0;
-      for (let i = 0; i < prompt.runCount; i++) {
+
+      for (let i = runStartIndex; i < prompt.runCount; i++) {
+        setExecutingPromptRunIndex(i);
+
         if (cancelExecutionRef.current) {
           console.log(`Execution cancelled for prompt ${prompt.id}`);
           break;
@@ -310,29 +364,51 @@ export function PromptsManager() {
           promptData.loras = shuffled.slice(0, lorasNumber).map(lora => {
             return { name: lora.name, weight: randomBetween(RANDOM_LORAS_MIN_WEIGHT, RANDOM_LORAS_MAX_WEIGHT) }
           });
-        } else {
         }
 
         try {
+          // Check if we need to restart before generating this image
+          if (totalExecutedPromptsRef.current >= PROMPTS_BEFORE_RESTART) {
+            console.log(`Executed ${totalExecutedPromptsRef.current} prompts, restarting Stable Diffusion WebUI`);
+
+            // Save execution state before restart
+            setExecutionStateBeforeRestart({
+              promptId: prompt.id,
+              modelIndex: k,
+              runIndex: i,
+              promptsExecuted: new Set(executedPromptIds)
+            });
+
+            // Restart Stable Diffusion
+            await callRestartStableDiffusion();
+
+            // Reset prompt count after restart
+            totalExecutedPromptsRef.current = 0;
+
+            // If restart failed or was cancelled, break execution
+            if (!isConnected || cancelExecutionRef.current) {
+              console.log("Breaking execution after restart");
+              break;
+            }
+
+            // Set flag to continue from where we left off
+            continueExecutionRef.current = true;
+
+            // Restart the progress polling
+            startProgressPolling();
+          }
+
           const result = await generateImage(promptData);
 
           if (result) {
             setSuccessCount(prev => prev + 1);
             totalExecutedPromptsRef.current = totalExecutedPromptsRef.current + 1;
-
-            if (totalExecutedPromptsRef.current >= PROMPTS_BEFORE_RESTART) {
-              console.log(`Executed ${totalExecutedPromptsRef.current} prompts, restarting Stable Diffusion WebUI`);
-              console.log("WAIT FOR RESTART");
-              await callRestartStableDiffusion();
-              totalExecutedPromptsRef.current = 0;
-            }
+          } else {
+            setFailureCount(prev => prev + 1);
           }
-
-
-          else { setFailureCount(prev => prev + 1); }
           setCurrentPromptIndex(prev => prev + 1);
         } catch (err) {
-          console.error(`Error running prompt ${prompt.id} (${prompt.currentRun}/${prompt.runCount}):`, err);
+          console.error(`Error running prompt ${prompt.id} (${i + 1}/${prompt.runCount}):`, err);
           setFailureCount(prev => prev + 1);
         }
 
@@ -350,38 +426,59 @@ export function PromptsManager() {
   const callRestartStableDiffusion = async (): Promise<void> => {
     if (isRestarting) return;
 
+    // Stop progress polling during restart
+    stopProgressPolling();
+
     setIsRestarting(true);
     toast.info("Restarting Stable Diffusion...");
 
-    console.log("Restarting Stable Diffusion WebUI...");
-    await restartStableDiffusion();
-    console.log("Waiting 5 seconds...");
-    //wait 5 sec
-    await new Promise(resolve => setTimeout(resolve, 5 * 1000));
-    console.log("5 seconds passed, checking connection");
-    await checkConnection();
-    console.log(isConnected);
-
-    let elapsedTime = 0;
-    let startTimer = Date.now();
-    while (elapsedTime < RESTART_TIMEOUT_MS && !isConnected) {
+    try {
+      console.log("Requesting restart of Stable Diffusion WebUI...");
       await restartStableDiffusion();
-      await checkConnection();
-      await new Promise(resolve => setTimeout(resolve, CONNECTION_CHECK_INTERVAL_MS));
 
-      elapsedTime = Date.now() - startTimer;
-      console.log("Elapsed time:", elapsedTime);
-      console.log("Waiting for connection...");
+      console.log("Restart requested, waiting for server to complete restart...");
+      // Wait 5 seconds to give the server time to restart
+      await new Promise(resolve => setTimeout(resolve, 5000));
 
+      let connected = false;
+      let attempts = 0;
+      const maxAttempts = 30; // 30 attempts * 2 seconds = up to 1 minute of waiting
 
-      if (!isConnected) {
-        break;
+      console.log("Starting connection check loop...");
+      while (!connected && attempts < maxAttempts && !cancelExecutionRef.current) {
+        attempts++;
+        console.log(`Connection attempt ${attempts}/${maxAttempts}...`);
+
+        try {
+          connected = await checkConnection();
+          if (connected) {
+            console.log("Connection established!");
+            break;
+          }
+        } catch (e) {
+          console.log("Connection check error:", e);
+        }
+
+        // Wait 2 seconds between attempts
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
-      break;
+
+      if (connected) {
+        toast.success("Stable Diffusion restarted successfully");
+      } else {
+        toast.error("Failed to reconnect after restart");
+        // Cancel execution if we couldn't reconnect
+        cancelExecutionRef.current = true;
+      }
+    } catch (error) {
+      console.error("Error during restart:", error);
+      toast.error("Failed to restart Stable Diffusion");
+      // Cancel execution on error
+      cancelExecutionRef.current = true;
+    } finally {
+      setIsRestarting(false);
     }
 
-    console.log("Is connected");
-    setIsRestarting(false);
     return Promise.resolve();
   };
 
@@ -409,7 +506,6 @@ export function PromptsManager() {
 
     await addPrompt(newPrompt);
   };
-
 
   const handleDuplicatePrompt = async (prompt: PromptEditor) => {
     const newPrompt: PromptEditor = {
@@ -449,6 +545,7 @@ export function PromptsManager() {
 
                 onRunPrompt={handleExecutePrompt}
                 onSkipExecution={handleSkipCurrentPrompt}
+                onInterruptGeneration={handleInterruptCurrentGeneration}
                 onDuplicatePrompt={() => handleDuplicatePrompt(prompt)}
                 onCopyRefresh={() => handleUpdateCopyRefresh()}
 
@@ -456,9 +553,9 @@ export function PromptsManager() {
                 onMove={reorderPrompt}
                 onPromptUpdate={handlePromptUpdate}
 
-
                 isCancelling={isCancelling}
                 isSkipping={isSkipping}
+                isRestarting={isRestarting}
 
                 isExecuted={executedPromptIds.has(prompt.id)}
                 isExecuting={status === 'execution'}

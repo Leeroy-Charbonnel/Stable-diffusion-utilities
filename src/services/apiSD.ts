@@ -162,3 +162,23 @@ export const restartStableDiffusion = async (): Promise<boolean> => {
     return false;
   }
 };
+
+
+export const interruptGeneration = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/interrupt`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      console.error(`Failed to interrupt generation: ${response.status}`);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error interrupting generation:', error);
+    return false;
+  }
+};

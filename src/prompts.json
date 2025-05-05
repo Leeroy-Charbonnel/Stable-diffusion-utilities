@@ -1,24 +1,299 @@
 [
   {
-    "id": "abbaa38e-87c3-4fad-8316-9e19ea97cce4",
+    "id": "97df4f4e-b71a-4626-a46a-eac2b6a77116",
     "isOpen": true,
-    "name": "New Prompt",
-    "text": "crystal flower",
-    "negativePrompt": "",
+    "name": "vi",
+    "text": "[masterpiece:1.2], [best quality:1.2], [highly detailed:1.1], [Arcane art style:1.3], (3/4 side view:1.8), (Vi from Arcane:1.5)\n\n((deep red purple hair:1.6) with (asymmetrical undercut:1.4), (short hair on left side:1.5), (longer choppy layers on right side:1.4), (disheveled windswept look:1.3)), (piercing blue-grey eyes:1.2), (smoky eye makeup:1.1), (strong square jawline:1.3), (split left eyebrow scar:1.1), (small scar on upper lip:1.1), (parted lips:1.2), (confident expression:1.3), smirk\n\n(athletic physique:1.4), (slender toned waist:1.3), (flat stomach:1.3), (visible hip bones:1.4), (standing with weight on one leg:1.8), (normal standing pose:1.7)\n\n(leaning against concrete wall:1.6), (one bare foot pressed flat against wall at knee height:1.5), (one leg slightly bent:1.4), (other leg straight supporting weight:1.6), (provocative pose:1.5), (pulling down shorts with one hand:1.7), (bare ass exposed:1.8), (hip exposed:1.6), (pulling up top with other hand:1.8), (visible underboob:1.6)\n\n(wearing light grey crop top:1.5), (one strap falling off shoulder:1.5), (pulled up revealing stomach:1.6), (extremely low-riding grey boxer shorts/sweatpants:1.6), (pulled down extremely low:1.8), (showing entire rear:1.8), (front barely covering pussy:1.7), pink pubic hair, (almost revealing:1.6), (no underwear:1.6), (matching grey hoodie partially off shoulders:1.3)\n\n(small underground gym:1.4), (Zaun aesthetic:1.2), (concrete walls:1.3), (dark moody environment:1.5), (deep shadows:1.4), (dramatic rim lighting:1.6), (highlighting the curves and contours of her body:1.6), (industrial setting:1.3), (workout equipment in background:1.2), red and purple neon lights",
+    "negativePrompt": "bad anatomy, extra limbs, deformed, ugly, poorly drawn, low quality, blurry, low resolution, bad proportions, bad shadows, wrong perspective, amateur, unprofessional, text, watermark, signature, back view, rear view, looking away, frontal view, gauntlets, shoes, pants, underwear, thong, panties, covered midriff, high waisted shorts\npants, shoes, socks",
     "cfgScale": 7,
     "seed": -1,
-    "steps": 10,
-    "sampler": "",
+    "steps": 45,
+    "sampler": "DPM++ 2M",
     "models": [
       "illustrij_v13"
     ],
-    "width": 256,
-    "height": 256,
+    "width": 768,
+    "height": 1344,
+    "lorasRandom": true,
+    "runCount": 20,
+    "tags": [],
+    "loras": [
+      {
+        "name": "ViPDXL",
+        "weight": 1,
+        "random": false
+      },
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 1,
+        "random": false
+      },
+      {
+        "name": "arcane",
+        "weight": 1,
+        "random": false
+      },
+      {
+        "name": "arcane_style_illustrious_goofy",
+        "weight": 1,
+        "random": false
+      },
+      {
+        "name": "Arcane_vi-v2",
+        "weight": 1,
+        "random": false
+      }
+    ],
+    "currentRun": 2,
+    "status": "idle"
+  },
+  {
+    "id": "c6158eb6-1e4f-44af-88a1-9f382d2a23e5",
+    "isOpen": false,
+    "runCount": 20,
+    "currentRun": 20,
+    "status": "idle",
+    "name": "furry soft",
+    "text": "Score_9, score_8_up, score_7_up, score_6_up, a single female participant, tresses of a soft light-brown hue, distinctive animalistic ears, nude, engaged in intense missionary sex (explicit hardcore:1.2). Legs bent, exposing the soles of her feet, on deep dark green velvet sheets. Visual emphasis on rough penetration (raw carnal energy:1.2), penis fucked pussy, full-body flush, wide-eyed gaze of intensity, and rhythmically moving breasts with each thrust (physical response:1.1). Fingers dig into sheets (tension:1.1)",
+    "negativePrompt": "Score_5_down, low-resolution, blurred details, improper lighting, inaccurately drawn anatomy, speech bubbles, artist's watermark, censorship, overly hirsute, deformed limbs or digits, additional animalistic features beyond ears, incorrect visual perspective, clashing color palette.",
+    "cfgScale": 7,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "width": 768,
+    "height": 1344,
+    "tags": [],
+    "models": [
+      "illustrij_v13"
+    ],
     "lorasRandom": false,
-    "runCount": 6,
+    "loras": [
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 1,
+        "random": false
+      }
+    ]
+  },
+  {
+    "id": "9ba2d3d1-7402-4438-ac52-e7b28bc1c9c0",
+    "isOpen": false,
+    "name": "blonde, feet, footjob",
+    "text": " fair skin, long blonde hair, nude, round perky breasts, stiff nipples, meticulously manicured toes, (red nail polish:1.3), (deep red velvet garter belt:1.3), foot job, erect penis, detailed artwork of feet rubbing the penis, (highly detailed stiletto shoes:1.2), detailed cum shot, toes covered in cum, glossy cum droplets on black heels and red velvet garter, (intense motion lines:1.2), (vivid pleasure moans:1.1), hyper-realistic quality, (masterpiece:1.2), (ultra-HD:1.2), (volumetric lighting:1.3), (dramatic lighting:1.1), wide eyes, moaning face.",
+    "negativePrompt": "poor quality, blurred lines, censored, visible watermark, bad anatomy, disproportionate body, flat breasts, dirty feet, chipped nail polish,, penis not visible, minimal detail, no cum, no motion lines, sketch, pixelated, low light, displeasing facial expression, unsatisfactory scene.omy, extra limbs, extra toes",
+    "cfgScale": 7,
+    "seed": -1,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "models": [
+      "cyberrealisticPony_v90Alt1"
+    ],
+    "width": 768,
+    "height": 1344,
+    "lorasRandom": false,
+    "runCount": 20,
+    "tags": [],
+    "loras": [],
+    "currentRun": 20,
+    "status": "idle"
+  },
+  {
+    "id": "24595995-dd41-4f69-bc64-c3100efc96bb",
+    "isOpen": false,
+    "runCount": 20,
+    "currentRun": 20,
+    "status": "idle",
+    "name": "feet licking",
+    "text": "Long dark haired girl, orange eyes, seated comfortably on an (orange velvet cushioned chair:1.3), legs crossed, nude, close up on feet, meticulously manicured toes, (no nail polish:1.3), another woman on her knees, nude, licking the toes, detailed depiction of tongue action on toes, explicit oral action, wetness and saliva glistening on toes, moans of pleasure, (masterpiece:1.2), (hyper-realistic:1.1), (ultra-HD:1.2) (dramatic lighting:1.1), (2girls:1.1).",
+    "negativePrompt": "Poor quality, blurred lines, censored, visible watermark, disproportionate bodies, flat breasts, small nipples, no girls, minimal detail, no oral sex, no saliva, no moaning, sketch, pixelated, low light, displeasing facial expressions, unsatisfactory scene, extra limbs, extra characters, bondage, slave.",
+    "cfgScale": 7,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "width": 768,
+    "height": 1344,
+    "tags": [],
+    "models": [
+      "illustrij_v13"
+    ],
+    "lorasRandom": false,
+    "loras": [
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 1,
+        "random": false
+      }
+    ]
+  },
+  {
+    "id": "00d54731-4ec9-4c1f-b1d6-3a49340c0248",
+    "isOpen": false,
+    "runCount": 20,
+    "currentRun": 20,
+    "status": "idle",
+    "name": "jinx and vi",
+    "text": "Jinx (Arcane), Vi (Arcane), both lying on their backs, deep dark vibrant purple velvet sheets, looking at each other, tongue kissing, Jinx fingering herself, Vi fingering Jinx, full body shot, both fully nude. Vi with her signature half-shaved hair, slight abs, Jinx's blue-haired pussy, Vi's pink-haired pussy, hands creating deep folds in the velvet sheet, (soft touch:1.2), (intense gaze:1.2), 2girls, no third person, masterpiece, ultra-HD, 8k, (adult), wide eyes, (mature females:1.2), (intense impact lines: 1.2), (movement lines: 1.2), (sweating:1.1), fair skin, fit bodies, highest quality, volumetric lighting, (sharp focus:1.2), dramatic lighting.",
+    "negativePrompt": "Smooth Negative-neg, anime style, bad quality, worst quality, worst detail, sketch, censored, artist name, signature, watermark, long fingers, speech bubble, clone, displeasing, ugly, poorly drawn, oldest, deformed limbs, bad anatomy, comic, frames, pixels, clone, bad fingers, extra fingers, anime face, forehead jewel, bare back, piercing, tattoos.",
+    "cfgScale": 7,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "width": 768,
+    "height": 1344,
+    "tags": [],
+    "models": [
+      "illustrij_v13"
+    ],
+    "lorasRandom": false,
+    "loras": [
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 1,
+        "random": false
+      }
+    ]
+  },
+  {
+    "id": "b8d01462-de22-4667-b66c-02905f78a9db",
+    "isOpen": false,
+    "name": "Vi",
+    "text": "Vi (Arcane), in a missionary position, deep purple velvet sheets, fully nude, half-shaved hair, red purple pink hair, slight abs, masculine athletic body, square jaw, pink-haired pussy, wide blue eyes filled with intensity, fair skin, fit body, visible nipples, (rough sex:1.2), (movement lines:1.2), (intense impact lines:1.2), (sweating:1.1), hands gripping the velvet sheets tightly, creating deep folds, masterpiece, ultra-HD, 8k, (adult), (mature female:1.2).",
+    "negativePrompt": "Smooth Negative-neg, anime style, bad quality, worst quality, worst detail, sketch, censored, artist name, signature, watermark, long fingers, speech bubble, clone, displeasing, ugly, poorly drawn, oldest, deformed limbs, bad anatomy, comic, frames, pixels, clone, bad fingers, extra fingers, anime face, forehead jewel, bare back, piercing, tattoos.",
+    "cfgScale": 7,
+    "seed": -1,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "models": [
+      "cyberrealisticPony_v90Alt1"
+    ],
+    "width": 768,
+    "height": 1344,
+    "lorasRandom": false,
+    "runCount": 20,
+    "tags": [],
+    "loras": [],
+    "currentRun": 20,
+    "status": "idle"
+  },
+  {
+    "id": "967c077b-b714-45c3-8ba6-18b8f7aa04ff",
+    "isOpen": false,
+    "runCount": 20,
+    "currentRun": 20,
+    "status": "idle",
+    "name": "velvet green",
+    "text": "Two girls, short dark hair, mid-length, nude, perky breasts, stiff nipples, one girl laying on her back on (green velvet sheet:1.3), legs spread wide open, detailed view of wet pussy, other girl between her legs, tongue out, licking pussy, explicit depiction of oral sex, detailed saliva, both girls moaning, one hand of standing girl gripping the laying girl's thigh, other hand caressing her own breast, (masterpiece:1.2), (hyper-realistic:1.1), (ultra-HD:1.2), (volumetric lighting:1.3), (dramatic lighting:1.1), (2girls:1.1).",
+    "negativePrompt": "Poor quality, blurred lines, censored, visible watermark, disproportionate bodies, flat breasts, small nipples, no girls, minimal detail, no oral sex, no saliva, no moaning, sketch, pixelated, low light, displeasing facial expressions, unsatisfactory scene, extra limbs, extra characters.",
+    "cfgScale": 7,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "width": 768,
+    "height": 1344,
+    "tags": [],
+    "models": [
+      "illustrij_v13"
+    ],
+    "lorasRandom": false,
+    "loras": [
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 1,
+        "random": false
+      }
+    ]
+  },
+  {
+    "id": "cd26f422-97ce-4687-b2fd-51d0388c2453",
+    "isOpen": false,
+    "name": "Vi",
+    "text": "Vi (Arcane), standing missionary position, pressed against a wall, POV shot, looking directly at viewer, fully nude, half-shaved hair, red purple pink hair, slight abs, pink-haired pussy, square jaw, her hands enlacing the viewer, wide blue eyes filled with desire, fair skin, fit body, visible nipples, (rough sex:1.2), (movement lines:1.2), (intense impact lines:1.2), (sweating:1.1), hands leaving visible imprints on the wall, masterpiece, ultra-HD, 8k, (adult), (mature female:1.2).",
+    "negativePrompt": "Smooth Negative-neg, anime style, bad quality, worst quality, worst detail, sketch, censored, artist name, signature, watermark, long fingers, speech bubble, clone, displeasing, ugly, poorly drawn, oldest, deformed limbs, bad anatomy, comic, frames, pixels, clone, bad fingers, extra fingers, anime face, forehead jewel, bare back, piercing, tattoos.",
+    "cfgScale": 7,
+    "seed": -1,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "models": [
+      "cyberrealisticPony_v90Alt1"
+    ],
+    "width": 768,
+    "height": 1344,
+    "lorasRandom": false,
+    "runCount": 20,
     "tags": [],
     "loras": [],
     "currentRun": 0,
     "status": "idle"
+  },
+  {
+    "id": "d6599ba4-fa89-40eb-8116-0e65eead8a29",
+    "isOpen": false,
+    "name": "vi2",
+    "text": "[masterpiece:1.2], [best quality:1.2], [highly detailed:1.1], [Arcane art style:1.3], (back view:1.8), (Vi from Arcane:1.5)\n\n((red purple pink hair:1.6) with (asymmetrical undercut:1.4), (short hair on left side:1.5), (longer choppy layers on right side:1.4), (disheveled windswept look:1.3)), (strong neck:1.2), (athletic shoulders:1.3), (toned back muscles:1.5), (visible spine:1.2)\n\n(athletic physique:1.4), (slender toned waist:1.3), (defined back:1.4), (visible shoulder blades:1.3), (deep squatting position:1.7), (bare feet:1.6), (feet flat on floor:1.5), (thighs parallel to floor:1.4)\n\n(looking slightly over shoulder:1.6), (piercing blue-grey eyes:1.2), (smoky eye makeup:1.1), (strong square jawline:1.3), (split left eyebrow scar:1.1), (small scar on upper lip:1.1), (parted lips:1.2), (confident expression:1.3)\n\n(squatting provocatively:1.6), (pulling down shorts with both hands:1.7), (bare ass exposed:1.8), (ass cheeks:1.8), (pulling shorts extremely low:1.8), (no underwear:1.6)\n\nbare chest, bare bakc, (no bra:1.8), tits showing on the side\n\n(small underground gym:1.4), (Zaun aesthetic:1.2), (concrete walls:1.3), (dark moody environment:1.5), (deep shadows:1.4), (dramatic rim lighting:1.6), (highlighting the curves and contours of her body:1.6), (red and purple neon lights:1.4), (providing the only illumination:1.3), (industrial setting:1.3), (workout equipment in background:1.2)",
+    "negativePrompt": "bad anatomy, extra limbs, deformed, ugly, poorly drawn, low quality, blurry, low resolution, bad proportions, bad shadows, wrong perspective, amateur, unprofessional, text, watermark, signature, back view, rear view, looking away, frontal view, gauntlets, shoes, pants, underwear, thong, panties, covered midriff, high waisted shorts\npants, shoes, socks",
+    "cfgScale": 7,
+    "seed": -1,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "models": [
+      "illustrij_v13"
+    ],
+    "width": 768,
+    "height": 1344,
+    "lorasRandom": true,
+    "runCount": 20,
+    "tags": [],
+    "loras": [
+      {
+        "name": "ViPDXL",
+        "weight": 1,
+        "random": false
+      },
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 1,
+        "random": false
+      },
+      {
+        "name": "arcane",
+        "weight": 1,
+        "random": false
+      },
+      {
+        "name": "arcane_style_illustrious_goofy",
+        "weight": 1,
+        "random": false
+      },
+      {
+        "name": "Arcane_vi-v2",
+        "weight": 1,
+        "random": false
+      }
+    ],
+    "currentRun": 0,
+    "status": "idle"
+  },
+  {
+    "id": "1c810076-c51c-423b-9937-fc93fcab619c",
+    "isOpen": false,
+    "runCount": 20,
+    "currentRun": 0,
+    "status": "idle",
+    "name": "furry soft",
+    "text": "Score_9, score_8_up, score_7_up, score_6_up, a single female participant, tresses of a soft light-brown hue, distinctive animalistic ears, nude, engaged in intense standing missionary sex (explicit hardcore:1.2). pressed agains wall, standing fuck, sun light, hard shadow on her breast, Visual emphasis on rough penetration (raw carnal energy:1.2), penis fucked pussy, full-body flush, wide-eyed gaze of intensity, and rhythmically moving breasts with each thrust (physical response:1.1), smirk, bitting lips in pleasure",
+    "negativePrompt": "Score_5_down, low-resolution, blurred details, improper lighting, inaccurately drawn anatomy, speech bubbles, artist's watermark, censorship, overly hirsute, deformed limbs or digits, additional animalistic features beyond ears, incorrect visual perspective, clashing color palette.",
+    "cfgScale": 7,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "width": 768,
+    "height": 1344,
+    "tags": [],
+    "models": [
+      "illustrij_v13"
+    ],
+    "lorasRandom": false,
+    "loras": [
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 1,
+        "random": false
+      }
+    ]
   }
 ]

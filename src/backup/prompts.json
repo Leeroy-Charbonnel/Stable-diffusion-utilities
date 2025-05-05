@@ -1,0 +1,24 @@
+[
+  {
+    "id": "abbaa38e-87c3-4fad-8316-9e19ea97cce4",
+    "isOpen": true,
+    "name": "New Prompt",
+    "text": "crystal flower",
+    "negativePrompt": "",
+    "cfgScale": 7,
+    "seed": -1,
+    "steps": 10,
+    "sampler": "",
+    "models": [
+      "illustrij_v13"
+    ],
+    "width": 1024,
+    "height": 1024,
+    "lorasRandom": false,
+    "runCount": 6,
+    "tags": [],
+    "loras": [],
+    "currentRun": 2,
+    "status": "idle"
+  }
+]
