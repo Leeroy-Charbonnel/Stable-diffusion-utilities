@@ -1,6 +1,10 @@
 {
   "modelLabels": [
     {
+      "name": "CHEYENNE_v10",
+      "label": "_CHEYENNE_"
+    },
+    {
       "name": "illuquaint_v02",
       "label": "IlluQuaint"
     },
@@ -49,6 +53,10 @@
     {
       "name": "ck-Sommo-Concept-Art-000015",
       "label": "Sommo Sci-Fi Concept Art by ChronoKnight - [FLUX & IL]"
+    },
+    {
+      "name": "ComiDusk",
+      "label": "Comics - v4.0"
     },
     {
       "name": "Cyberpunk_Style",

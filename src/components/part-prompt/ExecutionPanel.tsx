@@ -113,7 +113,7 @@ export function ExecutionPanel({
         {isExecuting && (
           <>
             <span className="mx-2">|</span>
-            <span>Restart after {remainingPromptsBeforeRestart} more</span>
+            <span>Restart in {remainingPromptsBeforeRestart}</span>
           </>
         )}
       </div>

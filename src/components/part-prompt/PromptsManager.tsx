@@ -10,7 +10,7 @@ import { usePrompt } from '@/contexts/contextPrompts';
 import { toast } from 'sonner';
 import { ExecutionPanel } from './ExecutionPanel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { CONNECTION_CHECK_INTERVAL_MS, DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDDOM_LORAS_MAX_COUNT, RANDOM_LORAS_MAX_WEIGHT, RANDOM_LORAS_MIN_WEIGHT, RESTART_TIMEOUT_MS, PROMPTS_BEFORE_RESTART } from '@/lib/constants';
+import { DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDDOM_LORAS_MAX_COUNT, RANDOM_LORAS_MAX_WEIGHT, RANDOM_LORAS_MIN_WEIGHT, RESTART_TIMEOUT_MS, PROMPTS_BEFORE_RESTART } from '@/lib/constants';
 import { SD_API_BASE_URL } from '@/lib/constants';
 import { interruptGeneration, restartStableDiffusion } from '@/services/apiSD';
 
@@ -315,12 +315,14 @@ export function PromptsManager() {
             return prompt.loras;
           }
         })(),
-        embeddings: [],
+        embeddings: prompt.embeddings.map(embedding => ({
+          name: embedding.name,
+          weight: embedding.weight
+        })),
         width: prompt.width,
         height: prompt.height,
         tags: prompt.tags
       }
-
       for (let i = 0; i < prompt.runCount; i++) {
         setExecutingPromptRunIndex(i);
 
@@ -392,7 +394,7 @@ export function PromptsManager() {
 
     setExecutingPromptId(null);
     return;
-  };
+  }
   const handleAddPrompt = async () => {
     const newPrompt: PromptEditor = {
       id: generateUUID(),
@@ -409,7 +411,6 @@ export function PromptsManager() {
       height: DEFAULT_PROMPT_WIDTH,
       lorasRandom: false,
       runCount: 1,
-      embeddingsRandom: false,
       embeddings: [],
       tags: [],
       loras: [],

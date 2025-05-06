@@ -68,7 +68,6 @@ export function PromptForm({
     }
   };
 
-
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (readOnly) return;
     if (e.key === 'Enter' && tagInput.trim()) {
@@ -95,7 +94,6 @@ export function PromptForm({
     if (readOnly) return;
     handleFormChange({ models: models.map(m => m.value) });
   };
-
 
   const handleLoraChange = (lora: DropDownOption[]) => {
     if (readOnly) return;
@@ -228,17 +226,17 @@ export function PromptForm({
       <ContextMenu>
         <ContextMenuTrigger>
           <div className='flex gap-2 items-center m-0'>
-            <Label htmlFor="sampler" className="w-20 h-fit">Model</Label>
+            <Label className="w-20 h-fit">Model</Label>
 
-    
-              <SearchableMultiSelect
-                options={availableModels.map(x => { return { value: x.name, label: x.label ? x.label : x.name } })}
-                values={formData.models || []}
-                placeholder="Select models..."
-                className='border-b py-2'
-                searchPlaceholder="Type to search..."
-                onChange={handleModelChange}
-              />
+
+            <SearchableMultiSelect
+              options={availableModels.map(x => { return { value: x.name, label: x.label ? x.label : x.name } })}
+              values={formData.models || []}
+              placeholder="Select models..."
+              className='border-b py-2'
+              searchPlaceholder="Type to search..."
+              onChange={handleModelChange}
+            />
 
           </div>
         </ContextMenuTrigger>
@@ -254,38 +252,43 @@ export function PromptForm({
       <Separator className='mb-0 my-3' />
 
       {/* CFG Scale */}
-      <div className='flex gap-2 w-full h-8 m-0'>
+      <div className='flex flex-wrap gap-4 w-full'>
+        {/* Sampler block */}
+        <div className="flex items-center gap-2 min-w-[200px] flex-1">
+          <Label htmlFor="sampler" className="text-nowrap h-8 w-20">Sampler</Label>
+          <div className="flex-1">
+            <Select value={formData.sampler} onValueChange={(value) => handleChange('sampler', value)} disabled={readOnly}>
+              <SelectTrigger id="sampler" className="!h-8 w-full">
+                <SelectValue placeholder="Select a sampler" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableSamplers.map((sampler) => (
+                  <SelectItem key={sampler} value={sampler} title={sampler}>{sampler}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
-        <Label htmlFor="sampler" className="text-nowrap h-8 min-w-20">Sampler</Label>
-
-        <Select value={formData.sampler} onValueChange={(value) => handleChange('sampler', value)} disabled={readOnly}>
-          <SelectTrigger id="sampler" className={"!h-8 min-w-48"} >
-            <SelectValue placeholder="Select a sampler" className='h-16' />
-          </SelectTrigger>
-          <SelectContent>
-            {availableSamplers.map((sampler) => (
-              <SelectItem key={sampler} value={sampler} title={sampler}>{sampler}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-
-        <Label htmlFor="cfgScale" className="text-nowrap h-8 w-20">CFG Scale</Label>
-
-        <Slider
-          id="cfgScale"
-          min={1} max={30} step={0.1} value={[formData.cfgScale || 7]}
-          onValueChange={(values) => handleChange('cfgScale', values[0])}
-          disabled={readOnly}
-          className='h-8'
-        />
-        <NumberInput
-          id="cfgScaleInput"
-          value={formData.cfgScale || 7}
-          onChange={(value) => handleChange('cfgScale', value)}
-          min={1} max={30} step={0.1} className={"h-8 !w-18 text-sm border-0 !bg-transparent border-b"}
-          disabled={readOnly}
-        />
+        {/* CFG Scale block */}
+        <div className="flex items-center gap-2 min-w-[250px] flex-2">
+          <Label htmlFor="cfgScale" className="text-nowrap h-8 w-20">CFG Scale</Label>
+          <Slider
+            id="cfgScale"
+            min={1} max={30} step={0.1} value={[formData.cfgScale || 7]}
+            onValueChange={(values) => handleChange('cfgScale', values[0])}
+            disabled={readOnly}
+            className='h-8 flex-1'
+          />
+          <NumberInput
+            id="cfgScaleInput"
+            value={formData.cfgScale || 7}
+            onChange={(value) => handleChange('cfgScale', value)}
+            min={1} max={30} step={0.1}
+            className="h-8 w-16 text-sm border-0 !bg-transparent border-b"
+            disabled={readOnly}
+          />
+        </div>
       </div>
 
       <Separator className='mb-0 my-3' />
@@ -377,13 +380,9 @@ export function PromptForm({
       <div className="px-4 py-2">
         <EmbeddingsEditor
           embeddings={prompt.embeddings}
-          embeddingsRandom={prompt.embeddingsRandom}
           availableEmbeddings={availableEmbeddings}
           onEmbeddingsChange={(embeddings) => {
             handleChange('embeddings', embeddings);
-          }}
-          onEmbeddingsRandomChange={(random) => {
-            handleChange('embeddingsRandom', random);
           }}
         />
       </div>

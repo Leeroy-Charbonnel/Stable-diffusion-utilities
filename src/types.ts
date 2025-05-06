@@ -27,13 +27,6 @@ export interface Embedding {
   weight: number;
 }
 
-export interface EmbeddingEditorConfig {
-  name: string;
-  weight: number;
-  random: boolean;
-}
-
-
 export type ExecutionStatus = 'idle' | 'execution' | 'cancelling' | 'completed';
 export type AiChatRole = 'user' | 'assistant' | 'system'
 
@@ -44,6 +37,10 @@ export interface ChatMessage {
   timestamp: string;
 }
 
+export interface EmbeddingEditorConfig {
+  name: string;
+  weight: number;
+}
 
 export interface PromptEditor {
   id: string;
@@ -66,8 +63,7 @@ export interface PromptEditor {
   models: string[];
   lorasRandom: boolean;
   loras: LoraEditorConfig[];
-  embeddingsRandom: boolean; // Added
-  embeddings: EmbeddingEditorConfig[]; // Added
+  embeddings: EmbeddingEditorConfig[];
 }
 
 export interface Prompt {

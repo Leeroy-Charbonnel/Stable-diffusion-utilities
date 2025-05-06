@@ -447,7 +447,6 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
         text: image.promptData.text,
         negativePrompt: image.promptData.negativePrompt,
         cfgScale: image.promptData.cfgScale,
-        embeddingsRandom: false,
         embeddings: [],
         seed: image.promptData.seed,
         steps: image.promptData.steps,

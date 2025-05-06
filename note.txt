@@ -1,13 +1,18 @@
 
 
 part prompt
-Style ?
+
 
 
 
 
 model popup overflow pb
-Dont close lora dd on click
+
+
+
+
+drag image in imageDialog cause rerender
+
 
 
 
