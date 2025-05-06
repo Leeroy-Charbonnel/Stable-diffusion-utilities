@@ -44,9 +44,7 @@ function AppContent() {
       <div className="w-full h-screen">
         <div className="h-full">
           <div className="h-full" style={{ display: activeTab === 'prompts' ? 'block' : 'none' }}><PromptsManager /></div>
-          <div className="h-full" style={{ display: activeTab === 'images' ? 'block' : 'none' }}>
-            <ImageViewer isActiveTab={activeTab === 'images'} />
-          </div>
+          <div className="h-full" style={{ display: activeTab === 'images' ? 'block' : 'none' }}> <ImageViewer isActiveTab={activeTab === 'images'} /></div>
           <div className="h-full" style={{ display: activeTab === 'ai' ? 'block' : 'none' }}><AiChat /></div>
           <div className="h-full" style={{ display: activeTab === 'models' ? 'block' : 'none' }}><ModelsManager /></div>
         </div>

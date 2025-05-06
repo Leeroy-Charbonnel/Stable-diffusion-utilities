@@ -3,7 +3,7 @@ import { ImageMetadata, Prompt, LabelItem, LabelsData } from '@/types';
 import * as apiSD from '@/services/apiSD';
 import * as apiFS from '@/services/apiFS';
 import * as apiPrompt from '@/services/apiPrompt';
-import { generateUUID } from '@/lib/utils';
+import { generateUUID, randomBetween } from '@/lib/utils';
 
 
 interface ApiContextType {
@@ -20,12 +20,13 @@ interface ApiContextType {
   availableSamplers: string[];
   availableModels: LabelItem[];
   availableLoras: LabelItem[];
+  availableEmbeddings: LabelItem[]; // Added
 
   //API methods
   checkConnection: () => Promise<boolean>;
   generateImage: (prompt: Prompt) => Promise<ImageMetadata | null>;
   updateLabelsData: (labelsData: LabelsData) => void;
-  refreshModelsAndLoras: () => Promise<void>;
+  refreshModelsAndLoras: () => Promise<void>; // Keep the original name for compatibility
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
@@ -34,10 +35,15 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const [labelsData, setLabelsData] = useState<LabelsData>({ modelLabels: [], lorasLabels: [] });
+  const [labelsData, setLabelsData] = useState<LabelsData>({
+    modelLabels: [],
+    lorasLabels: [],
+    embeddingsLabels: []
+  });
   const [availableSamplers, setAvailableSamplers] = useState<string[]>([]);
   const [availableModels, setAvailableModels] = useState<LabelItem[]>([]);
   const [availableLoras, setAvailableLoras] = useState<LabelItem[]>([]);
+  const [availableEmbeddings, setAvailableEmbeddings] = useState<LabelItem[]>([]); // Added
 
   useEffect(() => {
     const initializeApi = async () => {
@@ -63,33 +69,62 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     initializeApi();
   }, []);
 
-
-
+  // Keep the existing function name for compatibility with other parts of the code
   const refreshModelsAndLoras = async () => {
-    await apiSD.refreshModels();
-    await apiSD.refreshLoras();
-
-    const labelsData = await apiFS.getLabelsData();
-    const updatedLabelsData = { modelLabels: [], lorasLabels: [] } as LabelsData;
-
-    const [models, loras] = await Promise.all([
-      apiSD.getModels(),
-      apiSD.getLoras()
+    // Execute all refresh actions concurrently
+    await Promise.all([
+      apiSD.refreshModels(),
+      apiSD.refreshLoras(),
+      apiSD.refreshEmbeddings()
     ]);
 
+
+
+
+    const labelsData = await apiFS.getLabelsData();
+    const updatedLabelsData = {
+      modelLabels: [],
+      lorasLabels: [],
+      embeddingsLabels: []
+    } as LabelsData;
+
+    // Fetch all data in parallel
+    const [models, loras, embeddings] = await Promise.all([
+      apiSD.getModels(),
+      apiSD.getLoras(),
+      apiSD.getEmbeddings()
+    ]);
+    console.log(models, loras, embeddings);
+
+    // Process models
     models.forEach((model: string) => {
-      updatedLabelsData.modelLabels.push({ name: model, label: labelsData.modelLabels.find((x: LabelItem) => x.name === model)?.label || '' });
+      updatedLabelsData.modelLabels.push({
+        name: model,
+        label: labelsData.modelLabels.find((x: LabelItem) => x.name === model)?.label || ''
+      });
     });
 
+    // Process loras
     loras.forEach((lora: string) => {
-      updatedLabelsData.lorasLabels.push({ name: lora, label: labelsData.lorasLabels.find((x: LabelItem) => x.name === lora)?.label || '' });
+      updatedLabelsData.lorasLabels.push({
+        name: lora,
+        label: labelsData.lorasLabels.find((x: LabelItem) => x.name === lora)?.label || ''
+      });
+    });
+
+    // Process embeddings
+    embeddings.forEach((embedding: string) => {
+      updatedLabelsData.embeddingsLabels.push({
+        name: embedding,
+        label: labelsData.embeddingsLabels?.find((x: LabelItem) => x.name === embedding)?.label || ''
+      });
     });
 
     setLabelsData(updatedLabelsData);
     setAvailableModels(updatedLabelsData.modelLabels);
     setAvailableLoras(updatedLabelsData.lorasLabels);
+    setAvailableEmbeddings(updatedLabelsData.embeddingsLabels); // Set embeddings
   };
-
 
   const checkConnection = async (): Promise<boolean> => {
     setIsLoading(true);
@@ -119,7 +154,8 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         width: prompt.width,
         height: prompt.height,
         sampler_name: prompt.sampler,
-        cfg_scale: prompt.cfgScale,
+        // cfg_scale: prompt.cfgScale,
+        cfg_scale: randomBetween(6, 10),
         batch_size: 1,
         n_iter: 1,
       };
@@ -128,9 +164,17 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         sd_model_checkpoint: prompt.model
       };
 
+      // Add loras to the prompt
       if (prompt.loras && prompt.loras.length > 0) {
-        params.prompt = params.prompt + " " + prompt.loras.map(lora => `<lora:${lora.name}:${lora.weight}>`).join(", ");
+        params.prompt = params.prompt + " " + prompt.loras.map(lora =>
+          `<lora:${lora.name}:${lora.weight}>`).join(" ");
       }
+
+      // // Add embeddings to the prompt
+      // if (prompt.embeddings && prompt.embeddings.length > 0) {
+      //   params.prompt = params.prompt + " " + prompt.embeddings.map(embedding =>
+      //     `embedding:${embedding.name}:${embedding.weight}`).join(" ");
+      // }
 
       console.log("API SENDING:", params);
       const result = await apiSD.generateImage(params);
@@ -147,12 +191,10 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     }
   };
 
-
   const updateLabelsData = async (updatedLabelsData: LabelsData): Promise<boolean> => {
     setLabelsData(updatedLabelsData);
     return true;
   };
-
 
   const value = {
     apiSD: apiSD,
@@ -164,6 +206,7 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     availableSamplers,
     availableModels,
     availableLoras,
+    availableEmbeddings, 
     checkConnection,
     refreshModelsAndLoras,
     updateLabelsData,

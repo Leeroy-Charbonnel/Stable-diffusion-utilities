@@ -21,12 +21,14 @@ export function ModelsManager() {
     labelsData,
     availableModels,
     availableLoras,
+    availableEmbeddings,
     updateLabelsData,
     refreshModelsAndLoras,
   } = useApi();
 
   const [searchModel, setSearchModel] = useState<string>('');
   const [searchLora, setSearchLora] = useState<string>('');
+  const [searchEmbedding, setSearchEmbedding] = useState<string>('');
   const LIST_HEIGHT = `calc(100vh - ${HEADER_HEIGHT + TABS_HEIGHT + SEARCH_HEIGHT}px - 3rem)`;
 
 
@@ -69,6 +71,14 @@ export function ModelsManager() {
     updateLabelsData({ ...labelsData, lorasLabels: updatedLabels });
     saveLabelsData();
   };
+  const saveEmbeddingLabel = (embeddingName: string, embeddingsLabel: string) => {
+    const updatedLabels = [...labelsData.embeddingsLabels];
+    const existingIndex = updatedLabels.findIndex(item => item.name === embeddingName);
+    updatedLabels[existingIndex].label = embeddingsLabel;
+    updateLabelsData({ ...labelsData, embeddingsLabels: updatedLabels });
+    saveLabelsData();
+  };
+
 
   const filteredModels = labelsData.modelLabels.filter(model =>
     model.name.toLowerCase().includes(searchModel.toLowerCase()) || model.label.toLowerCase().includes(searchModel.toLowerCase())
@@ -78,11 +88,15 @@ export function ModelsManager() {
     lora.name.toLowerCase().includes(searchLora.toLowerCase()) || lora.label.toLowerCase().includes(searchLora.toLowerCase())
   );
 
-  const renderList = (type: 'models' | 'loras') => {
-    const searchValue = type === 'models' ? searchModel : searchLora;
-    const searchFunction = type === 'models' ? setSearchModel : setSearchLora;
-    const saveFunction = type === 'models' ? saveModelLabel : saveLoraLabel;
-    const list = type === 'models' ? filteredModels : filteredLoras;
+  const filteredEmbeddings = labelsData.embeddingsLabels.filter(embedding =>
+    embedding.name.toLowerCase().includes(searchEmbedding.toLowerCase()) || embedding.label.toLowerCase().includes(searchEmbedding.toLowerCase())
+  );
+
+  const renderList = (type: 'models' | 'loras' | 'embeddings') => {
+    const searchValue = type === 'models' ? searchModel : type === 'loras' ? searchLora : searchEmbedding;
+    const searchFunction = type === 'models' ? setSearchModel : type === 'loras' ? setSearchLora : setSearchEmbedding;
+    const saveFunction = type === 'models' ? saveModelLabel : type === 'loras' ? saveLoraLabel : saveEmbeddingLabel;
+    const list = type === 'models' ? filteredModels : type === 'loras' ? filteredLoras : filteredEmbeddings;
 
     return (
       <div>
@@ -142,7 +156,7 @@ export function ModelsManager() {
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={refreshModelsAndLoras} disabled={isLoading}>
               <RefreshCw className="h-4 w-4 mr-2" />
-              Reload Models/LoRAs
+              Reload Models/LoRAs/Embeddings
             </Button>
           </div>
         </div>
@@ -155,6 +169,7 @@ export function ModelsManager() {
           <TabsList>
             <TabsTrigger value="models">Models [{availableModels.length}]</TabsTrigger>
             <TabsTrigger value="loras">LoRAs [{availableLoras.length}]</TabsTrigger>
+            <TabsTrigger value="embeddings">Embeddings [{availableEmbeddings.length}]</TabsTrigger>
           </TabsList>
         </div>
 
@@ -165,6 +180,10 @@ export function ModelsManager() {
 
         <TabsContent value="loras" className="p-0 m-0">
           {renderList('loras')}
+        </TabsContent>
+
+        <TabsContent value="embeddings" className="p-0 m-0">
+          {renderList('embeddings')}
         </TabsContent>
       </Tabs>
     </div>

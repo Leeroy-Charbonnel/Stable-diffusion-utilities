@@ -48,6 +48,8 @@ export function ImageDetailsDialog({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
+
+  console.log(image);
   //Reference for animation frame
   const animationFrameRef = useRef<number | null>(null);
 
@@ -378,6 +380,14 @@ export function ImageDetailsDialog({
                           {new Date(image.createdAt).toLocaleString()}
                         </p>
                       </div>
+
+                      <div>
+                        <h4 className="text-xs font-medium text-muted-foreground">CFG Scale</h4>
+                        <p className="font-medium">
+                          {image.promptData.cfgScale}
+                        </p>
+                      </div>
+
                       <div className="col-span-2">
                         <h4 className="text-xs font-medium text-muted-foreground">Model</h4>
                         <p className="font-medium">{image.promptData.model}</p>

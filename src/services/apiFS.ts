@@ -51,6 +51,7 @@ export const saveGeneratedImage = async (
         name: promptData.name,
         text: promptData.text,
         negativePrompt: promptData.negativePrompt || "",
+        embeddings: promptData.embeddings || [],
         cfgScale: promptData.cfgScale,
         seed: promptData.seed,
         steps: promptData.steps,
@@ -202,7 +203,7 @@ export const getLabelsData = async (): Promise<LabelsData> => {
     return result.data;
   } catch (error) {
     console.error('Error getting labels data:', error);
-    return { modelLabels: [], lorasLabels: [] };
+    return { modelLabels: [], lorasLabels: [] , embeddingsLabels: []};
   }
 };
 

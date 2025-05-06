@@ -6,6 +6,7 @@ export interface LabelItem {
 export interface LabelsData {
   modelLabels: LabelItem[];
   lorasLabels: LabelItem[];
+  embeddingsLabels: LabelItem[];
 }
 
 
@@ -15,6 +16,18 @@ export interface Lora {
 }
 
 export interface LoraEditorConfig {
+  name: string;
+  weight: number;
+  random: boolean;
+}
+
+// Add embedding interface
+export interface Embedding {
+  name: string;
+  weight: number;
+}
+
+export interface EmbeddingEditorConfig {
   name: string;
   weight: number;
   random: boolean;
@@ -53,6 +66,8 @@ export interface PromptEditor {
   models: string[];
   lorasRandom: boolean;
   loras: LoraEditorConfig[];
+  embeddingsRandom: boolean; // Added
+  embeddings: EmbeddingEditorConfig[]; // Added
 }
 
 export interface Prompt {
@@ -65,6 +80,7 @@ export interface Prompt {
   sampler: string;
   model: string;
   loras: Lora[];
+  embeddings: Embedding[]; // Added
   width: number;
   height: number;
   tags: string[];

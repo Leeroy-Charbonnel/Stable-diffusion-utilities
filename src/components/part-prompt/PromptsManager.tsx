@@ -15,7 +15,7 @@ import { SD_API_BASE_URL } from '@/lib/constants';
 import { interruptGeneration, restartStableDiffusion } from '@/services/apiSD';
 
 export function PromptsManager() {
-  const { isConnected, checkConnection, generateImage, availableSamplers, availableModels, availableLoras } = useApi();
+  const { isConnected, checkConnection, generateImage, availableSamplers, availableModels, availableLoras, availableEmbeddings } = useApi();
   const { prompts, loadPrompts, addPrompt, updatePrompt, deletePrompt, reorderPrompt, isLoading: isPromptLoading } = usePrompt();
   const [refreshContextMenu, setRefreshContextMenu] = useState(false);
 
@@ -283,63 +283,6 @@ export function PromptsManager() {
     setExecutingModelIndex(0);
   }
 
-  const callRestartStableDiffusion = async (): Promise<void> => {
-    if (isRestarting) return Promise.resolve();
-
-    // Stop progress polling during restart
-    stopProgressPolling();
-
-    setIsRestarting(true);
-    toast.info("Restarting Stable Diffusion...");
-
-    try {
-      console.log("Requesting restart of Stable Diffusion WebUI...");
-      await restartStableDiffusion();
-
-      console.log("Restart requested, waiting for server to complete restart...");
-      // Wait 5 seconds to give the server time to restart
-      await new Promise(resolve => setTimeout(resolve, 5000));
-
-      let connected = false;
-
-      console.log("Starting connection check loop...");
-      while (!connected && !cancelExecutionRef.current) {
-        try {
-          connected = await checkConnection();
-          if (connected) {
-            toast.info("Connected to Stable Diffusion, waiting for WebUI to stabilize...");
-            // Wait for the WebUI to fully initialize after reconnection
-            await new Promise(resolve => setTimeout(resolve, 15000));
-            break;
-          }
-        } catch (e) {
-          console.log("Connection check error:", e);
-        }
-        // Wait 2 seconds between attempts
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-
-      if (connected) {
-        toast.success("Stable Diffusion restarted successfully");
-        totalExecutedPromptsRef.current = 0;
-
-        // Restart the progress polling to continue monitoring
-        startProgressPolling();
-      } else {
-        toast.error("Failed to reconnect after restart");
-        cancelExecutionRef.current = true;
-      }
-    } catch (error) {
-      console.error("Error during restart:", error);
-      toast.error("Failed to restart Stable Diffusion");
-      cancelExecutionRef.current = true;
-    } finally {
-      setIsRestarting(false);
-    }
-
-    return Promise.resolve();
-  };
-
   const executePrompt = async (prompt: PromptEditor): Promise<void> => {
     setExecutingPromptId(prompt.id);
 
@@ -372,6 +315,7 @@ export function PromptsManager() {
             return prompt.loras;
           }
         })(),
+        embeddings: [],
         width: prompt.width,
         height: prompt.height,
         tags: prompt.tags
@@ -401,15 +345,32 @@ export function PromptsManager() {
         }
 
         try {
+          // Check if we need to restart
           if (totalExecutedPromptsRef.current >= PROMPTS_BEFORE_RESTART) {
             console.log(`Executed ${totalExecutedPromptsRef.current} prompts, restarting Stable Diffusion WebUI`);
-            await callRestartStableDiffusion();
-            console.log("Restarted, resuming execution...");
+
+            // Clear prompt counter
+            totalExecutedPromptsRef.current = 0;
+
+            // Set restarting state
+            setIsRestarting(true);
+            toast.info("Restarting Stable Diffusion...");
+
+            // Call restart API
+            await restartStableDiffusion();
+
+            // Add a delay after restart to ensure server is ready
+            console.log("Waiting 30 seconds for server to fully restart...");
+            toast.info("Waiting 30 seconds for server to fully restart...");
+            await new Promise(resolve => setTimeout(resolve, 30000));
+            toast.info("Restart wait complete, resuming execution...");
+            console.log("Restart wait complete, resuming execution...");
+            setIsRestarting(false);
           }
 
           console.log("Await for image generation...");
           const result = await generateImage(promptData);
-          console.log(result);
+
           if (result) {
             setSuccessCount(prev => prev + 1);
             totalExecutedPromptsRef.current = totalExecutedPromptsRef.current + 1;
@@ -448,6 +409,8 @@ export function PromptsManager() {
       height: DEFAULT_PROMPT_WIDTH,
       lorasRandom: false,
       runCount: 1,
+      embeddingsRandom: false,
+      embeddings: [],
       tags: [],
       loras: [],
       currentRun: 0,
@@ -516,6 +479,7 @@ export function PromptsManager() {
                 availableSamplers={availableSamplers}
                 availableModels={availableModels}
                 availableLoras={availableLoras}
+                availableEmbeddings={availableEmbeddings}
               />
             ))}
 

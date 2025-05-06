@@ -84,6 +84,19 @@ export const getLoras = async (): Promise<string[]> => {
   }
 }
 
+//Get available Embeddings
+export const getEmbeddings = async (): Promise<string[]> => {
+  try {
+    const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/embeddings`);
+    if (!response.ok) throw new Error(`STABLE_DIFFUSION_API : Failed to fetch embeddings, status: ${response.status}`);
+
+    const data = await response.json();
+    return data.map((embedding: any) => embedding.name);
+  } catch (error) {
+    console.error('Error fetching embeddings:', error);
+    return [];
+  }
+}
 
 //Generate an image using text-to-image
 export const generateImage = async (params: Text2ImageRequest): Promise<Text2ImageResponse | null> => {
@@ -125,6 +138,20 @@ export const refreshModels = async (): Promise<void> => {
 
   } catch (error) {
     console.error('Error refreshing models:', error);
+  }
+};
+
+export const refreshEmbeddings = async (): Promise<void> => {
+  try {
+    const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/refresh-embeddings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) throw new Error(`Failed to refresh embeddings: ${response.status}`);
+
+  } catch (error) {
+    console.error('Error refreshing embeddings:', error);
   }
 };
 

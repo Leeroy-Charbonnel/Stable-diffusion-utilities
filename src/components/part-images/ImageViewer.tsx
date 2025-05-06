@@ -29,7 +29,7 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
   const { apiFS, isLoading: isApiLoading } = useApi();
   const { addPrompt } = usePrompt();
 
-  const [labelsData, setLabelsData] = useState<LabelsData>({ modelLabels: [], lorasLabels: [] });
+  const [labelsData, setLabelsData] = useState<LabelsData>({ modelLabels: [], lorasLabels: [] , embeddingsLabels: []});
 
   //Images arrays
   const [generatedImages, setGeneratedImages] = useState<ImageMetadata[]>([]);
@@ -127,7 +127,7 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
     if (isActiveTab && !previousActiveTabRef.current) {
       handleRefresh();
     }
-    
+
     // Update ref for next check
     previousActiveTabRef.current = isActiveTab;
   }, [isActiveTab]);
@@ -447,6 +447,8 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
         text: image.promptData.text,
         negativePrompt: image.promptData.negativePrompt,
         cfgScale: image.promptData.cfgScale,
+        embeddingsRandom: false,
+        embeddings: [],
         seed: image.promptData.seed,
         steps: image.promptData.steps,
         sampler: image.promptData.sampler,

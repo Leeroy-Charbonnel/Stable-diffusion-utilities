@@ -36,7 +36,7 @@ export function AiChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const { availableSamplers, availableModels, availableLoras, isLoading: isApiLoading } = useApi();
+  const { availableSamplers, availableModels, availableLoras, availableEmbeddings, isLoading: isApiLoading } = useApi();
   //Scroll to bottom when messages update
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -208,6 +208,7 @@ export function AiChat() {
                     availableSamplers={availableSamplers}
                     availableModels={availableModels}
                     availableLoras={availableLoras}
+                    availableEmbeddings={availableEmbeddings}
                   />
                 </div>
               </div>

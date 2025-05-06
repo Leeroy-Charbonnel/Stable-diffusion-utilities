@@ -14,6 +14,7 @@ import { DropDownOption, SearchableMultiSelect } from '@/components/ui/dropdown-
 import { getModelLabel } from '@/lib/utils';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '../ui/context-menu';
 import { usePrompt } from '@/contexts/contextPrompts';
+import { EmbeddingsEditor } from './EmbeddingsEditor';
 
 type PromptFormProps = {
   prompt: PromptEditor;
@@ -22,6 +23,7 @@ type PromptFormProps = {
   availableSamplers: string[];
   availableModels: LabelItem[];
   availableLoras: LabelItem[];
+  availableEmbeddings: LabelItem[];
   readOnly?: boolean;
 };
 
@@ -32,6 +34,7 @@ export function PromptForm({
   availableSamplers = [],
   availableModels = [],
   availableLoras = [],
+  availableEmbeddings = [],
   readOnly = false,
 }: PromptFormProps) {
 
@@ -227,15 +230,15 @@ export function PromptForm({
           <div className='flex gap-2 items-center m-0'>
             <Label htmlFor="sampler" className="w-20 h-fit">Model</Label>
 
-            <div className='border-b w-full h-fit py-2'>
+    
               <SearchableMultiSelect
                 options={availableModels.map(x => { return { value: x.name, label: x.label ? x.label : x.name } })}
                 values={formData.models || []}
-                placeholder="Select options..."
+                placeholder="Select models..."
+                className='border-b py-2'
                 searchPlaceholder="Type to search..."
                 onChange={handleModelChange}
               />
-            </div>
 
           </div>
         </ContextMenuTrigger>
@@ -293,11 +296,15 @@ export function PromptForm({
           {/* LoRAs Selector*/}
           <div className='m-0 h-8 mb-4'>
             <div className="flex items-center gap-2"><Label className="pb-2 min-w-20 h-8">LoRAs</Label>
+
+
+
               <SearchableMultiSelect
                 options={availableLoras.map(x => { return { value: x.name, label: x.label ? x.label : x.name } })}
                 values={formData.loras.map(x => x.name) || []}
-                placeholder="Select options..."
+                placeholder="Select loras..."
                 searchPlaceholder="Type to search..."
+                className='border-b py-2'
                 onChange={handleLoraChange}
               />
 
@@ -365,6 +372,21 @@ export function PromptForm({
 
         </ContextMenuContent>
       </ContextMenu>
+
+
+      <div className="px-4 py-2">
+        <EmbeddingsEditor
+          embeddings={prompt.embeddings}
+          embeddingsRandom={prompt.embeddingsRandom}
+          availableEmbeddings={availableEmbeddings}
+          onEmbeddingsChange={(embeddings) => {
+            handleChange('embeddings', embeddings);
+          }}
+          onEmbeddingsRandomChange={(random) => {
+            handleChange('embeddingsRandom', random);
+          }}
+        />
+      </div>
 
       <Separator className='mb-0 my-3' />
 

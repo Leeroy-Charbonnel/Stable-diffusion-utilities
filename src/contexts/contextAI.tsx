@@ -63,6 +63,7 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { availableSamplers: availableSDSamplers,
     availableModels: availableSDModels,
     availableLoras: availableSDLoras,
+    availableEmbeddings: availableSDEmbeddings, // Added embeddings
     isLoading: isApiLoading } = useApi();
 
   //Load settings from local storage
@@ -133,12 +134,14 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const prepareExtractionSystemPrompt = (): string => {
     const modelsSection = `${availableSDModels.map(x => `Name : ${x.name} (Label : ${x.label})`).join(', ')}`;
     const lorasSection = `${availableSDLoras.map(x => `Name : ${x.name} (Label : ${x.label})`).join(', ')}`;
+    const embeddingsSection = `${availableSDEmbeddings.map(x => `Name : ${x.name} (Label : ${x.label})`).join(', ')}`;
     const samplersSection = `${availableSDSamplers.join(', ')}`;
 
     let preparedPrompt = CHAT_SYSTEM_EXTRACTION_PROMPT
-      .replace('AVAILABLE_MODELS_PLACEHOLDER', modelsSection)
-      .replace('AVAILABLE_SAMPLERS_PLACEHOLDER', samplersSection)
-      .replace('AVAILABLE_LORAS_PLACEHOLDER', lorasSection);
+      .replace('%AVAILABLE_MODELS_PLACEHOLDER%', modelsSection)
+      .replace('%AVAILABLE_SAMPLERS_PLACEHOLDER%', samplersSection)
+      .replace('%AVAILABLE_LORAS_PLACEHOLDER%', lorasSection)
+      .replace('%AVAILABLE_EMBEDDINGS_PLACEHOLDER%', embeddingsSection);
 
     return preparedPrompt;
   }
@@ -253,7 +256,6 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
     if (mode == 'extraction') {
       const prompt: PromptEditor = {
-
         id: generateUUID(),
         isOpen: false,
         runCount: 1,
@@ -272,7 +274,11 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         tags: data.tags || [],
         models: [checkIfModelExist(availableSDModels, data.model) ? data.model : availableSDModels[0].name],
         lorasRandom: false,
-        loras: data.loras.filter((l: { name: string, weight: number }) => checkIfModelExist(availableSDLoras, l.name))
+        loras: data.loras?.filter((l: { name: string, weight: number }) =>
+          checkIfModelExist(availableSDLoras, l.name)) || [],
+        embeddingsRandom: false,
+        embeddings: data.embeddings?.filter((e: { name: string, weight: number }) =>
+          checkIfModelExist(availableSDEmbeddings, e.name)) || []
       }
       setGeneratedPrompt(prompt);
     } else {
@@ -296,10 +302,11 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         models: [availableSDModels.length > 0 ? availableSDModels[0].name : ''],
         lorasRandom: false,
         loras: [],
+        embeddingsRandom: false,
+        embeddings: []
       }
       setGeneratedPrompt(prompt);
     }
-
   }
 
 
@@ -331,5 +338,3 @@ export const useAi = (): AiContextType => {
   }
   return context;
 };
-
-

@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { NumberInput } from '../ui/number-input';
 import { getModelLabel } from '@/lib/utils';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '../ui/context-menu';
-
+import { EmbeddingsEditor } from './EmbeddingsEditor';
 
 interface PromptCardProps {
   prompt: PromptEditor;
@@ -43,6 +43,7 @@ interface PromptCardProps {
   availableSamplers: string[];
   availableModels: LabelItem[];
   availableLoras: LabelItem[];
+  availableEmbeddings: LabelItem[];
 }
 
 export function PromptCard({
@@ -68,7 +69,8 @@ export function PromptCard({
   isApiConnected = false,
   availableSamplers = [],
   availableModels = [],
-  availableLoras = []
+  availableLoras = [],
+  availableEmbeddings = [],
 }: PromptCardProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(prompt.name);
@@ -225,6 +227,7 @@ export function PromptCard({
                 availableSamplers={availableSamplers}
                 availableModels={availableModels}
                 availableLoras={availableLoras}
+                availableEmbeddings={availableEmbeddings}
                 readOnly={isExecuting || isCurrentlyExecuting}
               />
             </div>

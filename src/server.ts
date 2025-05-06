@@ -140,11 +140,11 @@ async function getAllImagesWithMetadata(): Promise<ImageMetadata[]> {
 async function readLabelsData(): Promise<LabelsData> {
   try {
     const labelsFile = Bun.file(LABELS_FILE);
-    if (!await labelsFile.exists()) return { modelLabels: [], lorasLabels: [] };
+    if (!await labelsFile.exists()) return { modelLabels: [], lorasLabels: [], embeddingsLabels: [] };
     return JSON.parse(await labelsFile.text());
   } catch (error) {
     console.error('Error reading labels data:', error);
-    return { modelLabels: [], lorasLabels: [] };
+    return { modelLabels: [], lorasLabels: [], embeddingsLabels: [] };
   }
 }
 
@@ -567,6 +567,7 @@ function startStableDiffusionWebUI(): Promise<boolean> {
   console.log("Starting Stable Diffusion WebUI...");
   const sdWebUIDir = 'D:/Projects/Code/stable-diffusion-webui';
   const webuiPath = path.join(sdWebUIDir, 'webui-user.bat');
+  sdProcess = null;
 
   if (!existsSync(sdWebUIDir)) {
     console.error(`Stable Diffusion directory not found at: ${sdWebUIDir}`);
@@ -615,14 +616,11 @@ function restartStableDiffusionWebUI(req: BunRequest): Promise<Response> {
             console.log("Process terminated successfully");
           }
 
-          // Add a small delay to ensure process is fully terminated
+          await new Promise(r => setTimeout(r, 2000));
+          const success = await startStableDiffusionWebUI();
           await new Promise(r => setTimeout(r, 2000));
 
-          // Reset the process reference
-          sdProcess = null;
 
-          // Start a new instance
-          const success = await startStableDiffusionWebUI();
           console.log("Restart result:", success ? "Success" : "Failed");
           return resolve(Response.json({ success: success }, { headers: corsHeaders }));
         });
@@ -642,6 +640,33 @@ function restartStableDiffusionWebUI(req: BunRequest): Promise<Response> {
     }
   });
 }
+
+
+async function refreshEmbeddings(req: BunRequest): Promise<Response> {
+  console.log("POST: Refreshing embeddings");
+  try {
+    const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/refresh-embeddings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to refresh embeddings: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return Response.json({ success: true, data: result }, { headers: corsHeaders });
+  } catch (error) {
+    console.error('Error refreshing embeddings:', error);
+    return Response.json(
+      { success: false, error: String(error) },
+      { status: 500, headers: corsHeaders }
+    );
+  }
+}
+
+
+
 
 const server = Bun.serve({
   port: process.env.PORT || 3001,
@@ -687,6 +712,9 @@ const server = Bun.serve({
     },
     "/api/sdapi/v1/refresh-checkpoints": {
       POST: refreshCheckpoints
+    },
+    "/api/sdapi/v1/refresh-embeddings": {
+      POST: refreshEmbeddings
     },
     "/api/labels":
     {

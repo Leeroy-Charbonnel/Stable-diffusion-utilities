@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
-import { LoraEditorConfig, PromptEditor } from '@/types';
+import { LoraEditorConfig, EmbeddingEditorConfig, PromptEditor } from '@/types';
 import * as promptsApi from '@/services/apiPrompt';
 import { toast } from 'sonner';
 import { DEBOUNCE_DELAY, DEFAULT_PROMPT_STEP } from '@/lib/constants';
@@ -42,9 +42,11 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             width: 0,
             height: 0,
             lorasRandom: false,
+            embeddingsRandom: false, // Added
             runCount: 1,
             tags: [],
             loras: [],
+            embeddings: [], // Added
             currentRun: 0,
             status: 'idle',
         };
@@ -159,12 +161,14 @@ export const PromptProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setPromptCopy(promptCopy);
         toast.success(`Copied ${propName} to clipboard`);
     }
+
     function GetCopyPromptPart<T extends keyof PromptEditor>(propName: T): PromptEditor[T] | undefined {
         if (!promptCopy) return;
         const value = promptCopy[propName];
 
         if (propName === 'tags' && (value as string[]).length == 0) return
         if (propName === 'loras' && (value as LoraEditorConfig[]).length == 0) return
+        if (propName === 'embeddings' && (value as EmbeddingEditorConfig[]).length == 0) return // Added
         if (propName === 'models' && (value as string[]).length == 0) return
 
         return value;

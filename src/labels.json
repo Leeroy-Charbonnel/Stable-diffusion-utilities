@@ -1,40 +1,12 @@
 {
   "modelLabels": [
     {
-      "name": "cyberrealisticPony_v90Alt1",
-      "label": "CyberRealistic Pony"
-    },
-    {
-      "name": "Hassaku XL (Illustrious)",
-      "label": "Hassaku XL (Illustrious)"
-    },
-    {
-      "name": "hassakuXLPony_v13BetterEyesVersion",
-      "label": "Hassaku XL (Pony)"
-    },
-    {
-      "name": "homemadeCheckpoint_ponyV10",
-      "label": "Homemade Checkpoint"
-    },
-    {
       "name": "illuquaint_v02",
       "label": "IlluQuaint"
     },
     {
       "name": "illustrij_v13",
       "label": "Illustrij"
-    },
-    {
-      "name": "illustriousRealismBy_v10VAE",
-      "label": "Illustrious Realism by klaabu"
-    },
-    {
-      "name": "novaAnimeXL_ilV60",
-      "label": "Nova Anime XL"
-    },
-    {
-      "name": "oneFORALLPonyFantasy_v20DPO",
-      "label": "ONE FOR ALL «Pony Fantasy» DPO+VAE"
     },
     {
       "name": "plantMilkModelSuite_almond",
@@ -51,14 +23,6 @@
     {
       "name": "smoothMixNoobai_realism",
       "label": "Smooth Mix - (NoobAI/Illustrious/Pony)"
-    },
-    {
-      "name": "waiNSFWIllustrious_v90",
-      "label": "WAI-NSFW-illustrious-SDXL"
-    },
-    {
-      "name": "WildCardX-XL-Fusion",
-      "label": "WildCardX-XL-Fusion"
     }
   ],
   "lorasLabels": [
@@ -79,16 +43,8 @@
       "label": "Arcane style | Goofy Ai"
     },
     {
-      "name": "Arcane_vi-v2",
-      "label": "Arcane VI (LORA)"
-    },
-    {
       "name": "artilands_v02-000006",
       "label": "Artify´s Fantastic Flux Landscape Lora V2.0"
-    },
-    {
-      "name": "Billie_SexNote",
-      "label": "Billie (SexNote) Illustrious/Pony"
     },
     {
       "name": "ck-Sommo-Concept-Art-000015",
@@ -101,10 +57,6 @@
     {
       "name": "DetailedEyes_V3",
       "label": "DetailedEyes_XL"
-    },
-    {
-      "name": "Expressive_H-000001",
-      "label": "ExpressiveH (Hentai LoRa Style) エロアニメ"
     },
     {
       "name": "g0th1cPXL",
@@ -127,16 +79,16 @@
       "label": "Incase Style [PonyXL]"
     },
     {
-      "name": "Jinx_-_Arcane_League_of_Legends_PonyXL(1)",
-      "label": "Jinx - Arcane League of Legends (PonyXL)"
-    },
-    {
       "name": "LeIsT0_style",
       "label": "LeIsT0 | Shiiro's Styles"
     },
     {
       "name": "Luminous_Shadowscape-000016",
       "label": "Luminous Shadowscape"
+    },
+    {
+      "name": "more_details",
+      "label": "Add More Details - Detail Enhancer / Tweaker (细节调整) LoRA"
     },
     {
       "name": "OB半写实肖像画V2.0",
@@ -177,14 +129,7 @@
     {
       "name": "USNR STYLE_XL_lokr",
       "label": "薄塗り / USNR STYLE"
-    },
-    {
-      "name": "ViPDXL",
-      "label": "Vi - Arcane PonyDiffusion XL"
-    },
-    {
-      "name": "ViPonyLora",
-      "label": "VI from League of Legends Game & Arcane 3 Skins | Pony / SD1.5"
     }
-  ]
+  ],
+  "embeddingsLabels": []
 }
