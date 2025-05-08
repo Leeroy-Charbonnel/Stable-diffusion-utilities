@@ -48,8 +48,6 @@ export function ImageDetailsDialog({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
-
-  console.log(image);
   //Reference for animation frame
   const animationFrameRef = useRef<number | null>(null);
 
@@ -182,7 +180,8 @@ export function ImageDetailsDialog({
             <div
               className="absolute inset-0 z-0"
               style={{
-                backgroundImage: `url(${localImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(60px) brightness(0.4)', transform: 'scale(1.2)', opacity: 0.7
+                background:"var(--background)",
+                backgroundImage: `url(${localImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(60px) brightness(0.4)', transform: 'scale(1.2)', opacity: 1
               }}
             />
           )}

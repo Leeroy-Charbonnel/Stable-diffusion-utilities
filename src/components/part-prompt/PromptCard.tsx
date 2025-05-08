@@ -32,7 +32,6 @@ interface PromptCardProps {
 
   isCancelling: boolean;
   isSkipping: boolean;
-  isRestarting?: boolean; // Add this new prop
 
   isExecuted: boolean;
   isExecuting: boolean;
@@ -60,7 +59,6 @@ export function PromptCard({
   onDuplicatePrompt,
   onInterruptGeneration,
   onCopyRefresh,
-  isRestarting,
   isExecuted = false,
   isExecuting = false,
   isCancelling = false,

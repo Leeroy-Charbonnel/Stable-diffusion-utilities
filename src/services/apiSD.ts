@@ -91,12 +91,25 @@ export const getEmbeddings = async (): Promise<string[]> => {
     if (!response.ok) throw new Error(`STABLE_DIFFUSION_API : Failed to fetch embeddings, status: ${response.status}`);
 
     const data = await response.json();
-    return data.map((embedding: any) => embedding.name);
+    const embeddings: string[] = [];
+
+    if (data.loaded) {
+      Object.entries(data.loaded).forEach(([name]: [string, any]) => {
+        embeddings.push(name);
+      });
+    }
+    if (data.skipped) {
+      Object.entries(data.skipped).forEach(([name]: [string, any]) => {
+        embeddings.push(name);
+      });
+    }
+
+    return embeddings;
   } catch (error) {
     console.error('Error fetching embeddings:', error);
     return [];
   }
-}
+};
 
 //Generate an image using text-to-image
 export const generateImage = async (params: Text2ImageRequest): Promise<Text2ImageResponse | null> => {
@@ -171,21 +184,6 @@ export const getPngInfo = async (imageBase64: string): Promise<any> => {
   } catch (error) {
     console.error('Error getting PNG info:', error);
     return null;
-  }
-};
-
-
-export const restartStableDiffusion = async (): Promise<boolean> => {
-  try {
-    const response = await fetch(`${FILE_API_BASE_URL}/restart-sd`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    return response.ok;
-  } catch (error) {
-    console.error('Error restarting Stable Diffusion:', error);
-    return false;
   }
 };
 

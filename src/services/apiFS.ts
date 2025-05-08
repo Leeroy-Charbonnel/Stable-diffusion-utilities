@@ -39,8 +39,6 @@ export const saveGeneratedImage = async (
   promptData: Prompt
 ): Promise<ImageMetadata | null> => {
   try {
-    console.log('Saving generated image');
-
     const timestamp = new Date().toISOString();
     const metadata: ImageMetadata = {
       id: imageId,
@@ -64,7 +62,7 @@ export const saveGeneratedImage = async (
       }
     };
 
-    console.log('Sending image to API');
+    console.log('Sending image to file server');
     const response = await fetch(`${FILE_API_BASE_URL}/images`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

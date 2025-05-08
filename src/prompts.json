@@ -1,36 +1,367 @@
 [
   {
-    "id": "058e27e2-9fff-4b8a-b51b-c23ab37b7282",
+    "id": "4ad2dcbb-70ef-46d1-ba73-1fbb8826f567",
     "isOpen": true,
-    "runCount": 3,
-    "currentRun": 0,
+    "runCount": 1,
+    "currentRun": 1,
     "status": "idle",
-    "name": "Ethereal Haunted Mansion Wreckage - Sketch Lineart",
-    "text": "(multiple comic panels:3.0), (panel separation:3.0), (black comic panel borders:3.0), (distinct scenes in each panel:2.9), (sequential narrative panels:2.8), (comic grid layout:2.6), (story told across multiple frames:3.0), (each panel shows a different moment:3.0), (progressive panel storytelling:3.0), (multiple perspectives:2.5), (comic frame composition:2.6), (case broken into frames:2.9), (visual cuts between scenes:2.8), (panel flow like a storyboard:2.8), (frames show step-by-step noir investigation:3.0), (urban noir panels:2.5), (detective case spread over frames:3.0), (cluttered noir panels:2.6), (black and white;2)\n\n(messy inking:1.8), (rough sketch style:1.7), (chaotic lineart:1.9), (cross-hatching:2.0), (dense hatching:2.1), (messy linework:1.8), (gritty ink style:2.2), (noisy lines:1.9), (textured shading:2.0), (hand-drawn look:1.7), (black and white only:1.0), (binary black and white:1.0), (almost binary contrast:2.2), (heavy black ink:2.4), (cinematic contrast:2.3), (epic chiaroscuro:2.2), (binary shadows:2.3), (no gray tones:1.0), (ink illustration:2.0), (dynamic shading:2.2), (dirty textures:1.8), (rough comic art:1.7), (expressionistic strokes:2.0), (non-uniform lines:1.9), (harsh lighting:2.3), (scratchy style:2.0), (high contrast:2.4),\n\n(50s detective film noir style:2.5), (moody atmosphere:2.3), (dramatic shadows:2.2), (gritty realism:2.0), (bars, alleyways, city rooftops, rainy streets), (rim lighting:2.3), (low light in each panel), (urban mystery in progression), (detective scenes in sequence), (comic case storytelling:2.5)",
-    "negativePrompt": " clean lines, smooth shading, no contrast, polished finish, soft lighting, minimalism, smooth texture, fine details, uniform linework, flat color, pastel tones, gray scale, even shadows, no grit, no mess, tidy inking, smooth gradients, digital style, vector art, no noise, soft edges, modern aesthetics, bright colors, minimal shadows, wide panels, structured framing, colors",
-    "cfgScale": 7,
+    "name": "vi",
+    "text": "score_8, girl with animal ears, fucked on deep green velvet sheets, shiny and vibrant texture, visible bare feet, smooth skin, flushed cheeks, closed eyes, tender expression, subtle sweat, visible male torso, penis fucking her deeply, (deep vaginal penetration:1.3), (vaginal sex:1.2), intense pleasure,, warm lighting, detailed anatomy, intimate atmosphere, (warm skin tone)",
+    "negativePrompt": "worst quality, sketch, censored, artist name, signature, watermark, speech bubble, clone, extra fingers, deformed limbs",
+    "cfgScale": 14.9,
     "embeddings": [],
-    "steps": 35,
-    "sampler": "Heun",
+    "steps": 20,
+    "sampler": "DPM++ 2M",
     "width": 768,
     "height": 1344,
-    "tags": [
-      "sketch",
-      "lineart",
-      "realistic",
-      "haunted mansion",
-      "cinematic",
-      "dramatic lighting",
-      "masterpiece"
-    ],
+    "tags": [],
     "models": [
-      "CHEYENNE_v10"
+      "illustrij_v13"
     ],
     "lorasRandom": false,
     "loras": [
       {
-        "name": "ComiDusk",
+        "name": "USNR STYLE_XL_lokr",
         "weight": 1,
+        "random": false
+      }
+    ]
+  },
+  {
+    "id": "b04b0d40-399c-485b-a325-3d899847c820",
+    "isOpen": false,
+    "name": "feet licking",
+    "text": "score_8, (2girl:1.2), (two fully nude lesbian girls:1.4), (lesbian girl licking other feet (no toenail polish):1.5), (vibrant orange velvet sheets:1.1), (soft lighting:1.1), (detailed skin texture:1.2), (visible toes and tongue:1.2), (sensual lesbian atmosphere:1.2), (gentle touch:1.1), (relaxed expressions:1.1), (warm colors:1.1), (cozy setting), (bare foot:1.5)",
+    "negativePrompt": "worst quality, censored, watermark, signature, extra limbs, deformed anatomy, sketch, blurry, (toenail polish), (colored nails), (painted nails), (nail polish), (bright nails), (glossy nails), (manicured nails), (fake nails), (nail art), (nail decorations)",
+    "cfgScale": 7,
+    "seed": -1,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "models": [
+      "illustrij_v13"
+    ],
+    "width": 768,
+    "height": 1344,
+    "lorasRandom": false,
+    "runCount": 1,
+    "tags": [],
+    "loras": [
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 1,
+        "random": false
+      }
+    ],
+    "currentRun": 1,
+    "status": "idle"
+  },
+  {
+    "id": "89d53045-50e0-4b58-ac5c-18bd1f6d84a8",
+    "isOpen": false,
+    "name": "doggystyle furry soft",
+    "text": "score_8, vibrant deep green velvet sheet background, (nude girl:1.2), long light brown hair cascading over shoulders, (animal ears:1.1) perched atop head, (hardcore sex:1.3), doggystyle position, ass raised, wet pussy glistening, man’s thick cock firmly thrusting inside, (rough pounding:1.2), visible sweat beads, flushed skin, fingers digging into velvet sheet, open mouth gasping moans, (cum dripping from pussy:1.1), intimate close-up, sharp focus on intense penetration, detailed anatomy, (glowing skin), (dynamic lighting) Negative: worst quality, sketch, censored, signature, watermark, extra limbs, deformed anatomy",
+    "negativePrompt": "Score_5_down, low-resolution, blurred details, improper lighting, inaccurately drawn anatomy, speech bubbles, artist's watermark, censorship, overly hirsute, deformed limbs or digits",
+    "cfgScale": 7,
+    "seed": -1,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "models": [
+      "illustrij_v13"
+    ],
+    "width": 768,
+    "height": 1344,
+    "lorasRandom": false,
+    "runCount": 1,
+    "tags": [],
+    "loras": [
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 1,
+        "random": false
+      }
+    ],
+    "currentRun": 1,
+    "status": "idle"
+  },
+  {
+    "id": "c6158eb6-1e4f-44af-88a1-9f382d2a23e5",
+    "isOpen": false,
+    "runCount": 1,
+    "currentRun": 1,
+    "status": "idle",
+    "name": "missionary furry soft",
+    "text": "score_8, intimate bedroom with vibrant deep green velvet sheet, (fully nude girl:1.2) lying on back in missionary position with both legs raised, soles of feet clearly visible and flexed, long light brown hair spread over pillow, (animal ears:1.1) perched atop head, (hardcore penetration:1.3) with man’s thick cock deeply thrusting inside her wet pussy, bodies pressed tightly together, girl’s hands gripping man’s shoulders, flushed skin with visible sweat, open mouth gasping moans, (cum dripping from pussy:1.1), detailed anatomy, warm lighting highlighting curves and soles, sharp focus on sensual connection Negative: worst quality, sketch, censored, signature, watermark, extra fingers, deformed limbs",
+    "negativePrompt": "Score_5_down, low-resolution, blurred details, improper lighting, inaccurately drawn anatomy, speech bubbles, artist's watermark, censorship, overly hirsute, deformed limbs or digits",
+    "cfgScale": 7,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "width": 768,
+    "height": 1344,
+    "tags": [],
+    "models": [
+      "illustrij_v13"
+    ],
+    "lorasRandom": false,
+    "loras": [
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 1,
+        "random": false
+      }
+    ]
+  },
+  {
+    "id": "ac3e92a8-3a33-44ac-b8ad-3a2ca1325460",
+    "isOpen": false,
+    "runCount": 1,
+    "currentRun": 0,
+    "status": "idle",
+    "name": "vi standard",
+    "text": "score_9, (Arcane Vi:1.4), full body visible from head to delicate natural toes, voluptuous and curvy figure with (large breasts:1.7), thick thighs, wide hips, red hair with (dark roots:1.7) (Arcane style), signature tattoo on upper arm and back, sweat droplets glistening on skin, (one nostril pierced:1.3), (dark eyebrows), (split in one eyebrow:1.4), (missionary position:1.4), sweet breasts glistening with sweat highlighted by dim cinematic lighting, (visible penis penetrating vagina:1.5) with white male torso and penis, deep vibrant purple velvet sheets (1.8) with deep shiny folds reflecting intense dim light, hands gripping sheets creating additional fabric folds, dramatic intense rim light (1.7), sharp shadows accentuating breasts, fully nude, (scar on upper lip:1.4), (red cheeks:1.5), (faded light scars scattered:1.3), (pleasure expression:1.1), (bare chest:1.5), (reddish pubic hair:1.4), entire body visible, bare legs\n",
+    "negativePrompt": "worst quality, sketch, censored, extra fingers, deformed limbs, dildo, toy, clothes, cloth, blood, many scars, manly, chiseled abs, dick's hair, tattoo on breasts, tattoo on stomach, tattoo on thighs, worst quality, sketch, censored, artist name, signature, watermark, speech bubble, clone, extra fingers, deformed limbs,black veins, dark veins, glowing veins, vein patterns on skin, corrupted skin, unnatural markings, black lines, dark tendrils, shadow veins, body distortions, unnatural textures, tattoo on pussy, dark stain, corruption",
+    "cfgScale": 7,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "width": 768,
+    "height": 1344,
+    "tags": [],
+    "models": [
+      "illustrij_v13"
+    ],
+    "lorasRandom": false,
+    "loras": [
+      {
+        "name": "arcane_style_illustrious_goofy",
+        "weight": 0.8,
+        "random": false
+      },
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 0.6,
+        "random": false
+      }
+    ]
+  },
+  {
+    "id": "625f4b7d-e208-4331-95f5-71dd12ddc0b4",
+    "isOpen": false,
+    "runCount": 1,
+    "currentRun": 0,
+    "status": "idle",
+    "name": "vi pieceing nipple version",
+    "text": "score_9, (Arcane Vi:1.4), full body visible from head to delicate natural toes, voluptuous and curvy figure with (large breasts:1.7) with (pierced nipples:1.5), thick thighs, wide hips, red hair with (dark roots:1.7) (Arcane style), signature tattoo on upper arm and back, sweat droplets glistening on skin, (one nostril pierced:1.3), (dark eyebrows), (split in one eyebrow:1.4), (missionary position:1.4), sweet breasts glistening with sweat highlighted by dim cinematic lighting, (visible penis penetrating vagina:1.5) with white male torso and penis, deep vibrant purple velvet sheets (1.8) with deep shiny folds reflecting intense dim light, hands gripping sheets creating additional fabric folds, dramatic intense rim light (1.7), sharp shadows accentuating breasts, fully nude, (scar on upper lip:1.4), (red cheeks:1.5), (faded light scars scattered:1.3), (pleasure expression:1.1), (bare chest:1.5), (reddish pubic hair:1.4), entire body visible, bare legs",
+    "negativePrompt": "worst quality, sketch, censored, extra fingers, deformed limbs, dildo, toy, clothes, cloth, blood, many scars, manly, chiseled abs, dick's hair, tattoo on breasts, tattoo on stomach, tattoo on thighs, worst quality, sketch, censored, artist name, signature, watermark, speech bubble, clone, extra fingers, deformed limbs,black veins, dark veins, glowing veins, vein patterns on skin, corrupted skin, unnatural markings, black lines, dark tendrils, shadow veins, body distortions, unnatural textures, tattoo on pussy, dark stain, corruption",
+    "cfgScale": 7,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "width": 768,
+    "height": 1344,
+    "tags": [],
+    "models": [
+      "illustrij_v13"
+    ],
+    "lorasRandom": false,
+    "loras": [
+      {
+        "name": "arcane_style_illustrious_goofy",
+        "weight": 0.8,
+        "random": false
+      },
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 0.6,
+        "random": false
+      }
+    ]
+  },
+  {
+    "id": "dfac5abe-8165-48bb-9720-9d4aec40f88b",
+    "isOpen": false,
+    "runCount": 1,
+    "currentRun": 0,
+    "status": "idle",
+    "name": "vi pieceing gauntlet version",
+    "text": "score_9, (Arcane Vi:1.4), full body visible from head to delicate natural toes, voluptuous and curvy figure with (large breasts:1.7), thick thighs, wide hips, red hair with (dark roots:1.7) (Arcane style), signature tattoo on upper arm and back, sweat droplets glistening on skin, (one nostril pierced:1.3), (dark eyebrows), (split in one eyebrow:1.4), (missionary position:1.4), sweet breasts glistening with sweat highlighted by dim cinematic lighting, (visible penis penetrating vagina:1.5) with white male torso and penis, deep vibrant purple velvet sheets (1.8) with deep shiny folds reflecting intense dim light, hands gripping sheets creating additional fabric folds, dramatic intense rim light (1.7), sharp shadows accentuating breasts, fully nude except wearing her signature arcan blue gauntlet on one arm, (scar on upper lip:1.4), (red cheeks:1.5), (faded light scars scattered:1.3), (pleasure expression:1.1), (bare chest:1.5), (reddish pubic hair:1.4), entire body visible, bare legs",
+    "negativePrompt": "worst quality, sketch, censored, extra fingers, deformed limbs, dildo, toy, clothes, cloth, blood, many scars, manly, chiseled abs, dick's hair, tattoo on breasts, tattoo on stomach, tattoo on thighs, worst quality, sketch, censored, artist name, signature, watermark, speech bubble, clone, extra fingers, deformed limbs,black veins, dark veins, glowing veins, vein patterns on skin, corrupted skin, unnatural markings, black lines, dark tendrils, shadow veins, body distortions, unnatural textures, tattoo on pussy, dark stain, corruption",
+    "cfgScale": 7,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "width": 768,
+    "height": 1344,
+    "tags": [],
+    "models": [
+      "illustrij_v13"
+    ],
+    "lorasRandom": false,
+    "loras": [
+      {
+        "name": "arcane_style_illustrious_goofy",
+        "weight": 0.8,
+        "random": false
+      },
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 0.6,
+        "random": false
+      }
+    ]
+  },
+  {
+    "id": "841fc049-0a26-409d-bfea-7c2680ab593f",
+    "isOpen": false,
+    "runCount": 1,
+    "currentRun": 0,
+    "status": "idle",
+    "name": "vi pieceing version panties to the side, bra revealing pussy,  penetration",
+    "text": "score_9, (Arcane Vi:1.4), full body visible from head to delicate natural toes, voluptuous and curvy figure with (large breasts:1.7), thick thighs, wide hips, red hair with (dark roots:1.7) (Arcane style), signature tattoo on upper arm and back, sweat droplets glistening on skin, (one nostril pierced:1.3), (dark eyebrows), (split in one eyebrow:1.4), (missionary position:1.4), sweet breasts glistening with sweat highlighted by dim cinematic lighting, (visible penis penetrating vagina:1.5) with white male torso and penis, deep vibrant purple velvet sheets (1.8) with deep shiny folds reflecting intense dim light, hands gripping sheets creating additional fabric folds, dramatic intense rim light (1.7), sharp shadows accentuating breasts, (panties pulled to the side revealing pussy:1.4), (bra half removed exposing breast and nipple:1.5), fully nude except underwear as described, (scar on upper lip:1.4), (red cheeks:1.5), (faded light scars scattered:1.3), (pleasure expression:1.1), (bare chest:1.5), (reddish pubic hair:1.4), entire body visible, bare legs",
+    "negativePrompt": "worst quality, sketch, censored, extra fingers, deformed limbs, dildo, toy, clothes, cloth, blood, many scars, manly, chiseled abs, dick's hair, tattoo on breasts, tattoo on stomach, tattoo on thighs, worst quality, sketch, censored, artist name, signature, watermark, speech bubble, clone, extra fingers, deformed limbs,black veins, dark veins, glowing veins, vein patterns on skin, corrupted skin, unnatural markings, black lines, dark tendrils, shadow veins, body distortions, unnatural textures, tattoo on pussy, dark stain, corruption",
+    "cfgScale": 7,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "width": 768,
+    "height": 1344,
+    "tags": [],
+    "models": [
+      "illustrij_v13"
+    ],
+    "lorasRandom": false,
+    "loras": [
+      {
+        "name": "arcane_style_illustrious_goofy",
+        "weight": 0.8,
+        "random": false
+      },
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 0.6,
+        "random": false
+      }
+    ]
+  },
+  {
+    "id": "967d5dcd-4b85-48bb-9da0-79c9bb1d9ca0",
+    "isOpen": false,
+    "runCount": 1,
+    "currentRun": 0,
+    "status": "idle",
+    "name": "vi pieceing version panties to the side, bra revealing pussy, no penetration, fingering",
+    "text": "score_9, (Arcane Vi:1.4), full body visible from head to delicate natural toes, voluptuous and curvy figure with (large breasts:1.7), thick thighs, wide hips, red hair with (dark roots:1.7) (Arcane style), signature tattoo on upper arm and back, sweat droplets glistening on skin, (one nostril pierced:1.3), (dark eyebrows), (split in one eyebrow:1.4), (missionary position:1.4), sweet breasts glistening with sweat highlighted by dim cinematic lighting, (fingering herself:1.5), deep vibrant purple velvet sheets (1.8) with deep shiny folds reflecting intense dim light, hands gripping sheets creating additional fabric folds, dramatic intense rim light (1.7), sharp shadows accentuating breasts, (panties pulled to the side revealing pussy:1.4), (bra half removed exposing breast and nipple:1.5), fully nude except underwear as described, (scar on upper lip:1.4), (red cheeks:1.5), (faded light scars scattered:1.3), (pleasure expression:1.1), (bare chest:1.5), (reddish pubic hair:1.4), entire body visible, bare legs",
+    "negativePrompt": "worst quality, sketch, censored, extra fingers, deformed limbs, dildo, toy, clothes, cloth, blood, many scars, manly, chiseled abs, dick's hair, tattoo on breasts, tattoo on stomach, tattoo on thighs, worst quality, sketch, censored, artist name, signature, watermark, speech bubble, clone, extra fingers, deformed limbs,black veins, dark veins, glowing veins, vein patterns on skin, corrupted skin, unnatural markings, black lines, dark tendrils, shadow veins, body distortions, unnatural textures, tattoo on pussy, dark stain, corruption",
+    "cfgScale": 7,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "width": 768,
+    "height": 1344,
+    "tags": [],
+    "models": [
+      "illustrij_v13"
+    ],
+    "lorasRandom": false,
+    "loras": [
+      {
+        "name": "arcane_style_illustrious_goofy",
+        "weight": 0.8,
+        "random": false
+      },
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 0.6,
+        "random": false
+      }
+    ]
+  },
+  {
+    "id": "64c56a90-eced-4f37-8654-1f0cdde2f005",
+    "isOpen": false,
+    "runCount": 1,
+    "currentRun": 0,
+    "status": "idle",
+    "name": "vi pieceing version panties to the side, bra revealing pussy, no penetration, no fingering",
+    "text": "score_9, (Arcane Vi:1.4), full body visible from head to delicate natural toes, voluptuous and curvy figure with (large breasts:1.7), thick thighs, wide hips, red hair with (dark roots:1.7) (Arcane style), signature tattoo on upper arm and back, sweat droplets glistening on skin, (one nostril pierced:1.3), (dark eyebrows), (split in one eyebrow:1.4), (missionary position:1.4), sweet breasts glistening with sweat highlighted by dim cinematic lighting, deep vibrant purple velvet sheets (1.8) with deep shiny folds reflecting intense dim light, hands gripping sheets creating additional fabric folds, dramatic intense rim light (1.7), sharp shadows accentuating breasts, (panties pulled to the side revealing pussy:1.4), (bra half removed exposing breast and nipple:1.5), fully nude except underwear as described, (scar on upper lip:1.4), (red cheeks:1.5), (faded light scars scattered:1.3), (pleasure expression:1.1), (bare chest:1.5), (reddish pubic hair:1.4), entire body visible, bare legs",
+    "negativePrompt": "worst quality, sketch, censored, extra fingers, deformed limbs, dildo, toy, clothes, cloth, blood, many scars, manly, chiseled abs, dick's hair, tattoo on breasts, tattoo on stomach, tattoo on thighs, worst quality, sketch, censored, artist name, signature, watermark, speech bubble, clone, extra fingers, deformed limbs,black veins, dark veins, glowing veins, vein patterns on skin, corrupted skin, unnatural markings, black lines, dark tendrils, shadow veins, body distortions, unnatural textures, tattoo on pussy, dark stain, corruption",
+    "cfgScale": 7,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "width": 768,
+    "height": 1344,
+    "tags": [],
+    "models": [
+      "illustrij_v13"
+    ],
+    "lorasRandom": false,
+    "loras": [
+      {
+        "name": "arcane_style_illustrious_goofy",
+        "weight": 0.8,
+        "random": false
+      },
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 0.6,
+        "random": false
+      }
+    ]
+  },
+  {
+    "id": "95472a46-2440-4d06-82a2-29cef1b97afc",
+    "isOpen": false,
+    "runCount": 1,
+    "currentRun": 0,
+    "status": "idle",
+    "name": "vi pieceing version with fighting bandage on hand",
+    "text": "score_9, (Arcane Vi:1.4), full body visible from head to delicate natural toes, voluptuous and curvy figure with (large breasts:1.7), thick thighs, wide hips, red hair with (dark roots:1.7) (Arcane style), signature tattoo on upper arm and back, sweat droplets glistening on skin, (one nostril pierced:1.3), (dark eyebrows), (split in one eyebrow:1.4), (missionary position:1.4), sweet breasts glistening with sweat highlighted by dim cinematic lighting, (visible penis penetrating vagina:1.5) with white male torso and penis, deep vibrant purple velvet sheets (1.8) with deep shiny folds reflecting intense dim light, hands gripping sheets creating additional fabric folds, dramatic intense rim light (1.7), sharp shadows accentuating breasts, fully nude except for fighting bandages wrapped tightly around her hands, (scar on upper lip:1.4), (red cheeks:1.5), (faded light scars scattered:1.3), (pleasure expression:1.1), (bare chest:1.5), (reddish pubic hair:1.4), entire body visible, bare legs",
+    "negativePrompt": "worst quality, sketch, censored, extra fingers, deformed limbs, dildo, toy, clothes, cloth, blood, many scars, manly, chiseled abs, dick's hair, tattoo on breasts, tattoo on stomach, tattoo on thighs, worst quality, sketch, censored, artist name, signature, watermark, speech bubble, clone, extra fingers, deformed limbs,black veins, dark veins, glowing veins, vein patterns on skin, corrupted skin, unnatural markings, black lines, dark tendrils, shadow veins, body distortions, unnatural textures, tattoo on pussy, dark stain, corruption",
+    "cfgScale": 7,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "width": 768,
+    "height": 1344,
+    "tags": [],
+    "models": [
+      "illustrij_v13"
+    ],
+    "lorasRandom": false,
+    "loras": [
+      {
+        "name": "arcane_style_illustrious_goofy",
+        "weight": 0.8,
+        "random": false
+      },
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 0.6,
+        "random": false
+      }
+    ]
+  },
+  {
+    "id": "6a5b0058-6de0-42a0-be25-8aba35b3149c",
+    "isOpen": false,
+    "runCount": 1,
+    "currentRun": 0,
+    "status": "idle",
+    "name": "vi pieceing version doggystyle",
+    "text": "score_9, (Arcane Vi:1.4), full body visible from head to delicate natural toes, voluptuous and curvy figure with (large breasts:1.7), thick thighs, wide hips, (thick ass:1.6) with soles of feet visible, red hair with (dark roots:1.7) (Arcane style), signature tattoo on upper arm and back, sweat droplets glistening on skin, (one nostril pierced:1.3), (dark eyebrows), (split in one eyebrow:1.4), (doggystyle position:1.4), sweet breasts glistening with sweat highlighted by dim cinematic lighting, (visible penis penetrating vagina from behind:1.5) with white male torso and penis, deep vibrant purple velvet sheets (1.8) with deep shiny folds reflecting intense dim light, hands gripping sheets creating additional fabric folds, dramatic intense rim light (1.7), sharp shadows accentuating breasts and thick ass, fully nude, (scar on upper lip:1.4), (red cheeks:1.5), (faded light scars scattered:1.3), (pleasure expression:1.1), (bare chest:1.5), (reddish pubic hair:1.4), entire body visible, bare legs",
+    "negativePrompt": "worst quality, sketch, censored, extra fingers, deformed limbs, dildo, toy, clothes, cloth, blood, many scars, manly, chiseled abs, dick's hair, tattoo on breasts, tattoo on stomach, tattoo on thighs, worst quality, sketch, censored, artist name, signature, watermark, speech bubble, clone, extra fingers, deformed limbs,black veins, dark veins, glowing veins, vein patterns on skin, corrupted skin, unnatural markings, black lines, dark tendrils, shadow veins, body distortions, unnatural textures, tattoo on pussy, dark stain, corruption",
+    "cfgScale": 7,
+    "steps": 45,
+    "sampler": "DPM++ 2M",
+    "width": 768,
+    "height": 1344,
+    "tags": [],
+    "models": [
+      "illustrij_v13"
+    ],
+    "lorasRandom": false,
+    "loras": [
+      {
+        "name": "arcane_style_illustrious_goofy",
+        "weight": 0.8,
+        "random": false
+      },
+      {
+        "name": "USNR STYLE_XL_lokr",
+        "weight": 0.6,
         "random": false
       }
     ]

@@ -1,9 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Play, StopCircle, RefreshCw } from 'lucide-react';
+import { Play, StopCircle } from 'lucide-react';
 import { ExecutionStatus, ProgressData, PromptEditor } from '@/types';
 import { Separator } from '@/components/ui/separator';
-import { PROMPTS_BEFORE_RESTART } from '@/lib/constants';
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
@@ -18,8 +17,6 @@ interface ExecutionPanelProps {
   isCancelling: boolean;
   elapsedTime: number;
   progressData: ProgressData | null;
-  isRestarting?: boolean;
-  totalExecutedPrompts: number;
   onStartExecution: () => void;
   onCancelExecution: () => void;
 }
@@ -35,8 +32,6 @@ export function ExecutionPanel({
   isCancelling,
   elapsedTime,
   progressData,
-  isRestarting = false,
-  totalExecutedPrompts,
   onStartExecution,
   onCancelExecution
 }: ExecutionPanelProps) {
@@ -52,14 +47,13 @@ export function ExecutionPanel({
   };
 
   const sdProgressPercentage = progressData?.progress ? Math.round(progressData.progress * 100) : 0;
-  const remainingPromptsBeforeRestart = PROMPTS_BEFORE_RESTART - totalExecutedPrompts;
 
   return (
     <div className="h-full flex flex-col p-4">
       <h3 className="text-lg font-semibold mb-4">Execution Status</h3>
 
       <Separator className='my-2' />
-      
+
       {/* API Connection Status - Added Here */}
       {!isApiConnected && (
         <Alert className="flex p-2 bg-destructive/20 mb-4">
@@ -68,15 +62,6 @@ export function ExecutionPanel({
         </Alert>
       )}
 
-      {/* Restart Status */}
-      {isRestarting && (
-        <div className="mb-4 p-2 bg-yellow-500/20 rounded-md">
-          <div className="flex items-center space-x-2">
-            <RefreshCw className="animate-spin h-4 w-4" />
-            <span className="font-medium">Restarting Stable Diffusion...</span>
-          </div>
-        </div>
-      )}
 
       {/* Elapsed Time Section */}
       {isExecuting && (
@@ -105,18 +90,6 @@ export function ExecutionPanel({
       )}
       <Separator className='my-2' />
 
-      {/* Counters Section */}
-      <div className="flex gap-2 mx-auto text-sm">
-        <span>Success {successCount}</span>
-        <span className="mx-2">|</span>
-        <span>Failed {failureCount}</span>
-        {isExecuting && (
-          <>
-            <span className="mx-2">|</span>
-            <span>Restart in {remainingPromptsBeforeRestart}</span>
-          </>
-        )}
-      </div>
 
       <Separator className='my-2' />
 
@@ -162,16 +135,16 @@ export function ExecutionPanel({
             onClick={onCancelExecution}
             variant="destructive"
             className="w-full"
-            disabled={isCancelling || isRestarting}
+            disabled={isCancelling}
           >
             <StopCircle className="mr-2 h-4 w-4" />
-            {isCancelling ? 'Stopping...' : isRestarting ? 'Restarting...' : 'Stop Execution'}
+            {isCancelling ? 'Stopping...' : 'Stop Execution'}
           </Button>
         ) : (
           <Button
             onClick={onStartExecution}
             className="w-full"
-            disabled={!isApiConnected || prompts.length === 0 || isRestarting}
+            disabled={!isApiConnected || prompts.length === 0 }
           >
             <Play className="mr-2 h-4 w-4" />
             Start Execution

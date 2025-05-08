@@ -29,6 +29,5 @@ export const RANDOM_EMBEDDINGS_MIN_WEIGHT = 0;
 export const RANDOM_EMBEDDINGS_MAX_WEIGHT = 1.5;
 
 
-export const PROMPTS_BEFORE_RESTART = 9999;
-export const RESTART_TIMEOUT_MS = 5 * 60 * 1000;
-export const CONNECTION_CHECK_INTERVAL_MS = 1000;
+export const RANDOM_MIN_CFG_SCALE= 6;
+export const RANDOM_MAX_CFG_SCALE= 12;

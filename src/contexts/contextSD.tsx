@@ -4,6 +4,7 @@ import * as apiSD from '@/services/apiSD';
 import * as apiFS from '@/services/apiFS';
 import * as apiPrompt from '@/services/apiPrompt';
 import { generateUUID, randomBetween } from '@/lib/utils';
+import { RANDOM_MAX_CFG_SCALE, RANDOM_MIN_CFG_SCALE } from '@/lib/constants';
 
 
 interface ApiContextType {
@@ -94,7 +95,6 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       apiSD.getLoras(),
       apiSD.getEmbeddings()
     ]);
-    console.log(models, loras, embeddings);
 
     // Process models
     models.forEach((model: string) => {
@@ -144,52 +144,60 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   const generateImage = async (prompt: Prompt): Promise<ImageMetadata | null> => {
     setIsLoading(true);
+    let success = false;
+    let result = null;
+    let attempts = 0;
 
-    try {
-      const params: any = {
-        prompt: prompt.text,
-        negative_prompt: prompt.negativePrompt,
-        seed: prompt.seed,
-        steps: prompt.steps,
-        width: prompt.width,
-        height: prompt.height,
-        sampler_name: prompt.sampler,
-        // cfg_scale: prompt.cfgScale,
-        cfg_scale: randomBetween(6, 10),
-        batch_size: 1,
-        n_iter: 1,
-      };
+    while (!success) {
+      attempts++;
+      console.log(`Generating image: Attempt #${attempts}`);
 
-      params.override_settings = {
-        sd_model_checkpoint: prompt.model
-      };
+      try {
 
-      // Add loras to the prompt
-      if (prompt.loras && prompt.loras.length > 0) {
-        params.prompt = params.prompt + " " + prompt.loras.map(lora =>
-          `<lora:${lora.name}:${lora.weight}>`).join(" ");
+        prompt.cfgScale = randomBetween(RANDOM_MIN_CFG_SCALE, RANDOM_MAX_CFG_SCALE);
+
+        const params: any = {
+          prompt: prompt.text,
+          negative_prompt: prompt.negativePrompt,
+          seed: prompt.seed,
+          steps: prompt.steps,
+          width: prompt.width,
+          height: prompt.height,
+          sampler_name: prompt.sampler,
+          cfg_scale: prompt.cfgScale,
+          batch_size: 1,
+          n_iter: 1,
+        };
+
+        params.override_settings = {
+          sd_model_checkpoint: prompt.model
+        };
+
+        // Add loras to the prompt
+        if (prompt.loras && prompt.loras.length > 0) {
+          params.prompt = params.prompt + " " + prompt.loras.map(lora =>
+            `<lora:${lora.name}:${lora.weight}>`).join(" ");
+        }
+
+        result = await apiSD.generateImage(params);
+
+        if (!result || !result.images || result.images.length === 0) {
+          throw new Error("Failed to generate image");
+        }
+        const generatedImage = await apiFS.saveGeneratedImage(generateUUID(), result.images[0], prompt);
+
+        success = true;
+        return generatedImage;
+
+      } catch (err) {
+        console.error(`Error generating image (Attempt #${attempts}):`, err);
       }
-
-      // // Add embeddings to the prompt
-      // if (prompt.embeddings && prompt.embeddings.length > 0) {
-      //   params.prompt = params.prompt + " " + prompt.embeddings.map(embedding =>
-      //     `embedding:${embedding.name}:${embedding.weight}`).join(" ");
-      // }
-
-      console.log("API SENDING:", params);
-      const result = await apiSD.generateImage(params);
-      if (!result || !result.images || result.images.length === 0) throw new Error("Failed to generate image");
-      console.log("Generated image:", result.images[0]);
-      const generatedImage = await apiFS.saveGeneratedImage(generateUUID(), result.images[0], prompt);
-      console.log("Generated image:", generatedImage);
-      return generatedImage;
-    } catch (err) {
-      console.log("Error generating image:", err);
-      return null;
-    } finally {
-      setIsLoading(false);
     }
+
+    setIsLoading(false);
+    return null;
   };
+
 
   const updateLabelsData = async (updatedLabelsData: LabelsData): Promise<boolean> => {
     setLabelsData(updatedLabelsData);
@@ -206,7 +214,7 @@ export const SdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     availableSamplers,
     availableModels,
     availableLoras,
-    availableEmbeddings, 
+    availableEmbeddings,
     checkConnection,
     refreshModelsAndLoras,
     updateLabelsData,

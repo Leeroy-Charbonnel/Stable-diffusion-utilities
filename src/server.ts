@@ -6,7 +6,7 @@ import { ImageMetadata, LabelsData, Prompt, PromptEditor } from "./types";
 import { DEFAULT_OUTPUT_FOLDER, DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER, LABELS_FILE_NAME, PROMPTS_FILE_NAME, SD_API_BASE_URL } from "./lib/constants";
 import sharp from 'sharp';
 import { getImageFolder } from "./lib/utils";
-import { ChildProcess, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import path from "path";
 
 //Constants
@@ -14,8 +14,6 @@ const OUTPUT_DIR: string = join(import.meta.dir, DEFAULT_OUTPUT_FOLDER);
 const PROMPTS_FILE: string = join(import.meta.dir, PROMPTS_FILE_NAME);
 const LABELS_FILE: string = join(import.meta.dir, LABELS_FILE_NAME);
 
-
-let sdProcess: ChildProcess | null = null;
 
 //CORS headers
 const corsHeaders: Record<string, string> = {
@@ -79,8 +77,6 @@ function getSeedValue(data: string): number | null {
   return match ? parseInt(match[1]) : null;
 }
 
-
-//Extract metadata from image file
 async function extractMetadataFromImage(imagePath: string): Promise<ImageMetadata | null> {
   try {
     const image = sharp(imagePath);
@@ -117,8 +113,6 @@ async function extractMetadataFromImage(imagePath: string): Promise<ImageMetadat
     return null;
   }
 }
-
-//Get all images with metadata
 async function getAllImagesWithMetadata(): Promise<ImageMetadata[]> {
   try {
     const imagePaths = await scanDirectoriesForImages();
@@ -562,86 +556,6 @@ async function refreshCheckpoints(req: BunRequest): Promise<Response> {
   }
 }
 
-
-function startStableDiffusionWebUI(): Promise<boolean> {
-  console.log("Starting Stable Diffusion WebUI...");
-  const sdWebUIDir = 'D:/Projects/Code/stable-diffusion-webui';
-  const webuiPath = path.join(sdWebUIDir, 'webui-user.bat');
-  sdProcess = null;
-
-  if (!existsSync(sdWebUIDir)) {
-    console.error(`Stable Diffusion directory not found at: ${sdWebUIDir}`);
-    return Promise.resolve(false);
-  }
-
-  sdProcess = spawn(webuiPath, [], {
-    shell: true,
-    detached: true,
-    cwd: sdWebUIDir,
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-
-  return new Promise((resolve) => {
-    sdProcess!.on('spawn', () => {
-      console.log("Process spawned successfully");
-      resolve(true);
-    });
-
-    sdProcess!.on('error', (err: Error) => {
-      console.error("Failed to start Stable Diffusion WebUI:", err);
-      resolve(false);
-    });
-
-    sdProcess!.on('exit', (code) => {
-      console.log(`Process exited with code ${code}`);
-      if (code !== 0) {
-        resolve(false);
-      }
-    });
-  });
-}
-function restartStableDiffusionWebUI(req: BunRequest): Promise<Response> {
-  console.log("Restarting Stable Diffusion WebUI...");
-
-  return new Promise(async (resolve) => {
-    try {
-      if (sdProcess && sdProcess.pid) {
-        console.log(`Killing process with PID: ${sdProcess.pid}`);
-
-        // For Windows, use taskkill to forcefully terminate the process tree
-        exec(`taskkill /pid ${sdProcess.pid} /t /f`, async (error) => {
-          if (error) {
-            console.log("Error killing process, may continue if process already terminated:", error);
-          } else {
-            console.log("Process terminated successfully");
-          }
-
-          await new Promise(r => setTimeout(r, 2000));
-          const success = await startStableDiffusionWebUI();
-          await new Promise(r => setTimeout(r, 2000));
-
-
-          console.log("Restart result:", success ? "Success" : "Failed");
-          return resolve(Response.json({ success: success }, { headers: corsHeaders }));
-        });
-      } else {
-        console.log("No running process found, starting a new one");
-        const success = await startStableDiffusionWebUI();
-        console.log("Start result:", success ? "Success" : "Failed");
-
-        return resolve(Response.json({ success: success }, { headers: corsHeaders }));
-      }
-    } catch (error) {
-      console.error("Error during restart:", error);
-      return resolve(Response.json({
-        success: false,
-        error: String(error)
-      }, { status: 500, headers: corsHeaders }));
-    }
-  });
-}
-
-
 async function refreshEmbeddings(req: BunRequest): Promise<Response> {
   console.log("POST: Refreshing embeddings");
   try {
@@ -665,16 +579,17 @@ async function refreshEmbeddings(req: BunRequest): Promise<Response> {
   }
 }
 
-
-
-
 const server = Bun.serve({
   port: process.env.PORT || 3001,
   fetch(req, server) {
+    const url = new URL(req.url);
+    console.log(`SERVER RECEIVED ${req.method} REQUEST TO: ${url.pathname}`);
+
     if (req.method === "OPTIONS") { return handleOptions(); }
     return server.fetch(req);
   },
   error(error) {
+
     return new Response(`Error: ${error.message}`, {
       status: 500,
       headers: corsHeaders
@@ -721,9 +636,6 @@ const server = Bun.serve({
       GET: getLabelsData,
       POST: saveLabelsDataRoute
     },
-    "/api/restart-sd": {
-      POST: restartStableDiffusionWebUI
-    },
     //Fallback for API routes
     "/api/*": (req: BunRequest) => {
       if (req.method === "OPTIONS") {
@@ -739,16 +651,4 @@ ensureDirectories(OUTPUT_DIR).then(async () => {
   console.log(`Server running on port ${server.port}`);
   console.log(`Images will be saved to: ${OUTPUT_DIR}`);
   console.log(`Default folder: ${join(OUTPUT_DIR, DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER)}`);
-
-  try {
-    const success = await startStableDiffusionWebUI();
-    if (success) {
-      console.log("OKé");
-    } else {
-      console.error("Ratey");
-    }
-
-  } catch (error) {
-    console.error("Error starting Stable Diffusion WebUI:", error);
-  }
 });

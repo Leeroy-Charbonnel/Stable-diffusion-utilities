@@ -324,9 +324,9 @@ export function PromptForm({
           {formData.loras && formData.loras.length > 0 && (
             <div>
               {formData.loras.map((lora) => (
-                <div key={lora.name} className="mb-2 h-8 grid grid-cols-2 gap-2 items-center">
-                  <div className={`font-medium truncate ${formData.lorasRandom ? 'text-muted-foreground' : ''}`} title={lora.name}>{getModelLabel(availableLoras, lora.name)}</div>
-                  <div className="flex items-center gap-1">
+                <div key={lora.name} className="mb-2 h-8 flex w-full gap-2 items-center">
+                  <div className={`font-medium truncate w-3xs max-w-3xs ${formData.lorasRandom ? 'text-muted-foreground' : ''}`} title={lora.name}>{getModelLabel(availableLoras, lora.name)}</div>
+                  <div className="flex items-center gap-1 w-full">
 
                     <Button
                       disabled={readOnly || formData.lorasRandom} variant="ghost"

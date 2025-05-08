@@ -10,12 +10,12 @@ import { usePrompt } from '@/contexts/contextPrompts';
 import { toast } from 'sonner';
 import { ExecutionPanel } from './ExecutionPanel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDDOM_LORAS_MAX_COUNT, RANDOM_LORAS_MAX_WEIGHT, RANDOM_LORAS_MIN_WEIGHT, RESTART_TIMEOUT_MS, PROMPTS_BEFORE_RESTART } from '@/lib/constants';
+import { DEBOUNCE_DELAY, DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, RANDDOM_LORAS_MAX_COUNT, RANDOM_LORAS_MAX_WEIGHT, RANDOM_LORAS_MIN_WEIGHT} from '@/lib/constants';
 import { SD_API_BASE_URL } from '@/lib/constants';
-import { interruptGeneration, restartStableDiffusion } from '@/services/apiSD';
+import { interruptGeneration } from '@/services/apiSD';
 
 export function PromptsManager() {
-  const { isConnected, checkConnection, generateImage, availableSamplers, availableModels, availableLoras, availableEmbeddings } = useApi();
+  const { isConnected, generateImage, availableSamplers, availableModels, availableLoras, availableEmbeddings } = useApi();
   const { prompts, loadPrompts, addPrompt, updatePrompt, deletePrompt, reorderPrompt, isLoading: isPromptLoading } = usePrompt();
   const [refreshContextMenu, setRefreshContextMenu] = useState(false);
 
@@ -30,7 +30,6 @@ export function PromptsManager() {
   const [failureCount, setFailureCount] = useState(0);
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
   const [promptsToRunCount, setPromptsToRunCount] = useState(0);
-  const totalExecutedPromptsRef = useRef(0);
 
   const [elapsedTime, setElapsedTime] = useState(0);
   const [progressData, setProgressData] = useState<ProgressData | null>(null);
@@ -46,12 +45,10 @@ export function PromptsManager() {
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const executionStartTimeRef = useRef<number>(0);
 
-  const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const connectionCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [showTags, setShowTags] = useState(false);
   const [showModels, setShowModels] = useState(false);
-  const [isRestarting, setIsRestarting] = useState(false);
   const continueExecutionRef = useRef(false);
 
   useEffect(() => {
@@ -64,7 +61,6 @@ export function PromptsManager() {
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
       if (elapsedTimeIntervalRef.current) clearInterval(elapsedTimeIntervalRef.current);
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-      if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
       if (connectionCheckIntervalRef.current) clearInterval(connectionCheckIntervalRef.current);
     };
   }, []);
@@ -92,9 +88,6 @@ export function PromptsManager() {
   };
 
   const fetchProgressData = async () => {
-    // Don't fetch progress data during restart
-    if (isRestarting) return;
-
     try {
       const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/progress`);
       if (response.ok) {
@@ -183,7 +176,7 @@ export function PromptsManager() {
     setFailureCount(0);
     setCurrentPromptIndex(0);
     setPromptsToRunCount(promptToExecute.runCount * promptToExecute.models.length);
-    totalExecutedPromptsRef.current = 0;
+
     // Reset flags
     cancelExecutionRef.current = false;
     skipExecutionRef.current = false;
@@ -216,7 +209,6 @@ export function PromptsManager() {
     setFailureCount(0);
     setCurrentPromptIndex(0);
     setExecutedPromptIds(new Set());
-    totalExecutedPromptsRef.current = 0;
 
     // Calculate total runs across all prompts
     const totalRuns = prompts.map(p => p.runCount * p.models.length).reduce((a, b) => a + b, 0)
@@ -315,14 +307,17 @@ export function PromptsManager() {
             return prompt.loras;
           }
         })(),
-        embeddings: prompt.embeddings.map(embedding => ({
-          name: embedding.name,
-          weight: embedding.weight
-        })),
+        embeddings:[],
         width: prompt.width,
         height: prompt.height,
         tags: prompt.tags
       }
+
+
+            // prompt.embeddings.map(embedding => ({
+        //   name: embedding.name,
+        //   weight: embedding.weight
+        // })),
       for (let i = 0; i < prompt.runCount; i++) {
         setExecutingPromptRunIndex(i);
 
@@ -347,35 +342,11 @@ export function PromptsManager() {
         }
 
         try {
-          // Check if we need to restart
-          if (totalExecutedPromptsRef.current >= PROMPTS_BEFORE_RESTART) {
-            console.log(`Executed ${totalExecutedPromptsRef.current} prompts, restarting Stable Diffusion WebUI`);
-
-            // Clear prompt counter
-            totalExecutedPromptsRef.current = 0;
-
-            // Set restarting state
-            setIsRestarting(true);
-            toast.info("Restarting Stable Diffusion...");
-
-            // Call restart API
-            await restartStableDiffusion();
-
-            // Add a delay after restart to ensure server is ready
-            console.log("Waiting 30 seconds for server to fully restart...");
-            toast.info("Waiting 30 seconds for server to fully restart...");
-            await new Promise(resolve => setTimeout(resolve, 30000));
-            toast.info("Restart wait complete, resuming execution...");
-            console.log("Restart wait complete, resuming execution...");
-            setIsRestarting(false);
-          }
-
           console.log("Await for image generation...");
           const result = await generateImage(promptData);
 
           if (result) {
             setSuccessCount(prev => prev + 1);
-            totalExecutedPromptsRef.current = totalExecutedPromptsRef.current + 1;
           } else {
             setFailureCount(prev => prev + 1);
           }
@@ -469,7 +440,6 @@ export function PromptsManager() {
 
                 isCancelling={isCancelling}
                 isSkipping={isSkipping}
-                isRestarting={isRestarting}
 
                 isExecuted={executedPromptIds.has(prompt.id)}
                 isExecuting={status === 'execution'}
@@ -507,10 +477,8 @@ export function PromptsManager() {
             promptsToRunCount={promptsToRunCount}
             isApiConnected={isConnected}
             isCancelling={isCancelling}
-            isRestarting={isRestarting}
             elapsedTime={elapsedTime}
             progressData={progressData}
-            totalExecutedPrompts={totalExecutedPromptsRef.current}
             onStartExecution={handleExecuteAll}
             onCancelExecution={handleInterruptExecution}
           />
