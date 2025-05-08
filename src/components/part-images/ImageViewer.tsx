@@ -4,10 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Image as ImageIcon, RefreshCw, FolderOpen, Trash2, CheckSquare, FolderClosed, X } from 'lucide-react';
-import { useApi } from '@/contexts/contextSD';
-import { ImageMetadata, LabelsData, PromptEditor } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { toast } from 'sonner';
 
@@ -15,10 +12,8 @@ import { toast } from 'sonner';
 import { FilterPanel } from './FilterPanel';
 import { ImageCard } from './ImageCard';
 import { ImageDetailsDialog } from './ImageDetailsDialog';
-import { usePrompt } from '@/contexts/contextPrompts';
-import { generateUUID, getModelLabel } from '@/lib/utils';
 import { getImageFromPath, getLabelsData } from '@/services/apiFS';
-import { DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER } from '@/lib/constants';
+import { EXTERNAL_IMAGES_FOLDER } from '@/lib/constants';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 
 interface ImageViewerProps {
@@ -26,12 +21,6 @@ interface ImageViewerProps {
 }
 
 export function ImageViewer({ isActiveTab }: ImageViewerProps) {
-  const { apiFS, isLoading: isApiLoading } = useApi();
-  const { addPrompt } = usePrompt();
-
-  const [labelsData, setLabelsData] = useState<LabelsData>({ modelLabels: [], lorasLabels: [] , embeddingsLabels: []});
-
-  //Images arrays
   const [generatedImages, setGeneratedImages] = useState<ImageMetadata[]>([]);
   const [filteredImages, setFilteredImages] = useState<ImageMetadata[]>([]);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
@@ -40,7 +29,7 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [availableLoras, setAvailableLoras] = useState<string[]>([]);
-  const [availableFolders, setAvailableFolders] = useState<string[]>([DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER]);
+  const [availableFolders, setAvailableFolders] = useState<string[]>([EXTERNAL_IMAGES_FOLDER]);
   //Filter
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
@@ -67,7 +56,7 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [moveFolderDialogOpen, setMoveFolderDialogOpen] = useState(false);
-  const [targetFolder, setTargetFolder] = useState<string>(DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER);
+  const [targetFolder, setTargetFolder] = useState<string>(EXTERNAL_IMAGES_FOLDER);
 
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
 
@@ -94,7 +83,7 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
       console.log(`ImageViewer - Loaded ${folders.length} folders`);
     } catch (error) {
       console.error('Failed to load folders:', error);
-      setAvailableFolders([DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER]);
+      setAvailableFolders([EXTERNAL_IMAGES_FOLDER]);
     }
   };
 
@@ -253,7 +242,7 @@ export function ImageViewer({ isActiveTab }: ImageViewerProps) {
     }
     //Filter by selected folders
     if (selectedFolders.length > 0) {
-      filtered = filtered.filter((img) => selectedFolders.includes(img.folder || DEFAULT_OUTPUT_IMAGES_SAVE_FOLDER));
+      filtered = filtered.filter((img) => selectedFolders.includes(img.folder || EXTERNAL_IMAGES_FOLDER));
     }
     //Sort by creation date, newest first
     filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

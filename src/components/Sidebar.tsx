@@ -13,27 +13,20 @@ import {
     SidebarTrigger,
     useSidebar,
 } from "@/components/ui/sidebar";
-import { ListChecks, Image, CheckCircle, AlertCircle, BrainCog, Database } from "lucide-react";
+import { Image, BrainCog } from "lucide-react";
 import { useApi } from "@/contexts/contextSD";
-import { Badge } from "@/components/ui/badge";
 
 interface SidebarProps {
-    activeTab: "prompts" | "ai" | "images" | "models";
-    setActiveTab: (tab: "prompts" | "ai" | "images" | "models") => void;
-    newImageNumber: number;
+    activeTab: "ai" | "images";
+    setActiveTab: (tab: "ai" | "images") => void;
 }
 
-function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps) {
+function SidebarInner({ activeTab, setActiveTab }: SidebarProps) {
     const { isConnected } = useApi();
     const { open } = useSidebar();
 
     //Navigation items
     const navItems = [
-        {
-            title: "Prompts",
-            id: "prompts",
-            icon: ListChecks,
-        },
         {
             title: "AI",
             id: "ai",
@@ -43,12 +36,6 @@ function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps)
             title: "Images",
             id: "images",
             icon: Image,
-            badge: newImageNumber > 0 ? newImageNumber : null,
-        },
-        {
-            title: "Models",
-            id: "models",
-            icon: Database,
         },
     ];
 
@@ -56,8 +43,8 @@ function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps)
         <>
             <SidebarHeader className="flex flex-row items-center justify-between">
                 <div className={`p-4 border-b border-border overflow-hidden transition-width text-nowrap ${open ? "block" : "hidden"}`}>
-                    <h1 className="text-xl font-bold">SD Utilities</h1>
-                    <p className="text-xs text-muted-foreground">Stable Diffusion Tools</p>
+                    <h1 className="text-xl font-bold">Image Viewer</h1>
+                    <p className="text-xs text-muted-foreground">Image Management</p>
                 </div>
                 <SidebarTrigger />
             </SidebarHeader>
@@ -70,13 +57,12 @@ function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps)
                                     <SidebarMenuButton
                                         asChild
                                         className={`w-full justify-start ${activeTab === item.id ? "bg-primary text-primary-foreground" : ""}`}
-                                        onClick={() => setActiveTab(item.id as "prompts" | "ai" | "images" | "models")}
+                                        onClick={() => setActiveTab(item.id as "ai" | "images")}
                                         data-tab={item.id}
                                     >
                                         <div>
                                             <item.icon />
                                             <span>{item.title}</span>
-                                            {item.badge && <Badge className="ml-auto">{item.badge}</Badge>}
                                         </div>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
@@ -85,23 +71,18 @@ function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps)
                     </SidebarGroupContent>
                 </SidebarGroup>
             </SidebarContent>
-
-            <SidebarFooter>
-                {/* API status removed from here */}
-            </SidebarFooter>
-
+            <SidebarFooter />
         </>
     );
 }
 
-export function AppSidebar({ activeTab, setActiveTab, newImageNumber }: SidebarProps) {
+export function AppSidebar({ activeTab, setActiveTab }: SidebarProps) {
     return (
         <SidebarProvider className="w-fit">
             <Sidebar collapsible="icon">
                 <SidebarInner
                     activeTab={activeTab}
                     setActiveTab={setActiveTab}
-                    newImageNumber={newImageNumber}
                 />
             </Sidebar>
         </SidebarProvider>
