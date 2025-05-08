@@ -131,47 +131,7 @@ async function getAllImagesWithMetadata(): Promise<ImageMetadata[]> {
 }
 
 
-async function readLabelsData(): Promise<LabelsData> {
-  try {
-    const labelsFile = Bun.file(LABELS_FILE);
-    if (!await labelsFile.exists()) return { modelLabels: [], lorasLabels: [], embeddingsLabels: [] };
-    return JSON.parse(await labelsFile.text());
-  } catch (error) {
-    console.error('Error reading labels data:', error);
-    return { modelLabels: [], lorasLabels: [], embeddingsLabels: [] };
-  }
-}
 
-
-async function getLabelsData(req: BunRequest): Promise<Response> {
-  console.log("GET: Getting labels data");
-  const labelsData = await readLabelsData();
-  return Response.json({ success: true, data: labelsData }, { headers: corsHeaders });
-}
-
-
-
-async function saveLabelsData(labelsData: any): Promise<boolean> {
-  try {
-    await ensureDirectories(OUTPUT_DIR);
-    await Bun.write(LABELS_FILE, JSON.stringify(labelsData, null, 2));
-    return true;
-  } catch (error) {
-    console.error('Error saving labels data:', error);
-    return false;
-  }
-}
-
-async function saveLabelsDataRoute(req: BunRequest): Promise<Response> {
-  console.log("POST: Saving labels data");
-  try {
-    await saveLabelsData(await req.json() as PromptEditor[]);
-    return Response.json({ success: true }, { headers: corsHeaders });
-  } catch (error) {
-    return Response.json({ success: false, error: String(error) },
-      { status: 500, headers: corsHeaders });
-  }
-}
 
 async function readPrompts(): Promise<Prompt[]> {
   try {
@@ -475,109 +435,6 @@ async function getFolders(req: BunRequest): Promise<Response> {
   }
 }
 
-//Get Civitai image data
-async function getCivitaiImage(req: BunRequest): Promise<Response> {
-  try {
-    const imageUrl = req.params?.id;
-
-    if (!imageUrl) {
-      return Response.json({ success: false, error: 'Image URL not provided' },
-        { status: 400, headers: corsHeaders });
-    }
-
-    const response = await fetch(imageUrl);
-
-    if (!response.ok) {
-      return Response.json({ success: false, error: 'Failed to fetch image' },
-        { status: response.status, headers: corsHeaders });
-    }
-
-    const imageBuffer = await response.arrayBuffer();
-    const base64Image = Buffer.from(imageBuffer).toString('base64');
-
-    return Response.json({
-      success: true,
-      data: {
-        base64: `data:${response.headers.get('content-type') || 'image/jpeg'};base64,${base64Image}`
-      }
-    }, { headers: corsHeaders });
-
-  } catch (error) {
-    return Response.json({ success: false, error: String(error) },
-      { status: 500, headers: corsHeaders });
-  }
-}
-
-//Refresh LoRAs from Stable Diffusion
-async function refreshLoras(req: BunRequest): Promise<Response> {
-  console.log("POST: Refreshing LoRAs");
-  try {
-    const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/refresh-loras`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to refresh LoRAs: ${response.status}`);
-    }
-
-    const result = await response.json();
-    return Response.json({ success: true, data: result }, { headers: corsHeaders });
-  } catch (error) {
-    console.error('Error refreshing LoRAs:', error);
-    return Response.json(
-      { success: false, error: String(error) },
-      { status: 500, headers: corsHeaders }
-    );
-  }
-}
-
-//Refresh checkpoints from Stable Diffusion
-async function refreshCheckpoints(req: BunRequest): Promise<Response> {
-  console.log("POST: Refreshing checkpoints");
-  try {
-    const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/refresh-checkpoints`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to refresh checkpoints: ${response.status}`);
-    }
-
-    const result = await response.json();
-    return Response.json({ success: true, data: result }, { headers: corsHeaders });
-  } catch (error) {
-    console.error('Error refreshing checkpoints:', error);
-    return Response.json(
-      { success: false, error: String(error) },
-      { status: 500, headers: corsHeaders }
-    );
-  }
-}
-
-async function refreshEmbeddings(req: BunRequest): Promise<Response> {
-  console.log("POST: Refreshing embeddings");
-  try {
-    const response = await fetch(`${SD_API_BASE_URL}/sdapi/v1/refresh-embeddings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to refresh embeddings: ${response.status}`);
-    }
-
-    const result = await response.json();
-    return Response.json({ success: true, data: result }, { headers: corsHeaders });
-  } catch (error) {
-    console.error('Error refreshing embeddings:', error);
-    return Response.json(
-      { success: false, error: String(error) },
-      { status: 500, headers: corsHeaders }
-    );
-  }
-}
 
 const server = Bun.serve({
   port: process.env.PORT || 3001,
@@ -619,24 +476,6 @@ const server = Bun.serve({
     "/api/folders": {
       GET: getFolders
     },
-    "/api/civitai/image/:id": {
-      GET: getCivitaiImage
-    },
-    "/api/sdapi/v1/refresh-loras": {
-      POST: refreshLoras
-    },
-    "/api/sdapi/v1/refresh-checkpoints": {
-      POST: refreshCheckpoints
-    },
-    "/api/sdapi/v1/refresh-embeddings": {
-      POST: refreshEmbeddings
-    },
-    "/api/labels":
-    {
-      GET: getLabelsData,
-      POST: saveLabelsDataRoute
-    },
-    //Fallback for API routes
     "/api/*": (req: BunRequest) => {
       if (req.method === "OPTIONS") {
         return handleOptions();
