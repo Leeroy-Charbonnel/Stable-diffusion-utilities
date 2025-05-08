@@ -1,12 +1,16 @@
-// src/components/part-ai/AiChat.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Settings, Send, RefreshCw, Trash2, AlertCircle } from 'lucide-react';
+import { Settings, Send, RefreshCw, Trash2, PlusCircle, CheckCircle, AlertCircle, Image } from 'lucide-react';
 import { useAi } from '@/contexts/contextAI';
+import { usePrompt } from '@/contexts/contextPrompts';
 import { ChatMessage } from '@/types';
+import { PromptForm } from '../part-prompt/PromptForm';
+import { toast } from 'sonner';
 import { AiSettingsModal } from './AiSettingsModal';
+import { useApi } from '@/contexts/contextSD';
 import { Badge } from '../ui/badge';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../ui/resizable';
 
@@ -16,15 +20,23 @@ export function AiChat() {
     isProcessing,
     error,
     settings,
+
     sendMessage,
     clearMessages,
+
+    generatedPrompt,
+    setGeneratedPrompt,
   } = useAi();
+
+
+  const { addPrompt } = usePrompt();
 
   const [inputMessage, setInputMessage] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  const { availableSamplers, availableModels, availableLoras, availableEmbeddings, isLoading: isApiLoading } = useApi();
   //Scroll to bottom when messages update
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -39,6 +51,7 @@ export function AiChat() {
     }
   }, [isProcessing]);
 
+
   const handleSendMessage = async () => {
     if (inputMessage.trim() && !isProcessing) {
       await sendMessage(inputMessage);
@@ -50,6 +63,20 @@ export function AiChat() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  //Save prompt to the prompt list
+  const savePromptToList = async () => {
+    if (!generatedPrompt) return;
+
+    try {
+      await addPrompt(generatedPrompt);
+      toast.success("Prompt saved successfully");
+    } catch (error) {
+      toast.error("Error saving prompt", {
+        description: error instanceof Error ? error.message : String(error)
+      });
     }
   };
 
@@ -80,6 +107,9 @@ export function AiChat() {
           <Settings className="h-5 w-5" />
         </Button>
       </div>
+
+
+
 
       <ResizablePanelGroup
         direction="horizontal"
@@ -126,7 +156,7 @@ export function AiChat() {
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type your message..."
+                placeholder="Ask for prompt ideas or paste a Civitai image URL..."
                 className="min-h-[50px] resize-none"
                 disabled={isProcessing}
               />
@@ -141,18 +171,82 @@ export function AiChat() {
                 }
               </Button>
             </div>
+
+            {/* Input Helpers */}
+            <div className="mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setInputMessage("Create a detailed Stable Diffusion prompt for ");
+                  inputRef.current?.focus();
+                }}
+                className="text-xs"
+              >
+                <Image className="h-3 w-3 mr-1" />
+                New Prompt Template
+              </Button>
+            </div>
           </div>
+
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel defaultSize={50}>
-          {/* Empty panel - kept for resizing functionality */}
+
+
+
           <div className="flex-1 h-screen p-2 overflow-auto">
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-              <p className="mb-2">This area is reserved for future functionality</p>
-            </div>
+            {generatedPrompt ? (
+              <div className="space-y-4">
+
+
+                <div className="border-b pb-2">
+                  <PromptForm
+                    onCopyRefresh={() => { }}
+                    prompt={generatedPrompt}
+                    onPromptUpdate={setGeneratedPrompt}
+                    availableSamplers={availableSamplers}
+                    availableModels={availableModels}
+                    availableLoras={availableLoras}
+                    availableEmbeddings={availableEmbeddings}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                <p className="mb-2">No prompt ready yet</p>
+              </div>
+            )}
+
+            {generatedPrompt && (
+              <div className="p-2 border-t">
+                <Button
+                  onClick={savePromptToList}
+                  className="w-full"
+                  disabled={isApiLoading}
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Save to Prompt List
+                </Button>
+              </div>
+            )}
           </div>
+
+
+
         </ResizablePanel>
       </ResizablePanelGroup>
+
+
+
+
+
+
+
+
+
+
+
 
       {/* Error Alert */}
       {error && (
@@ -167,3 +261,4 @@ export function AiChat() {
     </div>
   );
 }
+

@@ -13,20 +13,27 @@ import {
     SidebarTrigger,
     useSidebar,
 } from "@/components/ui/sidebar";
-import { Image, BrainCog } from "lucide-react";
+import { ListChecks, Image, CheckCircle, AlertCircle, BrainCog, Database } from "lucide-react";
 import { useApi } from "@/contexts/contextSD";
+import { Badge } from "@/components/ui/badge";
 
 interface SidebarProps {
-    activeTab: "ai" | "images";
-    setActiveTab: (tab: "ai" | "images") => void;
+    activeTab: "prompts" | "ai" | "images" | "models";
+    setActiveTab: (tab: "prompts" | "ai" | "images" | "models") => void;
+    newImageNumber: number;
 }
 
-function SidebarInner({ activeTab, setActiveTab }: SidebarProps) {
+function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps) {
     const { isConnected } = useApi();
     const { open } = useSidebar();
 
     //Navigation items
     const navItems = [
+        {
+            title: "Prompts",
+            id: "prompts",
+            icon: ListChecks,
+        },
         {
             title: "AI",
             id: "ai",
@@ -36,6 +43,12 @@ function SidebarInner({ activeTab, setActiveTab }: SidebarProps) {
             title: "Images",
             id: "images",
             icon: Image,
+            badge: newImageNumber > 0 ? newImageNumber : null,
+        },
+        {
+            title: "Models",
+            id: "models",
+            icon: Database,
         },
     ];
 
@@ -43,8 +56,8 @@ function SidebarInner({ activeTab, setActiveTab }: SidebarProps) {
         <>
             <SidebarHeader className="flex flex-row items-center justify-between">
                 <div className={`p-4 border-b border-border overflow-hidden transition-width text-nowrap ${open ? "block" : "hidden"}`}>
-                    <h1 className="text-xl font-bold">Image Viewer</h1>
-                    <p className="text-xs text-muted-foreground">Image Management</p>
+                    <h1 className="text-xl font-bold">SD Utilities</h1>
+                    <p className="text-xs text-muted-foreground">Stable Diffusion Tools</p>
                 </div>
                 <SidebarTrigger />
             </SidebarHeader>
@@ -57,12 +70,13 @@ function SidebarInner({ activeTab, setActiveTab }: SidebarProps) {
                                     <SidebarMenuButton
                                         asChild
                                         className={`w-full justify-start ${activeTab === item.id ? "bg-primary text-primary-foreground" : ""}`}
-                                        onClick={() => setActiveTab(item.id as "ai" | "images")}
+                                        onClick={() => setActiveTab(item.id as "prompts" | "ai" | "images" | "models")}
                                         data-tab={item.id}
                                     >
                                         <div>
                                             <item.icon />
                                             <span>{item.title}</span>
+                                            {item.badge && <Badge className="ml-auto">{item.badge}</Badge>}
                                         </div>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
@@ -71,18 +85,23 @@ function SidebarInner({ activeTab, setActiveTab }: SidebarProps) {
                     </SidebarGroupContent>
                 </SidebarGroup>
             </SidebarContent>
-            <SidebarFooter />
+
+            <SidebarFooter>
+                {/* API status removed from here */}
+            </SidebarFooter>
+
         </>
     );
 }
 
-export function AppSidebar({ activeTab, setActiveTab }: SidebarProps) {
+export function AppSidebar({ activeTab, setActiveTab, newImageNumber }: SidebarProps) {
     return (
         <SidebarProvider className="w-fit">
             <Sidebar collapsible="icon">
                 <SidebarInner
                     activeTab={activeTab}
                     setActiveTab={setActiveTab}
+                    newImageNumber={newImageNumber}
                 />
             </Sidebar>
         </SidebarProvider>
