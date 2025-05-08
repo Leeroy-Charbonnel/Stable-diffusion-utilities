@@ -2,11 +2,9 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { generateChatCompletion, getOpenAiModels } from '@/services/apiAI';
 import { checkIfModelExist, generateUUID } from '@/lib/utils';
 import { DEFAULT_AI_API_KEY } from '@/lib/constantsKeys';
-import { AiChatRole, ChatMessage, Prompt, PromptEditor } from '@/types';
-import { useApi } from './contextSD';
+import { AiChatRole, ChatMessage } from '@/types';
 import { CHAT_SYSTEM_EXTRACTION_PROMPT, CHAT_SYSTEM_GENERATION_PROMPT } from '@/lib/constantsAI';
 import { DEFAULT_PROMPT_CFG_SCALE, DEFAULT_PROMPT_HEIGHT, DEFAULT_PROMPT_NAME, DEFAULT_PROMPT_STEP, DEFAULT_PROMPT_WIDTH, FILE_API_BASE_URL } from '@/lib/constants';
-import { getPngInfo } from '@/services/apiSD';
 
 const DEFAULT_AI_SETTINGS: AiSettings = {
   apiKey: DEFAULT_AI_API_KEY,
@@ -36,9 +34,6 @@ interface AiContextType {
   setTemperature: (temp: number) => void;
   setMaxTokens: (tokens: number) => void;
 
-
-  generatedPrompt: PromptEditor | null;
-  setGeneratedPrompt: (prompt: PromptEditor) => void;
 }
 
 const AiContext = createContext<AiContextType | undefined>(undefined);
@@ -58,13 +53,6 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const setModel = (model: string) => { setSettings((prev) => ({ ...prev, model })); };
   const setTemperature = (temperature: number) => { setSettings((prev) => ({ ...prev, temperature })); };
   const setMaxTokens = (maxTokens: number) => { setSettings((prev) => ({ ...prev, maxTokens })); };
-
-  const [generatedPrompt, setGeneratedPrompt] = useState<PromptEditor | null>(null);
-  const { availableSamplers: availableSDSamplers,
-    availableModels: availableSDModels,
-    availableLoras: availableSDLoras,
-    availableEmbeddings: availableSDEmbeddings, // Added embeddings
-    isLoading: isApiLoading } = useApi();
 
   //Load settings from local storage
   useEffect(() => {
@@ -131,21 +119,6 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
 
 
-  const prepareExtractionSystemPrompt = (): string => {
-    const modelsSection = `${availableSDModels.map(x => `Name : ${x.name} (Label : ${x.label})`).join(', ')}`;
-    const lorasSection = `${availableSDLoras.map(x => `Name : ${x.name} (Label : ${x.label})`).join(', ')}`;
-    const embeddingsSection = `${availableSDEmbeddings.map(x => `Name : ${x.name} (Label : ${x.label})`).join(', ')}`;
-    const samplersSection = `${availableSDSamplers.join(', ')}`;
-
-    let preparedPrompt = CHAT_SYSTEM_EXTRACTION_PROMPT
-      .replace('%AVAILABLE_MODELS_PLACEHOLDER%', modelsSection)
-      .replace('%AVAILABLE_SAMPLERS_PLACEHOLDER%', samplersSection)
-      .replace('%AVAILABLE_LORAS_PLACEHOLDER%', lorasSection)
-      .replace('%AVAILABLE_EMBEDDINGS_PLACEHOLDER%', embeddingsSection);
-
-    return preparedPrompt;
-  }
-
   const createMessage = (content: string, role: 'user' | 'assistant' | 'system' = 'user') => {
     return {
       id: generateUUID(),
@@ -168,30 +141,13 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
     //Setup system prompt
     if (messages.length == 0 || updatedMode === 'extraction') {
-      const mContent = updatedMode === 'extraction' ? prepareExtractionSystemPrompt() : CHAT_SYSTEM_GENERATION_PROMPT;
-      const systemMessage = createMessage(mContent, 'system');
-      updatedMessages = [systemMessage];
     }
 
-    //Treat the message
-    if (updatedMode == 'extraction') {
-      //Get base64 from url, then extract metadata
-      const base64Image = (await fetchCivitaiData(content)).base64;
-      const civitData = await getPngInfo(base64Image);
+    const mContent = JSON.stringify({ message: content, data: {} });
+    newMessage = createMessage(mContent, role);
+    updatedMessages = [...updatedMessages, newMessage];
+    setMessages(updatedMessages);
 
-      //Create a new message
-      const mContent = JSON.stringify({ message: content + JSON.stringify(civitData), data: '' })
-      newMessage = createMessage(mContent, role)
-
-      updatedMessages = [...updatedMessages, newMessage];
-      setMessages(updatedMessages);
-    } else {
-      //Create a new message
-      const mContent = JSON.stringify({ message: content, data: {} });
-      newMessage = createMessage(mContent, role);
-      updatedMessages = [...updatedMessages, newMessage];
-      setMessages(updatedMessages);
-    }
     //If it's a user message, get a response from the AI
     if (role === 'user') {
       try {
@@ -206,7 +162,6 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         console.log(assistantMessage);
 
         setMessages((prevMessages) => [...prevMessages, assistantMessage]);
-        extractPromptFromResponse(response, updatedMode);
       } catch (err) {
         console.error('Error getting AI response:', err);
         setError(err instanceof Error ? err.message : String(err));
@@ -247,68 +202,6 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   };
 
 
-  function extractPromptFromResponse(response: string, mode: string) {
-    const jsonResponse = JSON.parse(response);
-    const generatePrompt = jsonResponse.generatePrompt;
-    const data = jsonResponse.data;
-    console.log(jsonResponse);
-    if (!generatePrompt) return;
-
-    if (mode == 'extraction') {
-      const prompt: PromptEditor = {
-        id: generateUUID(),
-        isOpen: false,
-        runCount: 1,
-        currentRun: 0,
-        status: 'idle',
-
-        name: data.name || DEFAULT_PROMPT_NAME,
-        text: data.text,
-        negativePrompt: data.negativePrompt,
-        cfgScale: data.cfgScale,
-        seed: data.seed || -1,
-        steps: data.steps || DEFAULT_PROMPT_STEP,
-        sampler: data.sampler || '',
-        width: data.width || DEFAULT_PROMPT_WIDTH,
-        height: data.height || DEFAULT_PROMPT_HEIGHT,
-        tags: data.tags || [],
-        models: [checkIfModelExist(availableSDModels, data.model) ? data.model : availableSDModels[0].name],
-        lorasRandom: false,
-        loras: data.loras?.filter((l: { name: string, weight: number }) =>
-          checkIfModelExist(availableSDLoras, l.name)) || [],
-        embeddingsRandom: false,
-        embeddings: data.embeddings?.filter((e: { name: string, weight: number }) =>
-          checkIfModelExist(availableSDEmbeddings, e.name)) || []
-      }
-      setGeneratedPrompt(prompt);
-    } else {
-      const prompt: PromptEditor = {
-        id: generateUUID(),
-        isOpen: false,
-        runCount: 1,
-        currentRun: 0,
-        status: 'idle',
-
-        name: data.name || DEFAULT_PROMPT_NAME,
-        text: data.text,
-        negativePrompt: data.negativePrompt,
-        cfgScale: DEFAULT_PROMPT_CFG_SCALE,
-        seed: -1,
-        steps: DEFAULT_PROMPT_STEP,
-        sampler: availableSDSamplers.length > 0 ? availableSDSamplers[0] : '',
-        width: DEFAULT_PROMPT_WIDTH,
-        height: DEFAULT_PROMPT_HEIGHT,
-        tags: data.tags || [],
-        models: [availableSDModels.length > 0 ? availableSDModels[0].name : ''],
-        lorasRandom: false,
-        loras: [],
-        embeddingsRandom: false,
-        embeddings: []
-      }
-      setGeneratedPrompt(prompt);
-    }
-  }
-
 
 
   const value: AiContextType = {
@@ -323,8 +216,6 @@ export const AiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setModel,
     setTemperature,
     setMaxTokens,
-    generatedPrompt,
-    setGeneratedPrompt
   };
 
 

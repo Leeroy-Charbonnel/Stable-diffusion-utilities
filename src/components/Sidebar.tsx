@@ -13,18 +13,15 @@ import {
     SidebarTrigger,
     useSidebar,
 } from "@/components/ui/sidebar";
-import { ListChecks, Image, CheckCircle, AlertCircle, BrainCog, Database } from "lucide-react";
-import { useApi } from "@/contexts/contextSD";
-import { Badge } from "@/components/ui/badge";
+import { Tab } from "@/types";
+import { ListChecks, Image, BrainCog, Database } from "lucide-react";
 
 interface SidebarProps {
-    activeTab: "prompts" | "ai" | "images" | "models";
-    setActiveTab: (tab: "prompts" | "ai" | "images" | "models") => void;
-    newImageNumber: number;
+    activeTab: Tab;
+    setActiveTab: (tab: Tab) => void;
 }
 
-function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps) {
-    const { isConnected } = useApi();
+function SidebarInner({ activeTab, setActiveTab }: SidebarProps) {
     const { open } = useSidebar();
 
     //Navigation items
@@ -38,18 +35,7 @@ function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps)
             title: "AI",
             id: "ai",
             icon: BrainCog,
-        },
-        {
-            title: "Images",
-            id: "images",
-            icon: Image,
-            badge: newImageNumber > 0 ? newImageNumber : null,
-        },
-        {
-            title: "Models",
-            id: "models",
-            icon: Database,
-        },
+        }
     ];
 
     return (
@@ -70,13 +56,12 @@ function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps)
                                     <SidebarMenuButton
                                         asChild
                                         className={`w-full justify-start ${activeTab === item.id ? "bg-primary text-primary-foreground" : ""}`}
-                                        onClick={() => setActiveTab(item.id as "prompts" | "ai" | "images" | "models")}
+                                        onClick={() => setActiveTab(item.id as Tab)}
                                         data-tab={item.id}
                                     >
                                         <div>
                                             <item.icon />
                                             <span>{item.title}</span>
-                                            {item.badge && <Badge className="ml-auto">{item.badge}</Badge>}
                                         </div>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
@@ -85,23 +70,17 @@ function SidebarInner({ activeTab, setActiveTab, newImageNumber }: SidebarProps)
                     </SidebarGroupContent>
                 </SidebarGroup>
             </SidebarContent>
-
-            <SidebarFooter>
-                {/* API status removed from here */}
-            </SidebarFooter>
-
         </>
     );
 }
 
-export function AppSidebar({ activeTab, setActiveTab, newImageNumber }: SidebarProps) {
+export function AppSidebar({ activeTab, setActiveTab }: SidebarProps) {
     return (
         <SidebarProvider className="w-fit">
             <Sidebar collapsible="icon">
                 <SidebarInner
                     activeTab={activeTab}
                     setActiveTab={setActiveTab}
-                    newImageNumber={newImageNumber}
                 />
             </Sidebar>
         </SidebarProvider>

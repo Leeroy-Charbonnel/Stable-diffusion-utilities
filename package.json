@@ -6,7 +6,7 @@
   "scripts": {
     "server": "node src/server.js",
     "dev:frontend": "vite",
-    "dev": "concurrently \"bun run --watch src/server.ts\" \"npm run dev:frontend\""
+    "dev": "npm run dev:frontend"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.4",
@@ -38,6 +38,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-resizable-panels": "^2.1.7",
+    "reactflow": "^11.11.4",
     "sharp": "^0.34.1",
     "sonner": "^2.0.3",
     "tailwind-merge": "^3.2.0",

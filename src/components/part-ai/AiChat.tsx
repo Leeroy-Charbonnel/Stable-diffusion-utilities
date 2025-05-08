@@ -1,16 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Settings, Send, RefreshCw, Trash2, PlusCircle, CheckCircle, AlertCircle, Image } from 'lucide-react';
+import { Settings, Send, RefreshCw, Trash2, AlertCircle, Image } from 'lucide-react';
 import { useAi } from '@/contexts/contextAI';
-import { usePrompt } from '@/contexts/contextPrompts';
 import { ChatMessage } from '@/types';
-import { PromptForm } from '../part-prompt/PromptForm';
-import { toast } from 'sonner';
 import { AiSettingsModal } from './AiSettingsModal';
-import { useApi } from '@/contexts/contextSD';
 import { Badge } from '../ui/badge';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../ui/resizable';
 
@@ -23,21 +18,15 @@ export function AiChat() {
 
     sendMessage,
     clearMessages,
-
-    generatedPrompt,
-    setGeneratedPrompt,
   } = useAi();
 
 
-  const { addPrompt } = usePrompt();
 
   const [inputMessage, setInputMessage] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const { availableSamplers, availableModels, availableLoras, availableEmbeddings, isLoading: isApiLoading } = useApi();
-  //Scroll to bottom when messages update
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -63,20 +52,6 @@ export function AiChat() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
-    }
-  };
-
-  //Save prompt to the prompt list
-  const savePromptToList = async () => {
-    if (!generatedPrompt) return;
-
-    try {
-      await addPrompt(generatedPrompt);
-      toast.success("Prompt saved successfully");
-    } catch (error) {
-      toast.error("Error saving prompt", {
-        description: error instanceof Error ? error.message : String(error)
-      });
     }
   };
 
@@ -194,43 +169,6 @@ export function AiChat() {
         <ResizablePanel defaultSize={50}>
 
 
-
-          <div className="flex-1 h-screen p-2 overflow-auto">
-            {generatedPrompt ? (
-              <div className="space-y-4">
-
-
-                <div className="border-b pb-2">
-                  <PromptForm
-                    onCopyRefresh={() => { }}
-                    prompt={generatedPrompt}
-                    onPromptUpdate={setGeneratedPrompt}
-                    availableSamplers={availableSamplers}
-                    availableModels={availableModels}
-                    availableLoras={availableLoras}
-                    availableEmbeddings={availableEmbeddings}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                <p className="mb-2">No prompt ready yet</p>
-              </div>
-            )}
-
-            {generatedPrompt && (
-              <div className="p-2 border-t">
-                <Button
-                  onClick={savePromptToList}
-                  className="w-full"
-                  disabled={isApiLoading}
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Save to Prompt List
-                </Button>
-              </div>
-            )}
-          </div>
 
 
 
